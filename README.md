@@ -7,6 +7,7 @@ Jede App ist eine einzelne, eigenständige HTML-Datei ohne externe Abhängigkeit
 |---|---|
 | [`driftlabor/`](driftlabor/) | **Driftlabor** – Einzelteilchenbewegung und Driften (E×B, ∇B, Krümmung u. a.) |
 | [`debye/`](debye/) | **Debye-Labor** – Abschirmung im Plasma: 1D-Zwei-Fluid-Simulation mit Debye-Hückel-Vergleich |
+| [`plasmawave/`](plasmawave/) | **Plasmaspiegel** – EM-Welle trifft auf ein Plasma: 1D-FDTD-Simulation von Reflexion, Eindringen und Transmission (Cutoff bei der Plasmafrequenz) |
 
 Pro Ordner:
 
