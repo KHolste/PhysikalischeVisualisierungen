@@ -11,6 +11,7 @@ Jede App ist eine einzelne, eigenständige HTML-Datei ohne externe Abhängigkeit
 | [`plasmakarte/`](plasmakarte/) | **Plasma-Landkarte** – Dichte-Temperatur-Karte idealer, nicht-idealer und entarteter Plasmen mit Teilchenbild, Längenvergleich und Beispielen vom Sonnenwind bis zum Weißen Zwerg |
 | [`kopplung/`](kopplung/) | **Kopplungslabor** – stark gekoppelte Plasmen: 2D-Molekulardynamik geladener Teilchen (Yukawa) vom Gas über die Flüssigkeit zum Coulomb-Kristall, mit Paarkorrelation g(r), Phasendiagramm und Umrechnung auf Staubplasma, Ionenfalle und Elektronen auf Helium |
 | [`entartung/`](entartung/) | **Entartungslabor** – das Elektronengas vom klassischen bis zum entarteten Grenzfall: Fermi-Kugel im Impulsraum, Fermi-Dirac gegen Maxwell-Boltzmann, Entartungsdruck, Debye- und Thomas-Fermi-Abschirmung, Masse-Radius-Beziehung weißer Zwerge mit Chandrasekhar-Grenze |
+| [`ionisation/`](ionisation/) | **Ionisationslabor** – wann ein Gas zum Plasma wird: Saha-Gleichung für H, He, Na und Ar, Dichte-Temperatur-Karte des Ionisationsgrads, Kontinuumsabsenkung und Druckionisation, optional entartete Elektronen, Teilchenbild und Energieniveaus |
 
 Pro Ordner:
 

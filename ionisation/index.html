@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ionisationslabor</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  /* Layout wie die übrigen Labore: links Parameter, Mitte Karte + Kurven + Teilchen + Niveaus, rechts Physik und Aufgaben */
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --c-neu:#e4ebf1; --c-ion:#e8762c; --c-s0:#1f5fc2; --c-s1:#c2571a; --c-s2:#7b3aa6; --c-s3:#2c8540;
+  --c-e:#c23a2b; --c-nuc:#14202b; --c-orb:#1f5fc2; --c-ipd:#b4480f; --c-deg:#4535b5; --c-kt:#0b6767;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --c-neu:#16212a; --c-ion:#ff8a4c; --c-s0:#62a1ff; --c-s1:#ffa36e; --c-s2:#c48cf0; --c-s3:#5cc46a;
+    --c-e:#ff715f; --c-nuc:#e1e8ed; --c-orb:#62a1ff; --c-ipd:#ffa36e; --c-deg:#b0a6ff; --c-kt:#47b6ae; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --c-neu:#16212a; --c-ion:#ff8a4c; --c-s0:#62a1ff; --c-s1:#ffa36e; --c-s2:#c48cf0; --c-s3:#5cc46a;
+  --c-e:#ff715f; --c-nuc:#e1e8ed; --c-orb:#62a1ff; --c-ipd:#ffa36e; --c-deg:#b0a6ff; --c-kt:#47b6ae; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1720px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+header.top .units{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr) 350px;grid-template-areas:"params stage info";align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{grid-area:params;padding:12px 14px 14px}
+.stage{grid-area:stage;min-width:0;display:flex;flex-direction:column;gap:10px}
+.info{grid-area:info;padding:16px 18px;min-width:0}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.seg button{all:unset;text-align:center;padding:6px 2px;cursor:pointer;font-size:12.5px;font-weight:500;line-height:1.2}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i,dl.kz dt i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chkrow{display:flex;gap:7px;align-items:flex-start;font-size:13px;margin-bottom:8px;cursor:pointer}
+.chkrow input{accent-color:var(--accent);margin-top:3px}
+.chkrow small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.ctl-tip{font-size:11.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.ctl-tip kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+select.sel{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%;margin-bottom:10px}
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz dd.hi{font-weight:600;color:var(--accent)}
+dl.kz .gh{grid-column:1/-1;font-family:var(--f-head);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+dl.kz .gh:first-child{margin-top:0;padding-top:0;border-top:0}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.status{font-size:13px;color:var(--muted);min-height:2.9em}
+.status b{color:var(--ink);font-weight:600}
+.mapwrap{position:relative;height:clamp(380px,50vh,560px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+#map{cursor:crosshair;touch-action:none}
+#map:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.trio{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.cwrap{position:relative;height:260px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.note b{color:var(--ink);font-weight:600}
+.info h3{font-family:var(--f-head);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;text-wrap:balance}
+.info p{margin:0 0 10px;max-width:65ch}
+.info b{font-weight:600}
+.formula{font-family:var(--f-math);font-size:17px;line-height:1.55;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 2px;margin:4px 0 12px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+.formula i{font-style:italic}
+.formula small{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.92em;line-height:1.15;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.frac>span:last-child{padding:0 3px}
+.info h4{font-family:var(--f-head);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 6px}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.tasks li:first-child{border-top:0}
+.tasks li p{margin:0}
+.tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
+.m{font-family:var(--f-math)}
+.foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
+@media (max-width:1500px){.trio{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.trio>:first-child{grid-column:1/-1}}
+@media (max-width:1280px){
+  .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
+  .trio{grid-template-columns:minmax(0,1fr)}
+  .trio>:first-child{grid-column:auto}
+  header.top .units{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <h1>Ionisationslabor</h1>
+  <p class="sub">Wann wird ein Gas zum Plasma? Saha-Gleichung, Kontinuumsabsenkung und Druckionisation</p>
+  <span class="units">thermisches Gleichgewicht · T<sub>e</sub> = T<sub>i</sub> · SI-Einheiten</span>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Beispiel</h2>
+    <select class="sel" id="example" aria-label="Beispiel wählen"></select>
+    <h2 class="lab">Element</h2>
+    <div class="seg" style="--n:4" id="segEl" role="group" aria-label="Element">
+      <button type="button" data-el="H">H</button><button type="button" data-el="He">He</button><button type="button" data-el="Na">Na</button><button type="button" data-el="Ar">Ar</button>
+    </div>
+    <h2 class="lab">Zustand</h2>
+    <div id="ctl-n"></div>
+    <div id="ctl-T"></div>
+    <h2 class="lab">Modell</h2>
+    <label class="chkrow"><input type="checkbox" id="o-ipd" checked><span>Kontinuumsabsenkung und Druckionisation<small>Die Nachbarn senken die Ionisationsenergie um Δ<i class="m">I</i>. Ist Δ<i class="m">I</i> ≥ <i class="m">I</i> oder überlappen die Atome, gibt es den gebundenen Zustand nicht mehr.</small></span></label>
+    <label class="chkrow"><input type="checkbox" id="o-fd"><span>Elektronen als Fermi-Gas<small>Bei hoher Dichte sind die freien Plätze für Elektronen knapp (Pauli-Prinzip).</small></span></label>
+    <p class="ctl-tip">Punkt in der Karte anklicken oder ziehen. Karte anklicken, dann mit <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> verschieben.</p>
+    <button class="btn" type="button" id="defaults">Standardwerte</button>
+    <hr class="sep">
+    <h2 class="lab">Kennzahlen</h2>
+    <dl class="kz" id="kz"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="plotbox">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="mapwrap"><canvas class="full" id="map" tabindex="0" aria-label="Karte des Ionisationsgrads über Dichte und Temperatur. Klick oder Pfeiltasten verschieben den Punkt."></canvas></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="trio">
+      <div class="panel boxp">
+        <h2 class="lab">Anteile der Stufen gegen die Temperatur</h2>
+        <div class="cwrap"><canvas class="full" id="frac" aria-label="Anteile von Atomen und Ionenstufen als Funktion der Temperatur bei fester Dichte"></canvas></div>
+        <div class="note" id="fracNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Teilchenbild</h2>
+        <div class="cwrap"><canvas class="full" id="pic" aria-label="Skizze: Atome mit gebundenen Elektronen, Ionen und freie Elektronen"></canvas></div>
+        <div class="note" id="picNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Energieniveaus</h2>
+        <div class="cwrap"><canvas class="full" id="lev" aria-label="Ionisationsenergien und abgesenktes Kontinuum im Vergleich zur thermischen Energie"></canvas></div>
+        <div class="note" id="levNote"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel info" id="info">
+    <h3>Vom Gas zum Plasma</h3>
+    <p>Im thermischen Gleichgewicht stellen sich Ionisation und Rekombination so ein, dass das Verhältnis der Ionisationsstufen nur von <i class="m">T</i> und der Elektronendichte abhängt. Das beschreibt die <b>Saha-Gleichung</b>:</p>
+    <div class="formula">
+      <div><span class="frac"><span><i>n</i><sub><i>z</i>+1</sub> <i>n</i><sub>e</sub></span><span><i>n</i><sub><i>z</i></sub></span></span> = 2<span class="frac"><span><i>g</i><sub><i>z</i>+1</sub></span><span><i>g</i><sub><i>z</i></sub></span></span><span class="frac"><span>1</span><span><i>λ</i><sub>th</sub><sup>3</sup></span></span> e<sup>−(<i>I</i><sub><i>z</i></sub> − Δ<i>I</i><sub><i>z</i></sub>)/<i>k</i><sub>B</sub><i>T</i></sup></div>
+      <div><i>λ</i><sub>th</sub> = <span class="frac"><span><i>h</i></span><span>√(2π<i>m</i><sub>e</sub><i>k</i><sub>B</sub><i>T</i>)</span></span> &nbsp;&nbsp; <small>thermische de-Broglie-Wellenlänge</small></div>
+      <div>Δ<i>I</i><sub><i>z</i></sub> = <span class="frac"><span>(<i>z</i>+1) <i>e</i><sup>2</sup></span><span>4π<i>ε</i><sub>0</sub>(<i>λ</i><sub>D</sub> + <i>a</i>)</span></span> &nbsp;&nbsp; <small>Kontinuumsabsenkung</small></div>
+    </div>
+    <p><b>Warum schon bei <i class="m">k</i><sub>B</sub><i class="m">T</i> ≪ <i class="m">I</i>?</b> Ein freies Elektron hat unvorstellbar viel mehr Zustände zur Verfügung als ein gebundenes: Der Faktor 1/(<i class="m">n</i><sub>e</sub><i class="m">λ</i><sub>th</sub><sup>3</sup>) ist bei kleiner Dichte riesig. Diese Entropie gewinnt gegen den Boltzmann-Faktor, lange bevor <i class="m">k</i><sub>B</sub><i class="m">T</i> die Ionisationsenergie erreicht. Je dünner das Gas, desto niedriger die Ionisationstemperatur.</p>
+    <p><b>Kontinuumsabsenkung:</b> In einem dichten Plasma schirmen die freien Ladungen den Kern ab, und die Nachbarn rücken heran. Das Elektron muss nicht mehr ins Unendliche gebracht werden, die Ionisationsenergie sinkt um Δ<i class="m">I</i>. Wird der Teilchenabstand <i class="m">a</i> vergleichbar mit der Größe der Atome, verschwinden die gebundenen Zustände ganz: <b>Druckionisation</b>. So werden Wasserstoff im Jupiter-Inneren und Metalle zu „kalten Plasmen“.</p>
+    <p><b>Grenzen:</b> Die Saha-Gleichung setzt Gleichgewicht voraus. In Gasentladungen, der Ionosphäre oder der Korona treiben Elektronenstöße bzw. Strahlung die Ionisation, und die Elektronen sind viel heißer als das Gas. Bei Druckionisation werden einfache Modelle wie dieses nur noch qualitativ richtig.</p>
+    <h4>Aufgaben</h4>
+    <ol class="tasks" id="tasks"></ol>
+  </aside>
+</div>
+<p class="foot">Modell: ideales Gemisch aus Atomen, Ionen und Elektronen im thermischen Gleichgewicht bei der Kerndichte <i class="m">n</i> (Atome + Ionen). Ionisationsenergien: H 13,60 eV; He 24,59 / 54,42 eV; Na 5,14 / 47,29 eV (nur die ersten beiden Stufen); Ar 15,76 / 27,63 / 40,74 eV (erste drei Stufen). Statistische Gewichte nur der Grundzustände (Feinstruktur zusammengefasst), angeregte Zustände vernachlässigt. Kontinuumsabsenkung Δ<i class="m">I</i><sub><i class="m">z</i></sub> = (<i class="m">z</i>+1)<i class="m">e</i><sup>2</sup>/(4π<i class="m">ε</i><sub>0</sub>(<i class="m">λ</i><sub>D</sub> + <i class="m">a</i>)): Debye-Hückel für <i class="m">λ</i><sub>D</sub> ≫ <i class="m">a</i>, bei hoher Dichte durch den Wigner-Seitz-Radius <i class="m">a</i> = (3/(4π<i class="m">n</i>))<sup>1/3</sup> begrenzt (Ionenkugel-Grenzfall). Die Debye-Länge enthält Elektronen und Ionen, für die Elektronen mit der effektiven Temperatur ((<i class="m">k</i><sub>B</sub><i class="m">T</i>)<sup>2</sup> + (2<i class="m">E</i><sub>F</sub>/3)<sup>2</sup>)<sup>1/2</sup>; Σ<i class="m">z</i><sup>2</sup><i class="m">n</i><sub><i class="m">z</i></sub> wird mit der mittleren Ladung genähert. Der gebundene Zustand erhält zusätzlich das Gewicht 1 − Δ<i class="m">I</i><sub><i class="m">z</i></sub>/<i class="m">I</i><sub><i class="m">z</i></sub> und den Faktor exp(−(4π/3)<i class="m">n</i>(2<i class="m">r</i><sub><i class="m">z</i></sub>)<sup>3</sup>) mit dem Bahnradius <i class="m">r</i><sub><i class="m">z</i></sub> ≈ <i class="m">a</i><sub>B</sub>(<i class="m">z</i>+1)·13,6 eV/<i class="m">I</i><sub><i class="m">z</i></sub> (vereinfachtes Modell der Besetzungswahrscheinlichkeiten nach Hummer und Mihalas): Er verschwindet stetig, wenn die Absenkung die Ionisationsenergie erreicht oder sich die Atome überlappen. Mit „Fermi-Gas“ ersetzt das chemische Potential des idealen Fermi-Gases den klassischen Ausdruck <i class="m">k</i><sub>B</sub><i class="m">T</i> ln(<i class="m">n</i><sub>e</sub><i class="m">λ</i><sub>th</sub><sup>3</sup>/2). Die Elektronendichte folgt aus der Ladungsneutralität; hat die Gleichung mehrere Lösungen (in der Nähe der Druckionisation möglich), wird die stärker ionisierte gezeigt. Im Teilchenbild sind die Atome mit ihrem Bahnradius ≈ <i class="m">a</i><sub>B</sub>(<i class="m">z</i>+1)·13,6 eV/<i class="m">I</i><sub><i class="m">z</i></sub> maßstäblich zum Abstand gezeichnet, mindestens aber 3 Pixel groß.</p>
+</div>
+
+<script>
+/*CORE-START*/
+const QE=1.602176634e-19,EPS0=8.8541878128e-12,ME=9.1093837015e-31,KB=1.380649e-23,HP=6.62607015e-34,HB=HP/(2*Math.PI);
+const KC=QE*QE/(4*Math.PI*EPS0),AB=5.29177210903e-11,EFC=HB*HB*Math.pow(3*Math.PI*Math.PI,2/3)/(2*ME);
+const EL={
+  H:{name:'Wasserstoff',I:[13.598],g:[2,1],sym:['H','H⁺']},
+  He:{name:'Helium',I:[24.587,54.418],g:[1,2,1],sym:['He','He⁺','He²⁺']},
+  Na:{name:'Natrium',I:[5.139,47.286],g:[2,1,6],sym:['Na','Na⁺','Na²⁺']},
+  Ar:{name:'Argon',I:[15.760,27.630,40.735],g:[1,6,9,4],sym:['Ar','Ar⁺','Ar²⁺','Ar³⁺']}
+};
+// chemisches Potential des idealen Fermi-Gases: Tabelle η(Θ) = μ/E_F aus dem Fermi-Dirac-Integral
+const fdf=(x,eta,Th)=>{const z=(x-eta)/Th;return z>700?0:z<-700?1:1/(Math.exp(z)+1);};
+function fdI(eta,Th){const N=1600,xm=Math.max(eta,0)+40*Th,um=Math.sqrt(xm),h=um/N;let s=0;
+  for(let i=0;i<=N;i++){const u=i*h,w=(i===0||i===N)?1:(i&1?4:2);s+=w*2*u*u*fdf(u*u,eta,Th);}return 1.5*s*h/3;}
+const etaClass=Th=>Th*Math.log(4/(3*Math.sqrt(Math.PI)*Math.pow(Th,1.5)));
+const ETAB=[];for(let k=0;k<=60;k++){const lg=-2+4*k/60,Th=Math.pow(10,lg);let lo=Math.min(-1,etaClass(Th)-20*Th),hi=1.0001;
+  for(let j=0;j<50;j++){const m=(lo+hi)/2;if(fdI(m,Th)<1)lo=m;else hi=m;}ETAB.push((lo+hi)/2);}
+function muOverKT(ne,kT,fd){const lam3=Math.pow(HP*HP/(2*Math.PI*ME*kT),1.5);
+  if(!fd)return Math.log(ne*lam3/2);
+  const EF=EFC*Math.pow(ne,2/3),Th=kT/EF,lg=Math.log10(Th);
+  if(lg>=2)return Math.log(ne*lam3/2);
+  if(lg<=-2)return (1-Math.PI*Math.PI*Th*Th/12)/Th;
+  const p=(lg+2)/4*60,i=Math.min(59,Math.floor(p)),f=p-i;return (ETAB[i]*(1-f)+ETAB[i+1]*f)/Th;}
+// Lösung bei gegebener Kerndichte n und Temperatur T
+function solve(n,T,el,ipd,fd){const E=EL[el],Z=E.I.length,kT=KB*T,a=Math.cbrt(3/(4*Math.PI*n));
+  const frac=(ne)=>{const zb=ne/n,EF=EFC*Math.pow(ne,2/3),kTe=Math.hypot(kT,2*EF/3);
+    const lD=ipd?1/Math.sqrt(QE*QE/EPS0*(ne/kTe+ne*Math.max(zb,1e-30)/kT)):Infinity;
+    const mu=muOverKT(ne,kT,fd),L=[0],dI=[];
+    for(let z=0;z<Z;z++){const d=ipd?(z+1)*KC/(lD+a):0;dI.push(d);const Ie=E.I[z]*QE-d;
+      const wb=1-d/(E.I[z]*QE); // Gewicht des gebundenen Zustands: verschwindet stetig bei ΔI → I
+      const rz=AB*(z+1)*13.606/E.I[z],wn=ipd?4*Math.PI/3*n*Math.pow(2*rz,3):0; // Nachbarn überlappen die Bahn (Hummer-Mihalas)
+      const lr=wb<=1e-300?700:Math.log(E.g[z+1]/E.g[z])-Ie/kT-mu-Math.log(wb)+wn;L.push(L[z]+Math.min(700,lr));}
+    const mx=Math.max(...L);let s=0;const x=L.map(v=>{const e=Math.exp(v-mx);s+=e;return e;});for(let z=0;z<=Z;z++)x[z]/=s;
+    let zbar=0;for(let z=1;z<=Z;z++)zbar+=z*x[z];return {x,zbar,dI,lD};};
+  const f=lg=>{const ne=Math.pow(10,lg);return n*frac(ne).zbar-ne;};
+  const hi=Math.log10(n*Z),lo=Math.log10(n)-45,M=70;let best=null,pv=f(hi),px=hi;
+  for(let k=1;k<=M;k++){const xg=hi-(hi-lo)*k/M,v=f(xg);if(v>0&&pv<=0){let A=xg,B=px;for(let j=0;j<45;j++){const m=(A+B)/2;if(f(m)>0)A=m;else B=m;}best=(A+B)/2;break;}pv=v;px=xg;}
+  if(best===null)best=frac(Math.pow(10,hi)).zbar>0.5*Z?hi:lo; // vollständig ionisiert liegt genau am Rand
+  const ne=Math.pow(10,best),r=frac(ne);return {n,T,el,ne,a,kT,...r,Z};}
+// T, bei der Stufe s zur Hälfte erreicht ist (Σ_{k≥s} x_k = 1/2); lg T im Bereich [t0,t1]
+function halfT(n,el,s,ipd,fd,t0,t1){const g=lg=>{const r=solve(n,Math.pow(10,lg),el,ipd,fd);let q=0;for(let k=s;k<=r.Z;k++)q+=r.x[k];return q-0.5;};
+  let a=t0,b=t1,ga=g(a),gb=g(b);if(ga>0)return t0-1;if(gb<0)return null;for(let j=0;j<26;j++){const m=(a+b)/2,gm=g(m);if(gm<0)a=m;else b=m;}return (a+b)/2;}
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const NF=(d)=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let m=x/Math.pow(10,e);if(Math.abs(+m.toFixed(d))>=10){m/=10;e++;}return (NF(d).format(m)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−');}
+function fmt(x,sig=3){if(x===null||!isFinite(x))return '—';const ax=Math.abs(x);return (ax>=0.01&&ax<1e5)||x===0?num(x,sig):sci(x,1);}
+function unitFmt(v,units){for(const [f,u] of units){if(Math.abs(v)>=f*0.9999)return num(v/f)+' '+u;}return null;}
+const fLen=m=>!isFinite(m)?'—':unitFmt(m,[[1e3,'km'],[1,'m'],[1e-3,'mm'],[1e-6,'µm'],[1e-9,'nm'],[1e-12,'pm']])||sci(m)+' m';
+const fT=T=>(T>=1e4||T<1)?sci(T,1)+' K':num(T,3)+' K';
+const pct=x=>x>0.9999?'> 99,99 %':x<1e-98?'≈ 0 %':x<1e-4?sci(100*x,1)+' %':num(100*x,3)+' %';
+
+/* ----- Beispiele ----- */
+const EX=[
+  {id:'cmb',name:'Rekombination im frühen Universum (z ≈ 1100)',el:'H',n:4e8,T:3700},
+  {id:'phot',name:'Sonnenphotosphäre',el:'H',n:1e23,T:5800},
+  {id:'flame',name:'Natriumdampf in einer Flamme',el:'Na',n:1e18,T:2300},
+  {id:'arc',name:'Argon-Lichtbogen bei 1 bar',el:'Ar',n:5e23,T:1.5e4},
+  {id:'heIon',name:'Helium in Sternatmosphären',el:'He',n:1e21,T:3e4},
+  {id:'cor',name:'Sonnenkorona (kein Gleichgewicht!)',el:'H',n:1e14,T:1.5e6},
+  {id:'jup',name:'Jupiter-Inneres (metallischer Wasserstoff)',el:'H',n:1e30,T:1.5e4},
+  {id:'sun',name:'Sonnenkern',el:'H',n:6e31,T:1.57e7}
+];
+const EXM=Object.fromEntries(EX.map(e=>[e.id,e]));
+const N0=8,N1=32,T0=3,T1=7;
+const DEF={lgN:23,lgT:Math.log10(5800),el:'H',ipd:true,fd:false,sel:'phot'};
+let st=Object.assign({},DEF),R=null,dirty=true,mapDirty=true,dragging=false;
+
+/* ----- Regler ----- */
+const PDEF={
+  lgN:{box:'#ctl-n',lab:'Kerndichte <i>n</i> (Atome + Ionen)',min:N0,max:N1,step:0.05,fmt:v=>sci(Math.pow(10,v),1)+' m⁻³',hint:'Luft am Boden: 2,5·10²⁵ m⁻³'},
+  lgT:{box:'#ctl-T',lab:'Temperatur <i>T</i>',min:T0,max:T1,step:0.01,fmt:v=>fT(Math.pow(10,v)),hint:'1 eV entspricht 11 600 K'}
+};
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
+    w.innerHTML=`<div class="row"><label for="p-${k}">${d.lab}</label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}" min="${d.min}" max="${d.max}" step="${d.step}"><div class="hint">${d.hint}</div>`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{st[k]=parseFloat(inp.value);st.sel=null;sync();});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  const sel=$('#example');sel.innerHTML='<option value="">— eigene Werte —</option>'+EX.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  sel.addEventListener('change',()=>{if(sel.value)selectEx(sel.value);else{st.sel=null;sync();}});
+  document.querySelectorAll('#segEl button').forEach(b=>b.addEventListener('click',()=>{if(st.el!==b.dataset.el){st.el=b.dataset.el;st.sel=null;mapDirty=true;sync();}}));
+  $('#o-ipd').addEventListener('change',e=>{st.ipd=e.target.checked;mapDirty=true;sync();});
+  $('#o-fd').addEventListener('change',e=>{st.fd=e.target.checked;mapDirty=true;sync();});
+  $('#defaults').addEventListener('click',()=>{const m=st.el!==DEF.el||st.ipd!==DEF.ipd||st.fd!==DEF.fd;st=Object.assign({},DEF);if(m)mapDirty=true;sync();});
+}
+function selectEx(id){const e=EXM[id];if(st.el!==e.el)mapDirty=true;st.el=e.el;st.lgN=Math.log10(e.n);st.lgT=Math.log10(e.T);st.sel=id;sync();}
+function sync(){st.lgN=Math.max(N0,Math.min(N1,st.lgN));st.lgT=Math.max(T0,Math.min(T1,st.lgT));
+  for(const k in PDEF){$('#p-'+k).value=st[k];$('#o-'+k).textContent=PDEF[k].fmt(st[k]);}
+  $('#example').value=st.sel||'';$('#o-ipd').checked=st.ipd;$('#o-fd').checked=st.fd;
+  document.querySelectorAll('#segEl button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.el===st.el)));
+  dirty=true;}
+
+/* ----- Aufgaben ----- */
+const TASKS=[
+  {t:'<b>Warum so kalt?</b> Wasserstoff im frühen Universum ist bei 3700 K, also <i class="m">k</i><sub>B</sub><i class="m">T</i> ≈ 0,3 eV, noch zur Hälfte ionisiert, obwohl die Ionisationsenergie 13,6 eV beträgt. Erkläre das mit dem Faktor 1/(<i class="m">n</i><sub>e</sub><i class="m">λ</i><sub>th</sub><sup>3</sup>). Erst darunter wird das Universum durchsichtig (kosmische Hintergrundstrahlung).',ex:'cmb',lab:'Einstellen'},
+  {t:'<b>Dichte zählt.</b> Bleib bei 10<sup>4</sup> K und ändere die Dichte. Folge der Linie „50 % ionisiert“ in der Karte: Um wie viel steigt die Ionisationstemperatur pro Dekade Dichte? Warum ionisiert ein dünneres Gas leichter?',set:{el:'H',lgN:20,lgT:4}},
+  {t:'<b>Sonnenphotosphäre.</b> Bei 5800 K ist der Wasserstoff nur zu etwa 0,02 % ionisiert. Wie heiß müsste die Photosphäre sein, damit er zur Hälfte ionisiert ist? Lies es in der Kurve unten links ab.',ex:'phot'},
+  {t:'<b>Mehrere Stufen.</b> Bei Helium und Argon folgen die Ionisationsstufen nacheinander. Gibt es Temperaturen, bei denen fast nur He⁺ vorliegt? Vergleiche die Abstände der Stufen in der Kurve mit den Ionisationsenergien.',ex:'heIon'},
+  {t:'<b>Alkali in der Flamme.</b> Natrium hat mit 5,1 eV eine sehr kleine Ionisationsenergie. Wie stark ist es in einer 2300 K heißen Flamme ionisiert? Deshalb setzt man Alkalimetalle zu, wenn eine Flamme oder ein MHD-Generator leitfähig werden soll.',ex:'flame'},
+  {t:'<b>Druckionisation.</b> Im Jupiter-Inneren ist es für die Saha-Gleichung viel zu kalt. Schalte die Kontinuumsabsenkung aus und wieder ein. Vergleiche im Teilchenbild die Bahnen der Elektronen mit dem Abstand der Kerne. In der Karte wird die ganze rechte Seite ionisiert, unabhängig von der Temperatur.',ex:'jup'},
+  {t:'<b>Sonnenkern.</b> Ohne Kontinuumsabsenkung sagt die Saha-Gleichung bei 1,6·10<sup>7</sup> K nur etwa 85 % Ionisation voraus. Warum ist das falsch? Wie groß ist Δ<i class="m">I</i> im Vergleich zu 13,6 eV?',ex:'sun'},
+  {t:'<b>Grenzen des Modells.</b> Schalte im Jupiter-Inneren „Elektronen als Fermi-Gas“ ein. Das Pauli-Prinzip blockiert die freien Plätze, und die Ionisation bricht wieder ein. Welcher Effekt gewinnt in Wirklichkeit? Hier hilft nur eine genauere Theorie (z. B. Dichtefunktional-Molekulardynamik). Und die Korona: Warum gilt die Saha-Gleichung dort gar nicht?',ex:'jup',fd:true}
+];
+(function(){const ol=$('#tasks');TASKS.forEach(t=>{const li=document.createElement('li');
+  li.innerHTML=`<p>${t.t}</p><button class="btn" type="button">${t.lab||'Einstellen'}</button>`;
+  li.querySelector('button').addEventListener('click',()=>{const fd=!!t.fd;if(st.fd!==fd||!st.ipd)mapDirty=true;st.fd=fd;st.ipd=true;
+    if(t.ex)selectEx(t.ex);else{if(t.set.el!==st.el)mapDirty=true;st=Object.assign({},st,t.set,{sel:null});sync();}});
+  ol.appendChild(li);});})();
+
+/* ----- Zeichenhilfen ----- */
+let C={},dpr=1;
+function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={stage:g('--stage'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),accent:g('--accent'),onAccent:g('--on-accent'),neu:g('--c-neu'),ion:g('--c-ion'),
+    s:[g('--c-s0'),g('--c-s1'),g('--c-s2'),g('--c-s3')],e:g('--c-e'),nuc:g('--c-nuc'),orb:g('--c-orb'),ipd:g('--c-ipd'),deg:g('--c-deg'),kt:g('--c-kt'),mono:g('--f-mono')||'monospace',ui:g('--f-ui')||'sans-serif'};}
+function ctxOf(cv){const r=cv.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function rgb(col){if(col.startsWith('#')&&col.length===7){const n=parseInt(col.slice(1),16);return [n>>16,(n>>8)&255,n&255];}return [128,128,128];}
+function hexA(col,a){const [r,g,b]=rgb(col);return `rgba(${r},${g},${b},${a})`;}
+function halo(c,txt,x,y){c.save();c.strokeStyle=hexA(C.stage,0.92);c.lineWidth=4;c.lineJoin='round';c.strokeText(txt,x,y);c.restore();c.fillText(txt,x,y);}
+function rich(c,s,x,y,o){o=o||{};const sz=o.size||11.5,wt=o.weight||500,parts=[],re=/([_^])\{([^}]*)\}/g;let last=0,m;
+  while((m=re.exec(s))){if(m.index>last)parts.push([s.slice(last,m.index),0]);parts.push([m[2],m[1]==='_'?1:-1]);last=re.lastIndex;}
+  if(last<s.length)parts.push([s.slice(last),0]);
+  const fnt=k=>`${wt} ${k?sz*0.74:sz}px ${C.ui}`;let W=0;for(const q of parts){c.font=fnt(q[1]);W+=c.measureText(q[0]).width;}
+  const al=o.align||'left';let px=al==='center'?x-W/2:al==='right'?x-W:x;const ta=c.textAlign;c.textAlign='left';
+  for(const q of parts){c.font=fnt(q[1]);const dy=q[1]===1?sz*0.3:q[1]===-1?-sz*0.42:0;if(o.halo)halo(c,q[0],px,y+dy);else c.fillText(q[0],px,y+dy);px+=c.measureText(q[0]).width;}
+  c.textAlign=ta;return W;}
+
+/* ----- Karte ----- */
+let MAP={key:'',img:null,lines:null,ref:null,busy:false},M=null;
+const GW=150,GH=70;
+function mapKey(){return `${st.el}|${st.ipd}|${st.fd}`;}
+function computeMap(){const key=mapKey(),Z=EL[st.el].I.length,z=new Float32Array(GW*GH);
+  for(let j=0;j<GH;j++){const T=Math.pow(10,T1-(j+0.5)/GH*(T1-T0));for(let i=0;i<GW;i++){const n=Math.pow(10,N0+(i+0.5)/GW*(N1-N0));z[j*GW+i]=solve(n,T,st.el,st.ipd,st.fd).zbar/Z;}}
+  const NL=90,lines=[],ref=[];
+  for(let s=1;s<=Z;s++){const L=[],Lr=[];for(let k=0;k<=NL;k++){const lg=N0+(N1-N0)*k/NL,n=Math.pow(10,lg);L.push([lg,halfT(n,st.el,s,st.ipd,st.fd,T0-1,T1+1)]);
+    if(st.ipd||st.fd)Lr.push([lg,halfT(n,st.el,s,false,false,T0-1,T1+1)]);}lines.push(L);ref.push(Lr);}
+  MAP={key,z,lines,ref,img:null};}
+function mapImage(){if(MAP.img&&MAP.img.col===C.ion+C.neu)return MAP.img.cv;const cv=document.createElement('canvas');cv.width=GW;cv.height=GH;const cx=cv.getContext('2d'),img=cx.createImageData(GW,GH),d=img.data;
+  const a=rgb(C.neu),b=rgb(C.ion);for(let k=0;k<GW*GH;k++){const t=Math.pow(MAP.z[k],0.8);for(let q=0;q<3;q++)d[4*k+q]=a[q]*(1-t)+b[q]*t;d[4*k+3]=255;}
+  cx.putImageData(img,0,0);MAP.img={cv,col:C.ion+C.neu};return cv;}
+function drawMap(){if(!R)return;const {c,W,H}=ctxOf($('#map'));const L=60,Rr=58,T=10,B=42,w=W-L-Rr,h=H-T-B;
+  const X=lg=>L+(lg-N0)/(N1-N0)*w,Y=lg=>T+h-(lg-T0)/(T1-T0)*h;M={L,T,w,h};
+  if(MAP.key===mapKey()){c.imageSmoothingEnabled=true;c.drawImage(mapImage(),L,T,w,h);}
+  else{c.fillStyle=C.neu;c.fillRect(L,T,w,h);c.fillStyle=C.muted;c.font=`13px ${C.ui}`;c.textAlign='center';c.textBaseline='middle';c.fillText('Karte wird berechnet …',L+w/2,T+h/2);}
+  c.strokeStyle=hexA(C.muted,0.18);c.lineWidth=1;for(let k=N0;k<=N1;k+=2){c.beginPath();c.moveTo(X(k)+0.5,T);c.lineTo(X(k)+0.5,T+h);c.stroke();}
+  for(let k=T0;k<=T1;k+=0.5){c.beginPath();c.moveTo(L,Y(k)+0.5);c.lineTo(L+w,Y(k)+0.5);c.stroke();}
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  const line=(pts,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;for(const p of pts){if(p[1]===null){pen=false;continue;}const x=X(p[0]),y=Y(p[1]);pen?c.lineTo(x,y):c.moveTo(x,y);pen=true;}c.stroke();c.setLineDash([]);};
+  // Entartung der Elektronen (bei vollständiger Ionisation) und Γ = 1
+  const deg=[],gam=[];for(let k=0;k<=100;k++){const lg=N0+(N1-N0)*k/100,n=Math.pow(10,lg),Z=EL[st.el].I.length,ne=n*Z;deg.push([lg,Math.log10(EFC*Math.pow(ne,2/3)/KB)]);gam.push([lg,Math.log10(KC/(Math.cbrt(3/(4*Math.PI*ne))*KB))]);}
+  line(deg,C.deg,1.4,[2,3]);line(gam,C.ipd,1.4,[2,3]);
+  if(MAP.key===mapKey()){MAP.ref.forEach(Lr=>{if(Lr.length)line(Lr,C.ink,1.4,[6,4]);});MAP.lines.forEach((Lp,s)=>line(Lp,C.s[(s+1)%4],2.6));}
+  c.restore();
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.font=`11px ${C.mono}`;c.fillStyle=C.muted;c.textAlign='center';c.textBaseline='top';for(let k=N0;k<=N1;k+=2)c.fillText('10'+sup(k),X(k),T+h+5);
+  rich(c,'Kerndichte n (m⁻³)',L+w/2,T+h+22,{size:12,align:'center'});
+  c.textAlign='right';c.textBaseline='middle';for(let k=T0;k<=T1;k++)c.fillText('10'+sup(k),L-6,Y(k));
+  c.textAlign='left';const evK=Math.log10(QE/KB);for(const ev of [0.1,1,10,100]){const y=Y(Math.log10(ev)+evK);if(y>T&&y<T+h){c.fillText(String(ev).replace('.',','),L+w+6,y);}}
+  c.save();c.translate(14,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.font=`12px ${C.ui}`;c.fillText('Temperatur T (K)',0,0);c.restore();
+  c.save();c.translate(W-12,T+h/2);c.rotate(Math.PI/2);c.textAlign='center';c.textBaseline='middle';rich(c,'k_{B}T (eV)',0,0,{size:12,align:'center'});c.restore();
+  // Beschriftung der Hilfslinien
+  const tag=(pts,lg,txt,col,dy)=>{const p=pts.reduce((b,q)=>Math.abs(q[0]-lg)<Math.abs(b[0]-lg)?q:b);if(p[1]===null)return;const y=Y(p[1]);if(y<T+10||y>T+h-6)return;c.fillStyle=col;c.textBaseline='bottom';rich(c,txt,X(p[0]),y+(dy||-3),{size:11,weight:600,halo:true,align:'center'});};
+  tag(deg,29.5,'Elektronen entartet ↓',C.deg,-3);tag(gam,25.6,'Γ = 1',C.ipd,-3);
+  if(MAP.key===mapKey()){MAP.lines.forEach((Lp,s)=>{const lab=EL[st.el].sym[s+1]+' zu 50 %';const k=Lp.findIndex(p=>p[0]>12);if(k>=0)tag(Lp,Lp[k][0],lab,C.s[(s+1)%4],-4);});}
+  // Beispiele derselben Sorte
+  c.font=`11px ${C.ui}`;for(const e of EX){if(e.el!==st.el)continue;const x=X(Math.log10(e.n)),y=Y(Math.log10(e.T));if(x<L||x>L+w||y<T||y>T+h)continue;
+    c.beginPath();c.arc(x,y,4,0,2*Math.PI);c.fillStyle=e.id===st.sel?C.accent:C.ink;c.fill();c.strokeStyle=C.stage;c.lineWidth=1.5;c.stroke();
+    c.fillStyle=C.ink;c.textAlign=x>L+w-140?'right':'left';c.textBaseline='middle';halo(c,e.name.split(' (')[0],x+(x>L+w-140?-8:8),y);}
+  // Punkt
+  const px=X(st.lgN),py=Y(st.lgT);c.strokeStyle=C.accent;c.lineWidth=2.5;c.beginPath();c.arc(px,py,8,0,2*Math.PI);c.stroke();c.fillStyle=C.accent;c.beginPath();c.arc(px,py,2.5,0,2*Math.PI);c.fill();
+  const t=`ionisiert: ${num(100*R.zbar/R.Z,3)} %`;c.font=`600 12px ${C.ui}`;const tw=c.measureText(t).width+14;let tx=px+14,ty=py-30;if(tx+tw>L+w)tx=px-14-tw;if(ty<T+2)ty=py+14;
+  c.fillStyle=C.accent;c.fillRect(tx,ty,tw,20);c.fillStyle=C.onAccent||'#fff';c.textAlign='left';c.textBaseline='middle';c.fillText(t,tx+7,ty+10);
+}
+const mapCv=$('#map');
+function ptFromXY(x,y){st.lgN=N0+(x-M.L)/M.w*(N1-N0);st.lgT=T0+(M.T+M.h-y)/M.h*(T1-T0);st.sel=null;sync();}
+mapCv.addEventListener('pointerdown',e=>{if(!M)return;const r=mapCv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;if(x<M.L||x>M.L+M.w||y<M.T||y>M.T+M.h)return;
+  mapCv.focus({preventScroll:true});dragging=true;mapCv.setPointerCapture(e.pointerId);ptFromXY(x,y);});
+mapCv.addEventListener('pointermove',e=>{if(!dragging||!M)return;const r=mapCv.getBoundingClientRect();ptFromXY(Math.max(M.L,Math.min(M.L+M.w,e.clientX-r.left)),Math.max(M.T,Math.min(M.T+M.h,e.clientY-r.top)));});
+['pointerup','pointercancel'].forEach(ev=>mapCv.addEventListener(ev,()=>{dragging=false;}));
+mapCv.addEventListener('keydown',e=>{const s=e.shiftKey?0.5:0.05;let u=true;
+  if(e.key==='ArrowLeft')st.lgN-=s;else if(e.key==='ArrowRight')st.lgN+=s;else if(e.key==='ArrowUp')st.lgT+=s/2;else if(e.key==='ArrowDown')st.lgT-=s/2;else u=false;
+  if(u){e.preventDefault();st.sel=null;sync();}});
+
+/* ----- Anteile gegen T ----- */
+function drawFrac(){if(!R)return;const {c,W,H}=ctxOf($('#frac'));const L=40,Rr=10,T=10,B=32,w=W-L-Rr,h=H-T-B;
+  const X=lg=>L+(lg-T0)/(T1-T0)*w,Y=v=>T+h-v*h,n=Math.pow(10,st.lgN),Z=R.Z,K=120;
+  const rows=[],rowsRef=[];for(let k=0;k<=K;k++){const lg=T0+(T1-T0)*k/K;rows.push(solve(n,Math.pow(10,lg),st.el,st.ipd,st.fd).x);if(st.ipd||st.fd)rowsRef.push(solve(n,Math.pow(10,lg),st.el,false,false).x);}
+  c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;c.textAlign='right';c.textBaseline='middle';
+  for(let v=0;v<=1;v+=0.25){c.strokeStyle=C.grid;c.lineWidth=1;c.beginPath();c.moveTo(L,Y(v));c.lineTo(L+w,Y(v));c.stroke();c.fillText(NF(2).format(v),L-4,Y(v));}
+  c.textAlign='center';c.textBaseline='top';for(let k=T0;k<=T1;k++){c.strokeStyle=C.grid;c.beginPath();c.moveTo(X(k),T);c.lineTo(X(k),T+h);c.stroke();c.fillText('10'+sup(k),X(k),T+h+4);}
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);c.fillStyle=C.muted;rich(c,`T (K) bei n = ${sci(n,1)} m⁻³`,L+w/2,T+h+17,{size:11,align:'center'});
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  for(let z=0;z<=Z;z++){if(rowsRef.length){c.strokeStyle=hexA(C.s[z%4],0.6);c.lineWidth=1.3;c.setLineDash([5,4]);c.beginPath();rowsRef.forEach((x,k)=>{const px=X(T0+(T1-T0)*k/K),py=Y(x[z]);k?c.lineTo(px,py):c.moveTo(px,py);});c.stroke();c.setLineDash([]);}
+    c.strokeStyle=C.s[z%4];c.lineWidth=2.6;c.beginPath();rows.forEach((x,k)=>{const px=X(T0+(T1-T0)*k/K),py=Y(x[z]);k?c.lineTo(px,py):c.moveTo(px,py);});c.stroke();
+    let kb=0,vb=-1;rows.forEach((x,k)=>{if(x[z]>vb){vb=x[z];kb=k;}});if(vb>0.3){c.fillStyle=C.s[z%4];c.font=`600 11.5px ${C.ui}`;c.textAlign='center';c.textBaseline='bottom';halo(c,EL[st.el].sym[z],X(T0+(T1-T0)*kb/K),Y(vb)-3);}}
+  c.restore();
+  const xc=X(st.lgT);c.strokeStyle=C.accent;c.lineWidth=1.5;c.setLineDash([3,3]);c.beginPath();c.moveTo(xc,T);c.lineTo(xc,T+h);c.stroke();c.setLineDash([]);
+  const hT=halfT(n,st.el,1,st.ipd,st.fd,T0-1,T1+1);
+  $('#fracNote').innerHTML=(hT!==null&&hT>=T0-0.5&&hT<=T1+0.5?`Bei dieser Dichte ist ${EL[st.el].name} bei <b>${fT(Math.pow(10,hT))}</b> zur Hälfte ionisiert, also bei k<sub>B</sub>T = ${num(KB*Math.pow(10,hT)/QE,2)} eV = ${num(KB*Math.pow(10,hT)/(EL[st.el].I[0]*QE),2)} I<sub>1</sub>. `:hT!==null&&hT<T0?'Bei dieser Dichte ist das Gas im ganzen Bereich ionisiert. ':'')+(rowsRef.length?'Gestrichelt: einfache Saha-Gleichung ohne die gewählten Korrekturen.':'');
+}
+
+/* ----- Teilchenbild ----- */
+const NP=36;let parts=null,els=[];
+function initParts(){parts=[];const g=6;for(let i=0;i<g;i++)for(let j=0;j<g;j++){parts.push({x:(i+0.5+(Math.random()-0.5)*0.6)/g,y:(j+0.5+(Math.random()-0.5)*0.6)/g,u:Math.random(),ph:Math.random()*6.28});}}
+function drawPic(dt){if(!R)return;const {c,W,H}=ctxOf($('#pic'));if(!parts)initParts();
+  const sz=Math.min(W,H-26)-6,ox=(W-sz)/2,oy=3,Z=R.Z;c.fillStyle=C.stage;c.fillRect(ox,oy,sz,sz);
+  // Stufe je Teilchen aus den Anteilen (feste Reihenfolge, damit sich das Bild nur ändert, wenn sich die Anteile ändern)
+  const cum=[];let s=0;for(let z=0;z<=Z;z++){s+=R.x[z];cum.push(s);}
+  const spacing=sz/6,aPx=spacing,scale=aPx/R.a;   // ein Gitterabstand ≈ mittlerer Kernabstand
+  let nfree=0;c.save();c.beginPath();c.rect(ox,oy,sz,sz);c.clip();
+  for(const p of parts){let z=0;while(z<Z&&p.u>cum[z])z++;p.z=z;nfree+=z;
+    const x=ox+p.x*sz,y=oy+p.y*sz;
+    if(z<Z){const rr=AB*(z+1)*13.6/EL[st.el].I[z]*scale,r=Math.max(3,rr);
+      c.strokeStyle=hexA(C.orb,0.55);c.lineWidth=1.2;c.fillStyle=hexA(C.orb,rr>3?0.12:0.25);c.beginPath();c.arc(x,y,r,0,2*Math.PI);c.fill();c.stroke();
+      p.ph+=dt*2;const ex=x+r*Math.cos(p.ph),ey=y+r*Math.sin(p.ph);c.fillStyle=C.e;c.beginPath();c.arc(ex,ey,2.4,0,2*Math.PI);c.fill();}
+    c.fillStyle=z>0?C.s[z%4]:C.nuc;c.beginPath();c.arc(x,y,3.6,0,2*Math.PI);c.fill();
+    if(z>0){c.fillStyle=C.s[z%4];c.font=`600 10px ${C.ui}`;c.textAlign='left';c.textBaseline='bottom';c.fillText(z>1?z+'+':'+',x+4,y-2);}}
+  // freie Elektronen
+  while(els.length<nfree)els.push({x:Math.random(),y:Math.random(),a:Math.random()*6.28});els.length=Math.min(els.length,nfree);
+  c.fillStyle=C.e;for(const q of els){q.a+=(Math.random()-0.5)*0.6;q.x=(q.x+Math.cos(q.a)*0.15*dt+1)%1;q.y=(q.y+Math.sin(q.a)*0.15*dt+1)%1;c.beginPath();c.arc(ox+q.x*sz,oy+q.y*sz,2.2,0,2*Math.PI);c.fill();}
+  c.restore();c.strokeStyle=C.line;c.lineWidth=1;c.strokeRect(ox+0.5,oy+0.5,sz-1,sz-1);
+  c.font=`11px ${C.ui}`;c.fillStyle=C.muted;c.textAlign='center';c.textBaseline='top';c.fillText(`Bildbreite ≈ 6 Kernabstände = ${fLen(6*R.a)}`,W/2,oy+sz+6);
+  const rB=AB*13.6/EL[st.el].I[0];
+  $('#picNote').innerHTML=`Blau: gebundenes Elektron auf seiner Bahn, rot: Elektronen. Bahnradius / Kernabstand = <b>${fmt(rB/R.a,2)}</b>. `+(rB/R.a<0.01?'Die Atome sind winzig gegen ihren Abstand (hier vergrößert gezeichnet).':rB/R.a>0.3?'Die Bahnen berühren sich: Gebundene Zustände werden unmöglich.':'');
+}
+
+/* ----- Energieniveaus ----- */
+function drawLev(){if(!R)return;const {c,W,H}=ctxOf($('#lev'));const E=EL[st.el],Z=R.Z,L=40,Rr=10,T=12,B=30,w=W-L-Rr,h=H-T-B;
+  const Imax=Math.max(...E.I)*1.12,Y=v=>T+h-v/Imax*h;
+  c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;c.textAlign='right';c.textBaseline='middle';
+  const stp=Imax>40?10:5;for(let v=0;v<=Imax;v+=stp){c.strokeStyle=C.grid;c.lineWidth=1;c.beginPath();c.moveTo(L,Y(v));c.lineTo(L+w,Y(v));c.stroke();c.fillText(String(v),L-4,Y(v));}
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.save();c.translate(10,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.font=`11px ${C.ui}`;c.fillText('Energie (eV)',0,0);c.restore();
+  const cw=w/Z;
+  for(let z=0;z<Z;z++){const x0=L+cw*z+cw*0.18,x1=L+cw*(z+1)-cw*0.18,I=E.I[z],dI=R.dI[z]/QE;
+    // gebundener Grundzustand bei 0, Kontinuum ab I − ΔI
+    c.fillStyle=hexA(C.s[(z+1)%4],0.13);c.fillRect(x0,T,x1-x0,Math.max(0,Y(Math.max(0,I-dI))-T));
+    c.strokeStyle=C.ink;c.lineWidth=2.5;c.beginPath();c.moveTo(x0,Y(0)-1);c.lineTo(x1,Y(0)-1);c.stroke();
+    c.strokeStyle=C.muted;c.lineWidth=1.3;c.setLineDash([4,3]);c.beginPath();c.moveTo(x0,Y(I));c.lineTo(x1,Y(I));c.stroke();c.setLineDash([]);
+    if(dI>0.01){const ye=Y(Math.max(0,I-dI));c.strokeStyle=C.ipd;c.lineWidth=2.2;c.beginPath();c.moveTo(x0,ye);c.lineTo(x1,ye);c.stroke();
+      const xm=(x0+x1)/2;c.beginPath();c.moveTo(xm,Y(I));c.lineTo(xm,ye);c.stroke();c.beginPath();c.moveTo(xm-4,ye-6);c.lineTo(xm,ye);c.lineTo(xm+4,ye-6);c.stroke();}
+    c.fillStyle=C.ink;c.font=`600 11px ${C.ui}`;c.textAlign='center';c.textBaseline='top';c.fillText(`${E.sym[z]} → ${E.sym[z+1]}`,(x0+x1)/2,T+h+5);
+    c.fillStyle=C.muted;c.font=`10.5px ${C.mono}`;c.textBaseline='bottom';halo(c,num(I,3)+' eV',(x0+x1)/2,Y(I)-2);
+    if(I-dI<=0){c.fillStyle=C.ipd;c.font=`600 10.5px ${C.ui}`;c.textBaseline='bottom';halo(c,'kein gebundener Zustand',(x0+x1)/2,Y(0)-6);}}
+  const kt=R.kT/QE;if(kt<Imax){c.strokeStyle=C.kt;c.lineWidth=1.8;c.setLineDash([7,4]);c.beginPath();c.moveTo(L,Y(kt));c.lineTo(L+w,Y(kt));c.stroke();c.setLineDash([]);c.fillStyle=C.kt;c.textBaseline='bottom';rich(c,'k_{B}T',L+4,Y(kt)-2,{size:11,weight:600,halo:true});}
+  $('#levNote').innerHTML=`k<sub>B</sub>T = ${num(kt,3)} eV. `+(st.ipd?`Absenkung ΔI<sub>1</sub> = <b>${num(R.dI[0]/QE,3)} eV</b> (orange): Das Kontinuum beginnt schon bei ${num(Math.max(0,E.I[0]-R.dI[0]/QE),3)} eV.`:'Kontinuumsabsenkung ausgeschaltet.');
+}
+
+/* ----- Kennzahlen und Status ----- */
+function updateKZ(){const E=EL[st.el],lD=R.lD,EF=EFC*Math.pow(R.ne,2/3);
+  let s=`<div class="gh">Zusammensetzung</div>`;for(let z=0;z<=R.Z;z++)s+=`<dt>${E.sym[z]}</dt><dd${R.x[z]>0.5?' class="hi"':''}>${pct(R.x[z])}</dd>`;
+  s+=`<dt>mittlere Ladung</dt><dd>${num(R.zbar,3)}</dd>
+  <div class="gh">Plasma</div>
+  <dt>Elektronendichte <i>n</i><sub>e</sub></dt><dd>${sci(R.ne,1)} m⁻³</dd>
+  <dt>Kernabstand <i>a</i></dt><dd>${fLen(R.a)}</dd>
+  <dt>Debye-Länge <i>λ</i><sub>D</sub></dt><dd>${fLen(lD)}</dd>
+  <dt>Absenkung Δ<i>I</i><sub>1</sub></dt><dd>${st.ipd?num(R.dI[0]/QE,3)+' eV':'aus'}</dd>
+  <dt>Entartung <i>k</i><sub>B</sub><i>T</i>/<i>E</i><sub>F</sub></dt><dd>${fmt(R.kT/EF,2)}</dd>
+  <dt>thermische Energie <i>k</i><sub>B</sub><i>T</i></dt><dd>${num(R.kT/QE,3)} eV</dd>
+  <dt><i>n</i><sub>e</sub><i>λ</i><sub>th</sub><sup>3</sup></dt><dd>${fmt(R.ne*Math.pow(HP*HP/(2*Math.PI*ME*R.kT),1.5),2)}</dd>`;
+  $('#kz').innerHTML=s;}
+function statusText(){const E=EL[st.el],f=R.zbar/R.Z,name=st.sel?`<b>${EXM[st.sel].name}:</b> `:'';let t;
+  if(f<1e-3)t=`<b>Neutrales Gas.</b> Nur ${pct(R.x.slice(1).reduce((a,b)=>a+b,0))} der ${E.name}atome sind ionisiert.`;
+  else if(f<0.1)t=`<b>Schwach ionisiert</b> (${pct(f)} der möglichen Elektronen frei).`;
+  else if(f<0.9)t=`<b>Teilweise ionisiert</b> (${pct(f)} der möglichen Elektronen frei).`;
+  else t=`<b>Plasma</b>: ${pct(f)} der betrachteten Elektronen sind frei.`;
+  const kt=R.kT/QE,I=E.I[0];if(R.x[0]<0.5&&kt<0.1*I)t+=` Und das bei k<sub>B</sub>T = ${num(kt,2)} eV, nur ${num(100*kt/I,2)} % der Ionisationsenergie.`;
+  if(st.ipd&&R.dI[0]/QE>=I)t+=' <b>Druckionisation:</b> Die Absenkung übersteigt die Ionisationsenergie, gebundene Zustände gibt es nicht mehr.';
+  else if(st.ipd&&R.dI[0]/QE>0.1*I)t+=` Die Kontinuumsabsenkung (${num(R.dI[0]/QE,2)} eV) erleichtert die Ionisation merklich.`;
+  if(st.sel==='cor')t+=' Achtung: In der Korona herrscht kein Gleichgewicht; Stoßionisation und Strahlungsrekombination ergeben dort einen anderen Ionisationsgrad (Koronagleichgewicht).';
+  $('#status').innerHTML=name+t;}
+function sw(col,dash,lw=2.4){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="${col}" stroke-width="${lw}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;}
+function box(a,b){return `<svg width="54" height="10" aria-hidden="true"><defs><linearGradient id="gi"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="54" height="10" rx="2" fill="url(#gi)"/></svg>`;}
+function buildLegend(){const it=[[box('var(--c-neu)','var(--c-ion)'),'Ionisationsgrad 0 → 100 %'],[sw('var(--c-s1)'),'50 % ionisiert (je Stufe)']];
+  if(st.ipd||st.fd)it.push([sw('var(--ink)','6 4',1.4),'ohne die gewählten Korrekturen']);
+  it.push([sw('var(--c-deg)','2 3',1.4),'Elektronen entartet (k<sub>B</sub>T = E<sub>F</sub>)'],[sw('var(--c-ipd)','2 3',1.4),'Kopplung Γ = 1']);
+  $('#legend').innerHTML=it.map(([s,t])=>`<span>${s}${t}</span>`).join('');}
+
+/* ----- Schleife ----- */
+let lastTs=0;
+function update(){readColors();R=solve(Math.pow(10,st.lgN),Math.pow(10,st.lgT),st.el,st.ipd,st.fd);updateKZ();statusText();buildLegend();drawMap();drawFrac();drawLev();}
+function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(dirty){dirty=false;update();if(mapDirty&&!MAP.busy){mapDirty=false;MAP.busy=true;setTimeout(()=>{computeMap();MAP.busy=false;drawMap();},20);}}
+  if(R)drawPic(dt);
+  requestAnimationFrame(frameLoop);}
+function redrawAll(){readColors();dpr=Math.min(2,window.devicePixelRatio||1);if(R){drawMap();drawFrac();drawLev();drawPic(0);}}
+for(const id of ['#map','#frac','#pic','#lev'])new ResizeObserver(redrawAll).observe($(id).parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+dpr=Math.min(2,window.devicePixelRatio||1);
+buildControls();
+{const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
+  if(h.includes('fd'))st.fd=true;if(h.includes('noipd'))st.ipd=false;
+  const id=h.find(k=>EXM[k]);if(id)selectEx(id);else selectEx('phot');}
+requestAnimationFrame(frameLoop);
+</script>
+
+</body>
+</html>
