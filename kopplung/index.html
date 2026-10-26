@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kopplungslabor</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  /* Layout wie die übrigen Labore: links Parameter, Mitte Simulation + Messung, rechts Physik und Aufgaben */
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --c-p:#1f5fc2; --c-md:#0b6767; --c-boltz:#b4480f; --c-lin:#4535b5; --c-melt:#2c8540; --c-trail:#c23a2b;
+  --c-gas:#e8edf1; --c-liq:#fbe3cf; --c-sol:#dcd7fb;
+  --hue-l:46%;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --c-p:#62a1ff; --c-md:#47b6ae; --c-boltz:#ffa36e; --c-lin:#b0a6ff; --c-melt:#5cc46a; --c-trail:#ff715f;
+    --c-gas:#141d24; --c-liq:#2e2016; --c-sol:#221f3d;
+    --hue-l:62%; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --c-p:#62a1ff; --c-md:#47b6ae; --c-boltz:#ffa36e; --c-lin:#b0a6ff; --c-melt:#5cc46a; --c-trail:#ff715f;
+  --c-gas:#141d24; --c-liq:#2e2016; --c-sol:#221f3d;
+  --hue-l:62%; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1720px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+header.top .units{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr) 350px;grid-template-areas:"params stage info";align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{grid-area:params;padding:12px 14px 14px}
+.stage{grid-area:stage;min-width:0;display:flex;flex-direction:column;gap:10px}
+.info{grid-area:info;padding:16px 18px;min-width:0}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i,dl.kz dt i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ctl-tip{font-size:11.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.ctl-tip kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+select.sel{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%;margin-bottom:8px}
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz dd.hi{font-weight:600;color:var(--accent)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.toolbar label.chk{display:flex;gap:5px;align-items:center;font-size:13px;cursor:pointer;user-select:none}
+.toolbar label.chk input{accent-color:var(--accent)}
+.toolbar select{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.status{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;min-height:2.9em}
+.status .tm{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.status .ph{font-size:13px;color:var(--muted)}
+.status .ph b{color:var(--ink);font-weight:600}
+.simwrap{position:relative;height:clamp(420px,58vh,660px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);align-items:center}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.transport .tempo{display:flex;align-items:center;gap:8px;flex:1;min-width:220px}
+.transport .tempo input{flex:1}
+.transport output{font-family:var(--f-mono);font-size:12.5px;min-width:112px;color:var(--muted)}
+.below{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.cwrap{position:relative;height:250px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.note b{color:var(--ink);font-weight:600}
+.info h3{font-family:var(--f-head);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;text-wrap:balance}
+.info p{margin:0 0 10px;max-width:65ch}
+.info b{font-weight:600}
+.formula{font-family:var(--f-math);font-size:17px;line-height:1.55;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 2px;margin:4px 0 12px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+.formula i{font-style:italic}
+.formula small{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.92em;line-height:1.15;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.frac>span:last-child{padding:0 3px}
+.info h4{font-family:var(--f-head);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 6px}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.tasks li:first-child{border-top:0}
+.tasks li p{margin:0}
+.tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
+.m{font-family:var(--f-math)}
+.foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
+@media (max-width:1280px){
+  .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
+  .below{grid-template-columns:minmax(0,1fr)}
+  .simwrap{height:clamp(320px,90vw,560px)}
+  header.top .units{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <h1>Kopplungslabor</h1>
+  <p class="sub">Vom Gas zum Coulomb-Kristall: was passiert, wenn die Kopplung Γ wächst</p>
+  <span class="units">2D-Molekulardynamik · Yukawa-Wechselwirkung · Längen in a · Zeiten in 1/ω<sub>p</sub></span>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Kopplung und Abschirmung</h2>
+    <div id="ctl-G"></div>
+    <div id="ctl-k"></div>
+    <div class="btns">
+      <button class="btn" type="button" id="cool">Langsam abkühlen</button>
+      <button class="btn" type="button" id="heat">Langsam aufheizen</button>
+    </div>
+    <h2 class="lab">Wärmebad</h2>
+    <div id="ctl-gam"></div>
+    <h2 class="lab">Neustart</h2>
+    <div class="btns">
+      <button class="btn" type="button" id="rand">zufällig verteilt</button>
+      <button class="btn" type="button" id="lat">als Gitter</button>
+    </div>
+    <p class="ctl-tip">Regler anklicken, dann mit <kbd>←</kbd> <kbd>→</kbd> fein verstellen. <kbd>Leertaste</kbd>: Start/Pause.</p>
+    <button class="btn" type="button" id="defaults">Standardwerte</button>
+    <hr class="sep">
+    <h2 class="lab">Was heißt das real?</h2>
+    <select class="sel" id="sys" aria-label="Reales System für die Umrechnung"></select>
+    <dl class="kz" id="real"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="toolbar">
+      <label class="chk">Färbung <select id="o-col">
+        <option value="ori" selected>Kristallorientierung</option><option value="ord">Ordnung |ψ₆|</option><option value="uni">einheitlich</option>
+      </select></label>
+      <label class="chk"><input type="checkbox" id="o-trail" checked> Spuren einzelner Teilchen</label>
+      <label class="chk"><input type="checkbox" id="o-rad"> Wechselwirkungsreichweite λ<sub>s</sub></label>
+    </div>
+    <div class="plotbox">
+      <div class="status"><span class="tm" id="tm"></span><span class="ph" id="ph" aria-live="polite"></span></div>
+      <div class="simwrap"><canvas class="full" id="sim" aria-label="Teilchen der zweidimensionalen Simulation"></canvas></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="transport">
+      <button class="btn primary" type="button" id="play">Pause</button>
+      <div class="tempo"><label for="tempo">Tempo</label><input type="range" id="tempo" min="0" max="100" step="1"><output id="tempoOut"></output></div>
+    </div>
+    <div class="below">
+      <div class="panel boxp">
+        <h2 class="lab">Paarkorrelation <span class="m" style="text-transform:none;letter-spacing:0"><i>g</i>(<i>r</i>)</span></h2>
+        <div class="cwrap"><canvas class="full" id="gr" aria-label="Paarkorrelationsfunktion aus der Simulation und zwei Näherungen"></canvas></div>
+        <div class="note" id="grNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Phasendiagramm und Messwerte</h2>
+        <div class="cwrap" style="height:190px"><canvas class="full" id="ph2" aria-label="Phasendiagramm Kopplung gegen Abschirmung mit Schmelzlinie"></canvas></div>
+        <dl class="kz" id="meas" style="margin-top:8px"></dl>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel info" id="info">
+    <h3>Stark gekoppelte Plasmen</h3>
+    <p>Simuliert wird eine Lage gleich geladener Teilchen, etwa Staubkörner in einer Gasentladung oder Ionen in einer Falle. Die leichten Elektronen und Ionen des umgebenden Plasmas schirmen ihre Ladung ab. Deshalb wechselwirken sie über das <b>Yukawa-Potential</b>, ein Coulomb-Potential, das auf der Abschirmlänge <i class="m">λ</i><sub>s</sub> abklingt.</p>
+    <div class="formula">
+      <div><i>u</i>(<i>r</i>) = <span class="frac"><span><i>Q</i><sup>2</sup></span><span>4π<i>ε</i><sub>0</sub><i>r</i></span></span> e<sup>−<i>r</i>/<i>λ</i><sub>s</sub></sup> &nbsp;&nbsp; <small>abgeschirmtes Coulomb-Potential</small></div>
+      <div><i>Γ</i> = <span class="frac"><span><i>Q</i><sup>2</sup></span><span>4π<i>ε</i><sub>0</sub><i>a</i> <i>k</i><sub>B</sub><i>T</i></span></span> &nbsp;&nbsp; <i>κ</i> = <span class="frac"><span><i>a</i></span><span><i>λ</i><sub>s</sub></span></span> &nbsp;&nbsp; <small><i>a</i> = (π<i>n</i>)<sup>−1/2</sup></small></div>
+      <div><i>g</i>(<i>r</i>) = <span class="frac"><span>Dichte im Abstand <i>r</i> von einem Teilchen</span><span>mittlere Dichte</span></span></div>
+      <div><i>g</i><sub>B</sub> = e<sup>−<i>u</i>/<i>k</i><sub>B</sub><i>T</i></sup> &nbsp;&nbsp; <i>g</i><sub>lin</sub> = 1 − <span class="frac"><span><i>u</i></span><span><i>k</i><sub>B</sub><i>T</i></span></span> &nbsp;&nbsp; <small>Näherungen</small></div>
+    </div>
+    <p>Die Kopplung <i class="m">Γ</i> vergleicht die Coulomb-Energie zweier Nachbarn mit der thermischen Energie. In der Landkarte der Plasmen ist das genau die Größe, die ideale von nicht-idealen Plasmen trennt.</p>
+    <p>Die <b>Paarkorrelation</b> <i class="m">g</i>(<i class="m">r</i>) zeigt, wie die Teilchen um ein herausgegriffenes Teilchen verteilt sind. Bei <i class="m">Γ</i> ≪ 1 entsteht nur ein kleines Korrelationsloch. Das beschreibt die linearisierte Näherung <i class="m">g</i><sub>lin</sub>, auf der auch die Debye-Hückel-Theorie beruht. Ab <i class="m">Γ</i> ≈ 1 wird <i class="m">g</i><sub>lin</sub> negativ und damit unsinnig. Der Boltzmann-Faktor <i class="m">g</i><sub>B</sub> bleibt zwar positiv, kennt aber nur Paare. Die Schalen aus Nachbarn, die in der Simulation entstehen, sind ein Vielteilcheneffekt.</p>
+    <p>Oberhalb der <b>Schmelzlinie</b> <i class="m">Γ</i><sub>m</sub>(<i class="m">κ</i>) ordnen sich die Teilchen zu einem Dreiecksgitter. Für ungeschirmte Teilchen in 2D liegt sie bei <i class="m">Γ</i> ≈ 137 (in 3D bei 175). Je stärker die Abschirmung, desto höher <i class="m">Γ</i><sub>m</sub>: Bei großem <i class="m">κ</i> spüren sich selbst Nachbarn kaum.</p>
+    <h4>Aufgaben</h4>
+    <ol class="tasks" id="tasks"></ol>
+  </aside>
+</div>
+<p class="foot">Modell: <i class="m">N</i> = 400 Teilchen der Masse <i class="m">m</i> und Ladung <i class="m">Q</i> in einer periodischen Box (20 × 20 Plätze eines Dreiecksgitters), Yukawa-Paarpotential mit Abschneideradius <i class="m">r</i><sub>c</sub> = min(1 + 9,2/<i class="m">κ</i>, halbe Boxbreite) <i class="m">a</i> und verschobener Energie. Längen in <i class="m">a</i> = (π<i class="m">n</i>)<sup>−1/2</sup>, Zeiten in 1/<i class="m">ω</i><sub>p</sub> mit <i class="m">ω</i><sub>p</sub> = (2<i class="m">Q</i><sup>2</sup>/(4π<i class="m">ε</i><sub>0</sub><i class="m">m a</i><sup>3</sup>))<sup>1/2</sup>. Langevin-Dynamik (BAOAB-Verfahren) mit Reibung <i class="m">γ</i> und passendem Zufallsantrieb, die Zieltemperatur folgt aus <i class="m">Γ</i>; das entspricht der Reibung der Staubteilchen am Neutralgas. Der Zeitschritt passt sich an <i class="m">Γ</i> an, damit auch nahe Stöße bei kleinem <i class="m">Γ</i> aufgelöst werden. <i class="m">g</i>(<i class="m">r</i>) wird laufend gemittelt (gleitender Mittelwert über etwa 15/<i class="m">ω</i><sub>p</sub>). Lokale Ordnung <i class="m">ψ</i><sub>6</sub> = Mittel von e<sup>6i<i class="m">θ</i></sup> über die Nachbarn bis 2,7 <i class="m">a</i>; die Farbe zeigt die Richtung des lokalen Gitters, die Sättigung |<i class="m">ψ</i><sub>6</sub>|. Diffusionskoeffizient aus der mittleren Verschiebung über 10/<i class="m">ω</i><sub>p</sub>. Schmelzlinie nach Hartmann u. a. (2005): <i class="m">Γ</i><sub>m</sub> = 131/(1 − 0,388<i class="m">κ</i><sup>2</sup> + 0,138<i class="m">κ</i><sup>3</sup> − 0,0138<i class="m">κ</i><sup>4</sup>). Mit 400 Teilchen und Abschneideradius sind die Ergebnisse qualitativ; kleine <i class="m">κ</i> nähern die reine Coulomb-Wechselwirkung nur an.</p>
+</div>
+
+<script>
+/*CORE-START*/
+// Einheiten: a = 1, Q²/(4πε0 a) = 1, m = 1 → Zeiteinheit τ = a·sqrt(m/E0), ω_p = √2/τ, k_BT = 1/Γ
+const COLS=20,ROWS=20,N=COLS*ROWS,DL=Math.sqrt(2*Math.PI/Math.sqrt(3)); // Gitterabstand bei n = 1/π
+const LX=COLS*DL,LY=ROWS*DL*Math.sqrt(3)/2,WP=Math.SQRT2;
+const meltG=k=>131/(1-0.388*k*k+0.138*k*k*k-0.0138*k*k*k*k);
+const mim=(d,L)=>d-L*Math.round(d/L), wrapc=(v,L)=>{v%=L;return v<0?v+L:v;};
+function gauss(){let u=0,v=0;while(u===0)u=Math.random();v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function createSim(P,mode){
+  const S={P,t:0,x:new Float64Array(N),y:new Float64Array(N),vx:new Float64Array(N),vy:new Float64Array(N),fx:new Float64Array(N),fy:new Float64Array(N),
+    ux:new Float64Array(N),uy:new Float64Array(N),epot:0,boost:mode==='rand'?6:0,
+    gr:{nb:140,rmax:7,acc:new Float64Array(140),w:0,lastT:-1},ps:null,snaps:[],D:null,trails:[]};
+  if(mode==='lat'){let k=0;for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){S.x[k]=(c+0.25+0.5*(r%2))*DL;S.y[k]=(r+0.5)*DL*Math.sqrt(3)/2;k++;}}
+  else{for(let k=0;k<N;k++){let ok=false,x,y,tries=0;while(!ok&&tries<200){x=Math.random()*LX;y=Math.random()*LY;ok=true;
+      for(let j=0;j<k;j++){const dx=mim(x-S.x[j],LX),dy=mim(y-S.y[j],LY);if(dx*dx+dy*dy<0.8){ok=false;break;}}tries++;}S.x[k]=x;S.y[k]=y;}}
+  const kT=1/P.G;for(let k=0;k<N;k++){S.vx[k]=Math.sqrt(kT)*gauss();S.vy[k]=Math.sqrt(kT)*gauss();S.ux[k]=S.x[k];S.uy[k]=S.y[k];}
+  for(let k=0;k<12;k++)S.trails.push({i:Math.floor((k+0.5)*N/12),p:[]});
+  setPot(S);forces(S);return S;
+}
+function setPot(S){const k=S.P.k;S.rc=Math.min(Math.min(LX,LY)/2-0.01,1+9.2/k);S.uc=Math.exp(-k*S.rc)/S.rc;}
+function forces(S){
+  const x=S.x,y=S.y,fx=S.fx,fy=S.fy,k=S.P.k,rc=S.rc,rc2=rc*rc,uc=S.uc;fx.fill(0);fy.fill(0);let ep=0;
+  const pair=(i,j)=>{const dx=mim(x[i]-x[j],LX),dy=mim(y[i]-y[j],LY),r2=dx*dx+dy*dy;if(r2>=rc2)return;
+    const r=Math.max(0.05,Math.sqrt(r2)),e=Math.exp(-k*r)/r,f=e*(1+k*r)/(r*r);ep+=e-uc;fx[i]+=f*dx;fy[i]+=f*dy;fx[j]-=f*dx;fy[j]-=f*dy;};
+  const ncx=Math.floor(LX/rc),ncy=Math.floor(LY/rc);
+  if(ncx<3||ncy<3){for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)pair(i,j);}
+  else{
+    if(!S.cell||S.cell.ncx!==ncx||S.cell.ncy!==ncy)S.cell={ncx,ncy,head:new Int32Array(ncx*ncy),next:new Int32Array(N)};
+    const {head,next}=S.cell;head.fill(-1);
+    for(let i=0;i<N;i++){const cx=Math.min(ncx-1,Math.floor(x[i]/LX*ncx)),cy=Math.min(ncy-1,Math.floor(y[i]/LY*ncy)),c=cy*ncx+cx;next[i]=head[c];head[c]=i;}
+    const nb=[[0,0],[1,0],[1,1],[0,1],[-1,1]];
+    for(let cy=0;cy<ncy;cy++)for(let cx=0;cx<ncx;cx++){const c=cy*ncx+cx;
+      for(const [ox,oy] of nb){const c2=((cy+oy+ncy)%ncy)*ncx+((cx+ox+ncx)%ncx);
+        for(let i=head[c];i>=0;i=next[i]){for(let j=(c2===c?next[i]:head[c2]);j>=0;j=next[j])pair(i,j);}}}
+  }
+  S.epot=ep;
+}
+function dtOf(G){return Math.min(0.02,Math.max(4e-4,0.018*Math.pow(G,1.5)));}
+function step(S){
+  const P=S.P,dt=S.dt,h=dt/2,x=S.x,y=S.y,vx=S.vx,vy=S.vy,fx=S.fx,fy=S.fy;
+  const gam=S.boost>0?Math.max(P.gam,1):P.gam,c1=Math.exp(-gam*dt),c2=Math.sqrt((1/P.G)*(1-c1*c1));
+  for(let i=0;i<N;i++){
+    vx[i]+=h*fx[i];vy[i]+=h*fy[i];
+    let dx=h*vx[i],dy=h*vy[i];
+    vx[i]=c1*vx[i]+c2*gauss();vy[i]=c1*vy[i]+c2*gauss();
+    dx+=h*vx[i];dy+=h*vy[i];
+    x[i]=wrapc(x[i]+dx,LX);y[i]=wrapc(y[i]+dy,LY);S.ux[i]+=dx;S.uy[i]+=dy;}
+  forces(S);
+  for(let i=0;i<N;i++){vx[i]+=h*fx[i];vy[i]+=h*fy[i];}
+  S.t+=dt;if(S.boost>0)S.boost-=dt;
+}
+// Messungen
+function sampleGr(S){const g=S.gr,nb=g.nb,dr=g.rmax/nb,r2m=g.rmax*g.rmax,h=new Float64Array(nb);
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const dx=mim(S.x[i]-S.x[j],LX),dy=mim(S.y[i]-S.y[j],LY),r2=dx*dx+dy*dy;if(r2<r2m){const b=Math.floor(Math.sqrt(r2)/dr);if(b<nb)h[b]+=2;}}
+  const n=1/Math.PI,decay=0.94;
+  for(let b=0;b<nb;b++){const r=(b+0.5)*dr,norm=N*n*2*Math.PI*r*dr;g.acc[b]=decay*g.acc[b]+h[b]/norm;}
+  g.w=decay*g.w+1;}
+function grValues(S){const g=S.gr;return Array.from(g.acc,v=>g.w>0?v/g.w:0);}
+function psi6(S){const re=new Float64Array(N),im=new Float64Array(N),cnt=new Int32Array(N),rc2=2.7*2.7;
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const dx=mim(S.x[j]-S.x[i],LX),dy=mim(S.y[j]-S.y[i],LY),r2=dx*dx+dy*dy;if(r2<rc2){
+    const th=6*Math.atan2(dy,dx),c=Math.cos(th),s=Math.sin(th);re[i]+=c;im[i]+=s;re[j]+=c;im[j]+=s;cnt[i]++;cnt[j]++;}}  // e^{6i(θ+π)} = e^{6iθ}
+  let sr=0,si=0,sa=0;for(let i=0;i<N;i++){if(cnt[i]){re[i]/=cnt[i];im[i]/=cnt[i];}sr+=re[i];si+=im[i];sa+=Math.hypot(re[i],im[i]);}
+  S.ps={re,im,glob:Math.hypot(sr,si)/N,loc:sa/N};}
+function trackD(S){const sn=S.snaps,last=sn[sn.length-1];if(last&&S.t-last.t<1)return;
+  sn.push({t:S.t,x:Float64Array.from(S.ux),y:Float64Array.from(S.uy)});while(sn.length>11)sn.shift();
+  if(sn.length>=2){const a=sn[0],b=sn[sn.length-1];let m=0;for(let i=0;i<N;i++){const dx=b.x[i]-a.x[i],dy=b.y[i]-a.y[i];m+=dx*dx+dy*dy;}S.D=m/N/(4*(b.t-a.t));}}
+function kinT(S){let s=0;for(let i=0;i<N;i++)s+=S.vx[i]*S.vx[i]+S.vy[i]*S.vy[i];return s/(2*N);}
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const NF=(d)=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let m=x/Math.pow(10,e);if(Math.abs(+m.toFixed(d))>=10){m/=10;e++;}return (NF(d).format(m)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−');}
+function fmt(x,sig=3){if(x===null||!isFinite(x))return '—';const ax=Math.abs(x);return (ax>=0.01&&ax<1e5)||x===0?num(x,sig):sci(x,1);}
+function unitFmt(v,units){for(const [f,u] of units){if(Math.abs(v)>=f*0.9999)return num(v/f)+' '+u;}return null;}
+const fLen=m=>unitFmt(m,[[1,'m'],[1e-3,'mm'],[1e-6,'µm'],[1e-9,'nm']])||sci(m)+' m';
+const fTime=s=>unitFmt(s,[[1,'s'],[1e-3,'ms'],[1e-6,'µs'],[1e-9,'ns'],[1e-12,'ps']])||sci(s)+' s';
+const fT=T=>T>=1e4||T<0.01?sci(T,1)+' K':num(T,3)+' K';
+const fEv=e=>unitFmt(e,[[1e3,'keV'],[1,'eV'],[1e-3,'meV'],[1e-6,'µeV']])||sci(e)+' eV';
+
+/* ----- reale Systeme ----- */
+const QE=1.602176634e-19,KCO=8.9875517923e9,KB=1.380649e-23,U=1.66053906660e-27,ME=9.1093837015e-31;
+const SYS=[
+  {id:'dust',name:'Staubiges Plasma (Kunststoffkugeln, 9 µm)',Q:1e4*QE,a:0.26e-3,m:6.16e-13,k:1,Qt:'≈ 10⁴ e'},
+  {id:'ion',name:'Be⁺-Ionen in einer Penning-Falle',Q:QE,a:1e-5,m:9.012*U,k:0.3,Qt:'e'},
+  {id:'he',name:'Elektronen auf flüssigem Helium',Q:QE,a:1/Math.sqrt(Math.PI*1e13),m:ME,k:0.3,Qt:'e'}
+];
+let sys=SYS[0];
+
+/* ----- Parameter ----- */
+const PDEF={
+  G:{box:'#ctl-G',lab:'Kopplung <i>Γ</i>',min:-1,max:4,step:0.01,toP:v=>Math.pow(10,v),fromP:p=>Math.log10(p),fmt:p=>fmt(p,3),hint:'Coulomb-Energie der Nachbarn / thermische Energie'},
+  k:{box:'#ctl-k',lab:'Abschirmung <i>κ</i> = <i>a</i>/<i>λ</i><sub>s</sub>',min:0.3,max:3,step:0.05,toP:v=>v,fromP:p=>p,fmt:p=>NF(2).format(p),hint:'klein: fast reines Coulomb-Potential, groß: kurze Reichweite'},
+  gam:{box:'#ctl-gam',lab:'Reibung <i>γ</i>/<i>ω</i><sub>p</sub>',min:-3,max:0,step:0.05,toP:v=>Math.pow(10,v)*WP,fromP:p=>Math.log10(p/WP),fmt:p=>fmt(p/WP,2),hint:'Kopplung an das Wärmebad (Neutralgas). Klein: Teilchen laufen frei, groß: zäh'}
+};
+const DEF={G:20,k:1,gam:0.03*WP};
+let P=Object.assign({},DEF),S=null,running=true,tempo=1,ramp=0,colMode='ori',showTrail=true,showRad=false;
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
+    w.innerHTML=`<div class="row"><label for="p-${k}">${d.lab}</label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}" min="${d.min}" max="${d.max}" step="${d.step}"><div class="hint">${d.hint}</div>`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{P[k]=d.toP(parseFloat(inp.value));$('#o-'+k).textContent=d.fmt(P[k]);if(k==='G')setRamp(0);applyP();});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  syncControls();}
+function syncControls(){for(const k in PDEF){const d=PDEF[k],i=$('#p-'+k);i.value=d.fromP(P[k]);$('#o-'+k).textContent=d.fmt(P[k]);}}
+function applyP(){if(!S)return;S.P=Object.assign({},P);S.dt=dtOf(P.G);setPot(S);updateReal();}
+function reset(mode){S=createSim(Object.assign({},P),mode||'rand');S.dt=dtOf(P.G);psi6(S);updateReal();drawAll();}
+function setRamp(r){ramp=r;$('#cool').setAttribute('aria-pressed',String(r>0));$('#heat').setAttribute('aria-pressed',String(r<0));
+  $('#cool').textContent=r>0?'Abkühlen stoppen':'Langsam abkühlen';$('#heat').textContent=r<0?'Aufheizen stoppen':'Langsam aufheizen';}
+$('#cool').addEventListener('click',()=>{setRamp(ramp>0?0:1);setRunning(true);});
+$('#heat').addEventListener('click',()=>{setRamp(ramp<0?0:-1);setRunning(true);});
+$('#rand').addEventListener('click',()=>{reset('rand');setRunning(true);});
+$('#lat').addEventListener('click',()=>{reset('lat');setRunning(true);});
+$('#defaults').addEventListener('click',()=>{P=Object.assign({},DEF);setRamp(0);syncControls();setTempo(1);reset('rand');setRunning(true);});
+$('#o-col').addEventListener('change',e=>{colMode=e.target.value;buildLegend();drawSim();});
+$('#o-trail').addEventListener('change',e=>{showTrail=e.target.checked;drawSim();});
+$('#o-rad').addEventListener('change',e=>{showRad=e.target.checked;drawSim();});
+(function(){const s=$('#sys');s.innerHTML=SYS.map(q=>`<option value="${q.id}">${q.name}</option>`).join('');s.addEventListener('change',()=>{sys=SYS.find(q=>q.id===s.value);updateReal();});})();
+function updateReal(){
+  const E0=KCO*sys.Q*sys.Q/sys.a,tau=sys.a*Math.sqrt(sys.m/E0),T=E0/(KB*P.G),Tm=E0/(KB*meltG(P.k));
+  $('#real').innerHTML=`<dt>Ladung <i>Q</i></dt><dd>${sys.Qt}</dd>
+  <dt>Abstandsmaß <i>a</i></dt><dd>${fLen(sys.a)}</dd>
+  <dt>Coulomb-Energie <i>Q</i>²/(4π<i>ε</i>₀<i>a</i>)</dt><dd>${fEv(E0/QE)}</dd>
+  <dt>Temperatur bei diesem <i>Γ</i></dt><dd class="hi">${fT(T)}</dd>
+  <dt>Schmelztemperatur (<i>Γ</i><sub>m</sub>)</dt><dd>${fT(Tm)}</dd>
+  <dt>Abschirmlänge <i>λ</i><sub>s</sub> = <i>a</i>/<i>κ</i></dt><dd>${fLen(sys.a/P.k)}</dd>
+  <dt>Zeiteinheit 1/<i>ω</i><sub>p</sub></dt><dd>${fTime(tau/WP)}</dd>`;}
+
+/* ----- Tempo (Zeit 1/ω_p pro Sekunde) ----- */
+const tempoIn=$('#tempo');
+const tFromS=s=>0.1*Math.pow(100,s/100),sFromT=t=>Math.round(100*Math.log(t/0.1)/Math.log(100));
+function setTempo(t){tempo=t;tempoIn.value=sFromT(t);showTempo();}
+function showTempo(){$('#tempoOut').textContent=num(tempo,2)+' × normal';}
+tempoIn.addEventListener('input',()=>{tempo=tFromS(+tempoIn.value);showTempo();});
+const playBtn=$('#play');
+function setRunning(r){running=r;playBtn.textContent=r?'Pause':'Start';}
+playBtn.addEventListener('click',()=>setRunning(!running));
+document.addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea,button'))return;if(e.code==='Space'){e.preventDefault();playBtn.click();}});
+
+/* ----- Aufgaben ----- */
+const TASKS=[
+  {t:'<b>Schwache Kopplung.</b> Bei <i class="m">Γ</i> = 0,3 fliegen die Teilchen fast frei. <i class="m">g</i>(<i class="m">r</i>) zeigt nur ein kleines Loch bei kleinen Abständen: Gleich geladene Teilchen meiden sich. Alle drei Kurven stimmen überein. Wie breit ist das Loch im Vergleich zu <i class="m">a</i>?',set:{G:0.3},init:'rand',lab:'Einstellen'},
+  {t:'<b>Die Linearisierung versagt.</b> Erhöhe <i class="m">Γ</i> schrittweise auf 3. Ab wann wird <i class="m">g</i><sub>lin</sub> = 1 − <i class="m">u</i>/<i class="m">k</i><sub>B</sub><i class="m">T</i> negativ? Eine negative Wahrscheinlichkeitsdichte ist unmöglich: Genau hier verliert die Debye-Hückel-Theorie ihre Grundlage.',set:{G:3},init:'rand'},
+  {t:'<b>Flüssigkeit.</b> Bei <i class="m">Γ</i> = 40 entstehen in <i class="m">g</i>(<i class="m">r</i>) Maxima: Schalen von Nachbarn. Der Boltzmann-Faktor kennt sie nicht, weil er nur zwei Teilchen betrachtet. Verfolge die Spuren: Jedes Teilchen zittert eine Weile in einem Käfig aus Nachbarn und springt dann weiter.',set:{G:40},init:'rand'},
+  {t:'<b>Kristallisation.</b> Starte bei <i class="m">Γ</i> = 60 und kühle langsam ab. Bei welchem <i class="m">Γ</i> erscheinen einfarbige Bereiche (Kristallkörner)? Vergleiche mit der Schmelzlinie <i class="m">Γ</i><sub>m</sub> ≈ 178. An den Korngrenzen sitzen Defekte, wo die Orientierung springt.',set:{G:60},init:'rand',ramp:1},
+  {t:'<b>Schmelzen.</b> Ein perfekter Kristall bei <i class="m">Γ</i> = 400 wird langsam aufgeheizt. Beobachte die Ordnung ⟨|ψ<sub>6</sub>|⟩ und den Diffusionskoeffizienten: Wann beginnen die Teilchen zu wandern? Schmilzt der Kristall genau bei <i class="m">Γ</i><sub>m</sub>, oder lässt er sich etwas überhitzen?',set:{G:400},init:'lat',ramp:-1},
+  {t:'<b>Abschirmung schwächt die Kopplung.</b> Ein Kristall bei <i class="m">Γ</i> = 300 und <i class="m">κ</i> = 1. Erhöhe <i class="m">κ</i> langsam bis 2,5, ohne <i class="m">Γ</i> zu ändern. Was passiert und warum? Schalte die Reichweite λ<sub>s</sub> ein und vergleiche sie mit dem Abstand der Nachbarn.',set:{G:300,k:1},init:'lat',opts:{rad:true}},
+  {t:'<b>Wärmebad.</b> Wähle bei <i class="m">Γ</i> = 40 eine sehr kleine Reibung und dann eine große. Ändert sich <i class="m">g</i>(<i class="m">r</i>)? Und die Bewegung? Die Struktur hängt nur von <i class="m">Γ</i> und <i class="m">κ</i> ab, die Reibung bestimmt nur, wie schnell sich das Gleichgewicht einstellt.',set:{G:40,gam:0.002*WP},init:'rand'},
+  {t:'<b>Reale Systeme.</b> Wähle unten links „Elektronen auf flüssigem Helium“. Bei welcher Temperatur kristallisieren sie? Grimes und Adams haben diesen Wigner-Kristall 1979 bei etwa 0,5 K beobachtet. Und ein Staubkristall bei Raumtemperatur: Wie groß ist dort <i class="m">Γ</i>?',set:{G:137,k:0.3},init:'lat',sys:'he'}
+];
+(function(){const ol=$('#tasks');TASKS.forEach(t=>{const li=document.createElement('li');
+  li.innerHTML=`<p>${t.t}</p><button class="btn" type="button">${t.lab||'Einstellen'}</button>`;
+  li.querySelector('button').addEventListener('click',()=>{
+    P=Object.assign({},DEF,t.set);syncControls();setRamp(t.ramp||0);
+    showRad=!!(t.opts&&t.opts.rad);$('#o-rad').checked=showRad;
+    if(t.sys){sys=SYS.find(q=>q.id===t.sys);$('#sys').value=t.sys;}
+    reset(t.init);setRunning(true);});
+  ol.appendChild(li);});})();
+
+/* ----- Zeichnen ----- */
+let C={},dpr=1;
+function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={stage:g('--stage'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),accent:g('--accent'),p:g('--c-p'),md:g('--c-md'),boltz:g('--c-boltz'),lin:g('--c-lin'),
+    melt:g('--c-melt'),trail:g('--c-trail'),gas:g('--c-gas'),liq:g('--c-liq'),sol:g('--c-sol'),hueL:g('--hue-l')||'50%',mono:g('--f-mono')||'monospace',ui:g('--f-ui')||'sans-serif'};}
+function ctxOf(cv){const r=cv.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function rgb(col){if(col.startsWith('#')&&col.length===7){const n=parseInt(col.slice(1),16);return [n>>16,(n>>8)&255,n&255];}return [128,128,128];}
+function hexA(col,a){const [r,g,b]=rgb(col);return `rgba(${r},${g},${b},${a})`;}
+function ticks(lo,hi,n){const span=hi-lo,raw=span/n,p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p,st=(f<1.5?1:f<3?2:f<7?5:10)*p;
+  const out=[];for(let v=Math.ceil(lo/st)*st;v<=hi+st*1e-6;v+=st)out.push(Math.abs(v)<st*1e-6?0:v);return {v:out,st};}
+function tl(v,st){const d=Math.max(0,-Math.floor(Math.log10(st)+1e-9));return NF(d).format(v).replace('-','−');}
+
+function drawSim(){if(!S)return;const {c,W,H}=ctxOf($('#sim'));
+  const sc=Math.min((W-4)/LX,(H-4)/LY),bw=LX*sc,bh=LY*sc,ox=(W-bw)/2,oy=(H-bh)/2;
+  c.fillStyle=C.stage;c.fillRect(ox,oy,bw,bh);
+  c.save();c.beginPath();c.rect(ox,oy,bw,bh);c.clip();
+  // Reichweite
+  if(showRad){const i0=S.trails[5].i,R=sc/S.P.k;c.fillStyle=hexA(C.accent,0.08);c.strokeStyle=C.accent;c.setLineDash([6,4]);c.lineWidth=1.5;
+    for(const [dx,dy] of [[0,0],[bw,0],[-bw,0],[0,bh],[0,-bh]]){c.beginPath();c.arc(ox+S.x[i0]*sc+dx,oy+S.y[i0]*sc+dy,R,0,2*Math.PI);c.fill();c.stroke();}c.setLineDash([]);}
+  // Spuren
+  if(showTrail){c.strokeStyle=hexA(C.trail,0.75);c.lineWidth=1.6;
+    for(const tr of S.trails){const p=tr.p;if(p.length<2)continue;c.beginPath();let pen=false;
+      for(let k=0;k<p.length;k++){const X=ox+wrapc(p[k][0],LX)*sc,Y=oy+wrapc(p[k][1],LY)*sc;
+        if(pen&&k>0&&(Math.abs(wrapc(p[k][0],LX)-wrapc(p[k-1][0],LX))>LX/2||Math.abs(wrapc(p[k][1],LY)-wrapc(p[k-1][1],LY))>LY/2))pen=false;
+        pen?c.lineTo(X,Y):c.moveTo(X,Y);pen=true;}c.stroke();}}
+  // Teilchen
+  const rp=Math.max(2.2,0.36*sc),ps=S.ps;
+  for(let i=0;i<N;i++){let col=C.p;
+    if(ps&&colMode!=='uni'){const m=Math.min(1,Math.hypot(ps.re[i],ps.im[i]));
+      if(colMode==='ori'){const hue=((Math.atan2(ps.im[i],ps.re[i])/Math.PI*180+360)%360);const s=Math.round(Math.max(0,(m-0.35)/0.6)*85);col=`hsl(${hue.toFixed(0)},${Math.min(85,s)}%,${C.hueL})`;}
+      else{const t=Math.max(0,Math.min(1,(m-0.3)/0.65));col=`hsl(${(220-200*t).toFixed(0)},${(25+55*t).toFixed(0)}%,${C.hueL})`;}}
+    const X=ox+S.x[i]*sc,Y=oy+S.y[i]*sc;c.fillStyle=col;
+    for(const [dx,dy] of [[0,0],[bw,0],[-bw,0],[0,bh],[0,-bh]]){const xx=X+dx,yy=Y+dy;if(xx<ox-rp||xx>ox+bw+rp||yy<oy-rp||yy>oy+bh+rp)continue;c.beginPath();c.arc(xx,yy,rp,0,2*Math.PI);c.fill();}}
+  if(showTrail){c.strokeStyle=C.trail;c.lineWidth=2;for(const tr of S.trails){c.beginPath();c.arc(ox+S.x[tr.i]*sc,oy+S.y[tr.i]*sc,rp+2.5,0,2*Math.PI);c.stroke();}}
+  c.restore();c.strokeStyle=C.line;c.lineWidth=1;c.strokeRect(ox+0.5,oy+0.5,bw-1,bh-1);
+  // Maßstab
+  c.fillStyle=hexA(C.stage,0.85);c.fillRect(ox+8,oy+bh-26,5*sc+70,20);c.strokeStyle=C.ink;c.lineWidth=2;c.beginPath();c.moveTo(ox+14,oy+bh-16);c.lineTo(ox+14+5*sc,oy+bh-16);c.stroke();
+  c.font=`11px ${C.ui}`;c.fillStyle=C.ink;c.textAlign='left';c.textBaseline='middle';c.fillText('5 a',ox+20+5*sc,oy+bh-16);
+}
+function drawGr(){if(!S)return;const {c,W,H}=ctxOf($('#gr'));const L=40,R=10,T=10,B=32,w=W-L-R,h=H-T-B;
+  const g=grValues(S),nb=S.gr.nb,dr=S.gr.rmax/nb,G=S.P.G,k=S.P.k,rmax=S.gr.rmax;
+  const u=r=>Math.exp(-k*r)/r;
+  let ymax=2;for(const v of g)ymax=Math.max(ymax,v*1.1);ymax=Math.min(ymax,8);
+  let ymin=0;for(let r=0.3;r<rmax;r+=0.05){const v=1-G*u(r);if(v<ymin)ymin=v;}ymin=Math.max(-1,ymin<0?Math.floor(ymin*2)/2-0.001:0);
+  const X=r=>L+r/rmax*w,Y=v=>T+h-(v-ymin)/(ymax-ymin)*h;
+  c.font=`11px ${C.mono}`;c.textBaseline='middle';c.textAlign='right';
+  const yt=ticks(ymin,ymax,4);for(const v of yt.v){const y=Y(v);c.strokeStyle=v===0||v===1?C.muted:C.grid;c.lineWidth=v===1?1.2:1;c.setLineDash(v===1?[3,3]:[]);c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();c.setLineDash([]);c.fillStyle=C.muted;c.fillText(tl(v,yt.st),L-6,y);}
+  c.textAlign='center';c.textBaseline='top';for(let r=0;r<=rmax;r++){const x=X(r);c.strokeStyle=C.grid;c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();c.fillStyle=C.muted;c.fillText(String(r),x,T+h+4);}
+  c.font=`11px ${C.ui}`;c.fillText('Abstand r / a',L+w/2,T+h+18);
+  if(ymin<0){c.fillStyle=hexA(C.lin,0.07);c.fillRect(L,Y(0),w,Y(ymin)-Y(0));}
+  // Gitterabstände
+  c.fillStyle=C.muted;for(const f of [1,Math.sqrt(3),2,Math.sqrt(7),3,Math.sqrt(12),Math.sqrt(13)]){const x=X(f*DL);if(f*DL<rmax){c.fillRect(x-0.75,T+h-7,1.5,7);}}
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  const curve=(f,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;for(let r=0.05;r<=rmax;r+=0.02){const v=f(r);if(!isFinite(v)){pen=false;continue;}const y=Y(Math.max(ymin-1,Math.min(ymax+1,v)));pen?c.lineTo(X(r),y):c.moveTo(X(r),y);pen=true;}c.stroke();c.setLineDash([]);};
+  curve(r=>1-G*u(r),C.lin,1.8,[2,3]);
+  curve(r=>Math.exp(-G*u(r)),C.boltz,1.8,[7,4]);
+  c.strokeStyle=C.md;c.lineWidth=2.6;c.beginPath();for(let b=0;b<nb;b++){const x=X((b+0.5)*dr),y=Y(g[b]);b?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();
+  c.restore();c.strokeStyle=C.line;c.lineWidth=1;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  // Legende im Diagramm
+  const items=[[C.md,[],'Simulation'],[C.boltz,[7,4],'Boltzmann e^(−u/kT)'],[C.lin,[2,3],'linearisiert 1 − u/kT']];
+  c.font=`11.5px ${C.ui}`;let yy=T+12;for(const [col,dash,txt] of items){const tw=c.measureText(txt).width;const x0=L+w-tw-38;
+    c.fillStyle=hexA(C.stage,0.85);c.fillRect(x0-4,yy-8,tw+40,16);c.strokeStyle=col;c.lineWidth=2.2;c.setLineDash(dash);c.beginPath();c.moveTo(x0,yy);c.lineTo(x0+24,yy);c.stroke();c.setLineDash([]);
+    c.fillStyle=C.ink;c.textAlign='left';c.textBaseline='middle';c.fillText(txt,x0+30,yy);yy+=17;}
+  // Hinweis
+  let rneg=null;for(let r=rmax;r>0.05;r-=0.01){if(1-G*u(r)<0){rneg=r;break;}}
+  const pk=(()=>{let m=0,b0=0;for(let b=5;b<nb;b++)if(g[b]>m){m=g[b];b0=b;}return {m,r:(b0+0.5)*dr};})();
+  let t=`Kleine Striche unten: Abstände der Nachbarschalen im Dreiecksgitter. `;
+  t+=rneg&&rneg>0.6?`Die linearisierte Näherung ist für r &lt; ${num(rneg,2)} a negativ und damit unphysikalisch. `:rneg?'Die linearisierte Näherung wird nur bei sehr kleinen Abständen negativ, wo ohnehin kaum Teilchen sind. ':'Die linearisierte Näherung bleibt überall positiv. ';
+  if(pk.m>1.15)t+=`Erstes Maximum der Simulation: g = ${num(pk.m,2)} bei r = ${num(pk.r,2)} a (Nachbarschale).`;
+  $('#grNote').innerHTML=t;
+}
+function drawPhase(){const {c,W,H}=ctxOf($('#ph2'));const L=40,R=10,T=8,B=30,w=W-L-R,h=H-T-B,k0=0.3,k1=3,g0=-1,g1=4;
+  const X=k=>L+(k-k0)/(k1-k0)*w,Y=lg=>T+h-(lg-g0)/(g1-g0)*h;
+  c.fillStyle=C.gas;c.fillRect(L,Y(0),w,Y(g0)-Y(0));
+  c.fillStyle=C.liq;c.beginPath();c.moveTo(L,Y(0));for(let k=k0;k<=k1+1e-9;k+=0.02)c.lineTo(X(k),Y(Math.log10(meltG(k))));c.lineTo(L+w,Y(0));c.closePath();c.fill();
+  c.fillStyle=C.sol;c.beginPath();c.moveTo(L,T);for(let k=k0;k<=k1+1e-9;k+=0.02)c.lineTo(X(k),Y(Math.log10(meltG(k))));c.lineTo(L+w,T);c.closePath();c.fill();
+  c.strokeStyle=C.melt;c.lineWidth=2.2;c.beginPath();for(let k=k0;k<=k1+1e-9;k+=0.02){const x=X(k),y=Y(Math.log10(meltG(k)));k===k0?c.moveTo(x,y):c.lineTo(x,y);}c.stroke();
+  c.font=`11px ${C.mono}`;c.fillStyle=C.muted;c.textAlign='right';c.textBaseline='middle';
+  for(let g=g0;g<=g1;g++){c.fillText(g===0?'1':g===1?'10':'10'+sup(g),L-5,Y(g));c.strokeStyle=hexA(C.muted,0.2);c.beginPath();c.moveTo(L,Y(g));c.lineTo(L+w,Y(g));c.stroke();}
+  c.textAlign='center';c.textBaseline='top';for(let k=0.5;k<=3;k+=0.5)c.fillText(NF(1).format(k),X(k),T+h+4);
+  c.font=`11px ${C.ui}`;c.fillText('Abschirmung κ',L+w/2,T+h+17);
+  c.font=`italic 13px ${C.ui}`;c.textBaseline='middle';c.fillText('Γ',10,T+h/2);
+  c.font=`600 11.5px ${C.ui}`;c.textAlign='left';c.textBaseline='middle';c.fillStyle=C.ink;
+  c.fillText('Kristall',X(0.4),Y(3.5));c.fillText('Flüssigkeit',X(0.4),Y(1.2));c.fillText('schwach gekoppelt',X(0.4),Y(-0.5));
+  c.strokeStyle=C.line;c.lineWidth=1;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  const px=X(S.P.k),py=Y(Math.log10(S.P.G));c.beginPath();c.arc(px,py,6,0,2*Math.PI);c.fillStyle=C.accent;c.fill();c.strokeStyle=C.stage;c.lineWidth=2;c.stroke();
+}
+function phaseText(){const G=S.P.G,Gm=meltG(S.P.k),ps=S.ps,D=S.D;
+  let s;
+  if(G<1)s=`<b>Schwach gekoppelt (Γ &lt; 1):</b> Die thermische Energie überwiegt. Die Teilchen fliegen fast frei, Stöße sind schwach.`;
+  else if(G<Gm)s=`<b>Flüssigkeit (1 &lt; Γ &lt; Γ<sub>m</sub> = ${num(Gm,3)}):</b> Nachbarn halten Abstand und bilden Schalen, aber die Teilchen wandern weiter.`;
+  else s=`<b>Oberhalb der Schmelzlinie (Γ &gt; Γ<sub>m</sub> = ${num(Gm,3)}):</b> Im Gleichgewicht bilden die Teilchen ein Dreiecksgitter.`;
+  if(ps){if(G>=Gm&&ps.loc<0.6)s+=' Noch ungeordnet: Die Kristallisation braucht Zeit, langsames Abkühlen hilft.';
+    else if(G<Gm&&ps.loc>0.75&&D!==null&&D*WP<0.002)s+=' Noch kristallin: Der Kristall ist überhitzt und schmilzt erst nach einer Weile.';}
+  if(S.boost>0)s+=' (Einschwingen mit starker Reibung …)';
+  if(ramp)s+=ramp>0?' Abkühlen läuft: Γ steigt.':' Aufheizen läuft: Γ sinkt.';
+  return s;}
+function updateMeas(){if(!S)return;const kt=kinT(S),G=S.P.G;
+  $('#meas').innerHTML=`<dt>Γ (Wärmebad)</dt><dd>${fmt(G)}</dd>
+  <dt>Γ aus kinetischer Energie</dt><dd>${fmt(1/kt)}</dd>
+  <dt>Schmelzpunkt Γ<sub>m</sub>(κ)</dt><dd>${fmt(meltG(S.P.k))}</dd>
+  <dt>potentielle Energie / (N k<sub>B</sub>T)</dt><dd>${fmt(S.epot/N*G)}</dd>
+  <dt>lokale Ordnung ⟨|ψ<sub>6</sub>|⟩</dt><dd class="hi">${S.ps?NF(2).format(S.ps.loc):'—'}</dd>
+  <dt>Diffusion D (a²ω<sub>p</sub>)</dt><dd class="hi">${S.D===null?'—':fmt(Math.max(0,S.D/WP),2)}</dd>`;}
+function sw(col,dash,lw=2.2){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="${col}" stroke-width="${lw}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;}
+function buildLegend(){let s='';
+  if(colMode==='ori')s+=`<span><svg width="70" height="10" aria-hidden="true"><defs><linearGradient id="hg"><stop offset="0" stop-color="hsl(0,80%,50%)"/><stop offset=".33" stop-color="hsl(120,80%,50%)"/><stop offset=".67" stop-color="hsl(240,80%,50%)"/><stop offset="1" stop-color="hsl(360,80%,50%)"/></linearGradient></defs><rect width="70" height="10" rx="2" fill="url(#hg)"/></svg>Richtung des lokalen Gitters (0–60°); grau: ungeordnet</span>`;
+  else if(colMode==='ord')s+=`<span><svg width="70" height="10" aria-hidden="true"><defs><linearGradient id="og"><stop offset="0" stop-color="hsl(220,25%,50%)"/><stop offset="1" stop-color="hsl(20,80%,50%)"/></linearGradient></defs><rect width="70" height="10" rx="2" fill="url(#og)"/></svg>Ordnung |ψ<sub>6</sub>| von ungeordnet bis Gitter</span>`;
+  s+=`<span>${sw('var(--c-trail)')}Spur einzelner Teilchen</span>`;
+  $('#legend').innerHTML=s;}
+function drawAll(){if(!S)return;readColors();
+  $('#tm').textContent='t = '+NF(0).format(S.t*WP)+' /ωₚ';$('#ph').innerHTML=phaseText();
+  drawSim();drawGr();drawPhase();updateMeas();}
+
+/* ----- Schleife ----- */
+let lastTs=0,lastSlow=0,lastPsi=0;
+function frameLoop(ts){const dtr=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(running&&S){
+    // sichtbare Geschwindigkeit: bei kleinem Γ langsamer, damit die schnellen Teilchen verfolgbar bleiben
+    const rate=tempo*Math.min(4.5,2.2*Math.sqrt(S.P.G)),target=S.t+rate*dtr,t0=performance.now();let lastGr=S.gr.lastT;
+    while(S.t<target&&performance.now()-t0<22){step(S);
+      if(ramp){const lg=Math.log10(P.G)+ramp*0.006*S.dt,lim=ramp>0?4:-1;P.G=Math.pow(10,ramp>0?Math.min(lim,lg):Math.max(lim,lg));if((ramp>0&&lg>=lim)||(ramp<0&&lg<=lim))setRamp(0);applyP();}
+      if(S.t-lastGr>0.35){sampleGr(S);lastGr=S.t;}
+      trackD(S);}
+    S.gr.lastT=lastGr;
+    for(const tr of S.trails){tr.p.push([S.ux[tr.i],S.uy[tr.i]]);if(tr.p.length>260)tr.p.shift();}
+    if(ts-lastPsi>90){psi6(S);lastPsi=ts;}
+    if(ramp&&ts-lastSlow>150){syncControls();updateReal();lastSlow=ts;}
+    drawAll();
+  }
+  requestAnimationFrame(frameLoop);}
+function resize(){dpr=Math.min(2,window.devicePixelRatio||1);drawAll();}
+new ResizeObserver(resize).observe($('.simwrap'));new ResizeObserver(resize).observe($('#gr').parentElement);new ResizeObserver(resize).observe($('#ph2').parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawAll);
+new MutationObserver(drawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+buildControls();setTempo(1);buildLegend();
+{const h=location.hash.slice(1).split('&');let mode='rand';
+  for(const q of h){const [a,b]=q.split('=');if(a==='G'&&+b>0)P.G=+b;if(a==='k'&&+b>0)P.k=Math.max(0.3,Math.min(3,+b));if(a==='lat')mode='lat';if(a==='dark'||a==='light')document.documentElement.dataset.theme=a;if(a==='cool')setRamp(1);}
+  syncControls();reset(mode);
+  const wm=h.find(q=>q.startsWith('warm='));if(wm){const tEnd=+wm.split('=')[1]/WP;let lg=-1;while(S.t<tEnd){step(S);if(S.t-lg>0.35){sampleGr(S);lg=S.t;}trackD(S);}S.gr.lastT=lg;psi6(S);}}
+setRunning(true);
+requestAnimationFrame(frameLoop);
+</script>
+
+</body>
+</html>
