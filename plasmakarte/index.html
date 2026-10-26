@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plasma-Landkarte</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  /* Layout wie Debye-Labor und Plasmaspiegel: links Ort und Kennzahlen, Mitte Karte + Teilchenbild + Längen, rechts Physik und Aufgaben */
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --c-i:#1f5fc2; --c-e:#c23a2b; --c-scr:#0a7f93;
+  --c-nid:#e8762c; --c-nid-l:#b4480f; --c-deg:#6a5ae0; --c-deg-l:#4535b5; --c-ion:#2c8540; --c-saha:#8a6a12; --c-rel:#7a8794;
+  --reg-a:0.26;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --c-i:#62a1ff; --c-e:#ff715f; --c-scr:#3cc3d8;
+    --c-nid:#ff8a4c; --c-nid-l:#ffa36e; --c-deg:#8f80ff; --c-deg-l:#b0a6ff; --c-ion:#5cc46a; --c-saha:#d9b45a; --c-rel:#8d9eab;
+    --reg-a:0.30; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --c-i:#62a1ff; --c-e:#ff715f; --c-scr:#3cc3d8;
+  --c-nid:#ff8a4c; --c-nid-l:#ffa36e; --c-deg:#8f80ff; --c-deg-l:#b0a6ff; --c-ion:#5cc46a; --c-saha:#d9b45a; --c-rel:#8d9eab;
+  --reg-a:0.30; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1720px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+header.top .units{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr) 350px;grid-template-areas:"params stage info";align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{grid-area:params;padding:12px 14px 14px}
+.stage{grid-area:stage;min-width:0;display:flex;flex-direction:column;gap:10px}
+.info{grid-area:info;padding:16px 18px;min-width:0}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+/* Regler */
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.seg button{all:unset;text-align:center;padding:6px 2px;cursor:pointer;font-size:12.5px;font-weight:500;line-height:1.2}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ctl-tip{font-size:11.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.ctl-tip kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+select.sel{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%;margin-bottom:10px}
+/* Kennzahlen links */
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dt i{font-family:var(--f-math);font-style:italic;font-size:1.06em}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz .gh{grid-column:1/-1;font-family:var(--f-head);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+dl.kz .gh:first-child{margin-top:0;padding-top:0;border-top:0}
+dl.kz dd.hi{font-weight:600}
+dl.kz dd.nid{color:var(--c-nid-l)}
+dl.kz dd.deg{color:var(--c-deg-l)}
+/* Bühne */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.toolbar label.chk{display:flex;gap:5px;align-items:center;font-size:13px;cursor:pointer;user-select:none}
+.toolbar label.chk input{accent-color:var(--accent)}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.status{font-size:13px;color:var(--muted);min-height:2.9em}
+.status b{color:var(--ink);font-weight:600}
+.mapwrap{position:relative;height:clamp(440px,60vh,700px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+#map{cursor:crosshair;touch-action:none}
+#map:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.below{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.cwrap{position:relative;height:300px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;min-height:2.6em;line-height:1.4}
+.note b{color:var(--ink);font-weight:600}
+/* Info */
+.info h3{font-family:var(--f-head);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;text-wrap:balance}
+.info p{margin:0 0 10px;max-width:65ch}
+.info b{font-weight:600}
+.formula{font-family:var(--f-math);font-size:17px;line-height:1.55;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 2px;margin:4px 0 12px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+.formula i{font-style:italic}
+.formula small{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.92em;line-height:1.15;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.frac>span:last-child{padding:0 3px}
+.sqrt{display:inline-flex;align-items:center}
+.sqrt>span{border-top:1px solid currentColor;padding-top:2px;margin-left:1px}
+.info h4{font-family:var(--f-head);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 6px}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.tasks li:first-child{border-top:0}
+.tasks li p{margin:0}
+.tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
+.m{font-family:var(--f-math)}
+.sw-nid{color:var(--c-nid-l);font-weight:600}
+.sw-deg{color:var(--c-deg-l);font-weight:600}
+.foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
+@media (max-width:1280px){
+  .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
+  .below{grid-template-columns:minmax(0,1fr)}
+  .mapwrap{height:clamp(420px,120vw,620px)}
+  header.top .units{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <h1>Plasma-Landkarte</h1>
+  <p class="sub">Ideal, nicht-ideal, entartet: wo ein Plasma liegt und was daraus folgt</p>
+  <span class="units">Dichte und Temperatur der Elektronen · T<sub>e</sub> = T<sub>i</sub> · SI-Einheiten</span>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Beispiel</h2>
+    <select class="sel" id="example" aria-label="Beispielplasma wählen"></select>
+    <h2 class="lab">Ort in der Karte</h2>
+    <div id="ctl-n"></div>
+    <div id="ctl-T"></div>
+    <h2 class="lab">Ionensorte</h2>
+    <div class="seg" style="--n:3" id="segZ" role="group" aria-label="Ionensorte">
+      <button type="button" data-z="1">H⁺ (<i>Z</i> = 1)</button><button type="button" data-z="2">He²⁺ (<i>Z</i> = 2)</button><button type="button" data-z="6">C⁶⁺ (<i>Z</i> = 6)</button>
+    </div>
+    <p class="ctl-tip">Punkt in der Karte ziehen oder anklicken. Karte anklicken, dann mit <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> verschieben (mit <kbd>Shift</kbd> in großen Schritten).</p>
+    <button class="btn" type="button" id="defaults">Standardwerte</button>
+    <hr class="sep">
+    <h2 class="lab">Kennzahlen</h2>
+    <dl class="kz" id="kz"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="toolbar">
+      <label class="chk"><input type="checkbox" id="o-cont" checked> Höhenlinien von Γ</label>
+      <label class="chk"><input type="checkbox" id="o-ion" checked> Ionenlinien</label>
+      <label class="chk"><input type="checkbox" id="o-saha" checked> Saha (Wasserstoff)</label>
+      <label class="chk"><input type="checkbox" id="o-rel" checked> relativistisch</label>
+      <label class="chk"><input type="checkbox" id="o-adi"> Adiabate durch den Punkt</label>
+      <label class="chk"><input type="checkbox" id="o-ex" checked> Beispiele</label>
+    </div>
+    <div class="plotbox">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="mapwrap"><canvas class="full" id="map" tabindex="0" aria-label="Dichte-Temperatur-Karte der Plasmen. Klick oder Pfeiltasten verschieben den Punkt."></canvas></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="below">
+      <div class="panel boxp">
+        <h2 class="lab">Teilchenbild am Punkt</h2>
+        <div class="cwrap"><canvas class="full" id="pic" aria-label="Skizze der Teilchenanordnung: Ionen, Elektronen als Wellenpakete und Abschirmlänge"></canvas></div>
+        <div class="note" id="picNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Längen im Vergleich zum Teilchenabstand <span class="m" style="text-transform:none;letter-spacing:0"><i>a</i></span></h2>
+        <div class="cwrap"><canvas class="full" id="len" aria-label="Logarithmischer Vergleich der charakteristischen Längen mit dem mittleren Elektronenabstand"></canvas></div>
+        <div class="note" id="lenNote"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel info" id="info">
+    <h3>Wann ist ein Plasma ideal?</h3>
+    <p>Dichte <i class="m">n</i><sub>e</sub> und Temperatur <i class="m">T</i> legen fest, wie sich ein Plasma verhält. Entscheidend sind zwei Verhältnisse von Energien. Gleichwertig kann man drei Längen mit dem mittleren Teilchenabstand <i class="m">a</i> vergleichen.</p>
+    <div class="formula">
+      <div><i>a</i> = <span class="frac"><span>3</span><span>4π<i>n</i><sub>e</sub></span></span><sup>1/3</sup> &nbsp;&nbsp; <small>mittlerer Teilchenabstand (Wigner-Seitz-Radius)</small></div>
+      <div><i>Γ</i> = <span class="frac"><span><i>e</i><sup>2</sup>/(4π<i>ε</i><sub>0</sub><i>a</i>)</span><span><i>k</i><sub>B</sub><i>T</i></span></span> = <span class="frac"><span><i>b</i></span><span><i>a</i></span></span> &nbsp;&nbsp; <small>Kopplung: Coulomb- / thermische Energie</small></div>
+      <div><i>N</i><sub>D</sub> = <span class="frac"><span>4π</span><span>3</span></span><i>n</i><sub>e</sub><i>λ</i><sub>D</sub><sup>3</sup> = (3<i>Γ</i>)<sup>−3/2</sup> &nbsp;&nbsp; <small>Teilchen in der Debye-Kugel</small></div>
+      <div><i>E</i><sub>F</sub> = <span class="frac"><span><i>ħ</i><sup>2</sup></span><span>2<i>m</i><sub>e</sub></span></span>(3π<sup>2</sup><i>n</i><sub>e</sub>)<sup>2/3</sup> &nbsp;&nbsp; <i>Θ</i> = <span class="frac"><span><i>k</i><sub>B</sub><i>T</i></span><span><i>E</i><sub>F</sub></span></span> &nbsp;&nbsp; <small>Entartung</small></div>
+      <div><i>λ</i><sub>th</sub> = <span class="frac"><span><i>h</i></span><span><span class="sqrt">√<span>2π<i>m</i><sub>e</sub><i>k</i><sub>B</sub><i>T</i></span></span></span></span> &nbsp;&nbsp; <small>thermische de-Broglie-Wellenlänge</small></div>
+      <div><i>Γ</i><sub>eff</sub> = <span class="frac"><span><i>e</i><sup>2</sup>/(4π<i>ε</i><sub>0</sub><i>a</i>)</span><span><span class="sqrt">√<span>(<i>k</i><sub>B</sub><i>T</i>)<sup>2</sup> + <i>E</i><sub>F</sub><sup>2</sup></span></span></span></span> &nbsp;&nbsp; <small>Kopplung mit Entartung</small></div>
+    </div>
+    <p><b>Ideal (<i class="m">Γ</i> ≪ 1):</b> Die Coulomb-Energie zwischen Nachbarn ist klein gegen ihre kinetische Energie. Viele Teilchen teilen sich eine Debye-Kugel, die Abschirmung ist ein kollektiver Effekt. Es gelten das ideale Gasgesetz, die Debye-Hückel-Theorie und die kinetische Theorie mit kleinen Stoßwinkeln. Fast alle Plasmen der Vorlesung liegen hier.</p>
+    <p><b class="sw-nid">Nicht-ideal (<i class="m">Γ</i> ≳ 1):</b> Jedes Teilchen spürt vor allem seine Nachbarn. Es entsteht eine Nahordnung wie in einer Flüssigkeit, bei <i class="m">Γ</i> ≈ 175 sogar ein Kristall. Die Debye-Länge wird kleiner als <i class="m">a</i>, die Debye-Hückel-Näherung bricht zusammen.</p>
+    <p><b class="sw-deg">Entartet (<i class="m">Θ</i> ≲ 1):</b> Die Wellenpakete der Elektronen (<i class="m">λ</i><sub>th</sub>) überlappen. Wegen des Pauli-Prinzips füllen sie die Fermi-Kugel, ihre typische Energie ist dann <i class="m">E</i><sub>F</sub> statt <i class="m">k</i><sub>B</sub><i class="m">T</i>. Der Druck kommt aus der Entartung, nicht aus der Temperatur.</p>
+    <p><b>Überraschung:</b> Weil <i class="m">E</i><sub>F</sub> ∝ <i class="m">n</i><sup>2/3</sup> schneller wächst als die Coulomb-Energie ∝ <i class="m">n</i><sup>1/3</sup>, gilt im entarteten Plasma <i class="m">Γ</i><sub>eff</sub> ∝ <i class="m">n</i><sup>−1/3</sup>. Sehr dichte Materie wird wieder ideal. Das nicht-ideale Gebiet ist deshalb eine Zunge, die bei etwa 10<sup>29</sup> m<sup>−3</sup> endet.</p>
+    <h4>Aufgaben</h4>
+    <ol class="tasks" id="tasks"></ol>
+  </aside>
+</div>
+<p class="foot">Modell: vollständig ionisiertes Plasma aus Elektronen und Ionen der Ladung <i class="m">Z</i> im thermischen Gleichgewicht (<i class="m">T</i><sub>e</sub> = <i class="m">T</i><sub>i</sub> = <i class="m">T</i>, Ionendichte <i class="m">n</i><sub>e</sub>/<i class="m">Z</i>). In Gasentladungen ist in Wirklichkeit <i class="m">T</i><sub>i</sub> ≪ <i class="m">T</i><sub>e</sub>; die Karte verwendet die Elektronentemperatur. Formeln nichtrelativistisch; die gestrichelten Linien zeigen, wo <i class="m">k</i><sub>B</sub><i class="m">T</i> bzw. der Fermi-Impuls <i class="m">m</i><sub>e</sub><i class="m">c</i><sup>2</sup> bzw. <i class="m">m</i><sub>e</sub><i class="m">c</i> erreicht. Die Farbflächen folgen <i class="m">Γ</i><sub>eff</sub> (orange) und <i class="m">Θ</i> (violett). <i class="m">Γ</i><sub>eff</sub> und die Abschirmlänge <i class="m">λ</i><sub>s</sub> = (<i class="m">ε</i><sub>0</sub><i class="m">k</i><sub>B</sub><i class="m">T</i><sub>s</sub>/(<i class="m">n</i><sub>e</sub><i class="m">e</i><sup>2</sup>))<sup>1/2</sup> mit <i class="m">k</i><sub>B</sub><i class="m">T</i><sub>s</sub> = ((<i class="m">k</i><sub>B</sub><i class="m">T</i>)<sup>2</sup> + (2<i class="m">E</i><sub>F</sub>/3)<sup>2</sup>)<sup>1/2</sup> interpolieren glatt zwischen dem klassischen Grenzfall (Debye) und dem entarteten (Thomas-Fermi). Ionenkopplung <i class="m">Γ</i><sub>i</sub> = <i class="m">Z</i><sup>2</sup><i class="m">e</i><sup>2</sup>/(4π<i class="m">ε</i><sub>0</sub><i class="m">a</i><sub>i</sub><i class="m">k</i><sub>B</sub><i class="m">T</i>); Kristallisation des Einkomponentenplasmas bei <i class="m">Γ</i><sub>i</sub> ≈ 175. Die Ionenlinie „Quanteneffekte“ markiert <i class="m">n</i><sub>i</sub><i class="m">λ</i><sub>th,i</sub><sup>3</sup> = 1. Saha-Linie: 50 % Ionisation von Wasserstoff im Gleichgewicht ohne Absenkung der Ionisationsenergie; oberhalb von etwa 10<sup>27</sup> m<sup>−3</sup> ist sie wegen Druckionisation nicht mehr sinnvoll und wird nicht gezeichnet. Coulomb-Logarithmus ln <i class="m">Λ</i> = ln(<i class="m">λ</i><sub>s</sub>/<i class="m">b</i><sub>min</sub>) mit dem größeren von klassischem und quantenmechanischem minimalem Stoßparameter. Das Teilchenbild ist eine qualitative Skizze: Die Ionenpositionen stammen aus einer zweidimensionalen Monte-Carlo-Rechnung mit abgeschirmter Coulomb-Wechselwirkung bei <i class="m">Γ</i><sub>i</sub>, die Elektronen sind Wellenpakete mit der Halbwertsbreite <i class="m">λ</i><sub>th</sub> an zufälligen Orten. Die Beispielwerte sind typische Größenordnungen.</p>
+</div>
+
+<script>
+/*CORE-START*/
+// SI-Konstanten
+const QE=1.602176634e-19,EPS0=8.8541878128e-12,ME=9.1093837015e-31,KB=1.380649e-23,HP=6.62607015e-34,HB=HP/(2*Math.PI),C0=2.99792458e8,MU=1.66053906660e-27;
+const KC=QE*QE/(4*Math.PI*EPS0), AB=5.29177210903e-11, IH=13.605693*QE;
+const EFC=HB*HB*Math.pow(3*Math.PI*Math.PI,2/3)/(2*ME);   // E_F = EFC · n^(2/3)
+const ION={1:{A:1,sym:'H⁺'},2:{A:4,sym:'He²⁺'},6:{A:12,sym:'C⁶⁺'}};
+// Kartenausschnitt (dekadische Logarithmen)
+const N0=4,N1=36,T0=0,T1=10;
+const aOf=n=>Math.cbrt(3/(4*Math.PI*n));
+function sahaS(T){const kT=KB*T;return Math.pow(2*Math.PI*ME*kT/(HP*HP),1.5)*Math.exp(-IH/kT);} // n_e bei 50 % Ionisation (H)
+function phys(ne,T,Z){
+  const A=ION[Z].A,kT=KB*T,a=aOf(ne),Ec=KC/a,EF=EFC*Math.pow(ne,2/3);
+  const lD=Math.sqrt(EPS0*kT/(ne*QE*QE)), kTs=Math.hypot(kT,2*EF/3), ls=Math.sqrt(EPS0*kTs/(ne*QE*QE));
+  const lth=HP/Math.sqrt(2*Math.PI*ME*kT);
+  const ni=ne/Z, ai=aOf(ni), mi=A*MU, lthi=HP/Math.sqrt(2*Math.PI*mi*kT);
+  const v=Math.sqrt(3*kTs/ME), bcl=KC/(3*kTs), bq=HB/(2*ME*v);
+  const S=sahaS(T);
+  return {ne,T,Z,kT,a,Ec,EF,TF:EF/KB,lD,ls,lth,ni,ai,
+    G:Ec/kT, ND:4/3*Math.PI*ne*lD*lD*lD, Th:kT/EF, Geff:Ec/Math.hypot(kT,EF),
+    Gi:Z*Z*KC/(ai*kT), chii:ni*lthi*lthi*lthi, b:KC/kT,
+    lnL:Math.log(ls/Math.max(bcl,bq)), fp:Math.sqrt(ne*QE*QE/(EPS0*ME))/(2*Math.PI),
+    xH:S/(S+ne), relT:kT/(ME*C0*C0), relF:HB*Math.cbrt(3*Math.PI*Math.PI*ne)/(ME*C0)};
+}
+// Linien in der Karte: lg T als Funktion von lg n (null = nicht vorhanden)
+const L10=Math.log10;
+function lgT_Geff(lgN,G0){const n=Math.pow(10,lgN),Ec=KC/aOf(n),EF=EFC*Math.pow(n,2/3),q=Ec/G0;return q>EF?L10(Math.sqrt(q*q-EF*EF)/KB):null;}
+function lgN_tip(G0){return 3*L10(2*ME*KC*Math.cbrt(4*Math.PI/3)/(G0*HB*HB*Math.pow(3*Math.PI*Math.PI,2/3)));} // Spitze der Zunge: Ec/G0 = E_F
+const lgT_TF=lgN=>L10(EFC*Math.pow(10,2*lgN/3)/KB);
+function lgT_Gi(lgN,G0,Z){const ni=Math.pow(10,lgN)/Z;return L10(Z*Z*KC/(aOf(ni)*KB*G0));}
+function lgT_iq(lgN,Z){const ni=Math.pow(10,lgN)/Z,mi=ION[Z].A*MU;return L10(HP*HP*Math.pow(ni,2/3)/(2*Math.PI*mi*KB));}
+const LGT_REL=L10(ME*C0*C0/KB), LGN_REL=L10(Math.pow(ME*C0/HB,3)/(3*Math.PI*Math.PI));
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const NF=(d)=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let m=x/Math.pow(10,e);
+  if(Math.abs(+m.toFixed(d))>=10){m/=10;e++;}
+  return (NF(d).format(m)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−');}
+function fmt(x,sig=2){if(!isFinite(x))return '—';const ax=Math.abs(x);return (ax>=0.01&&ax<1e4)?num(x,sig):sci(x,1);}
+function unitFmt(v,units){for(const [f,u] of units){if(Math.abs(v)>=f*0.9999)return num(v/f)+' '+u;}return null;}
+const fLen=m=>unitFmt(m,[[1e3,'km'],[1,'m'],[1e-2,'cm'],[1e-3,'mm'],[1e-6,'µm'],[1e-9,'nm'],[1e-12,'pm'],[1e-15,'fm']])||sci(m)+' m';
+const fFreq=h=>unitFmt(h,[[1e18,'EHz'],[1e15,'PHz'],[1e12,'THz'],[1e9,'GHz'],[1e6,'MHz'],[1e3,'kHz'],[1,'Hz']])||sci(h)+' Hz';
+const fE=J=>{const ev=J/QE;return unitFmt(ev,[[1e6,'MeV'],[1e3,'keV'],[1,'eV'],[1e-3,'meV']])||sci(ev)+' eV';};
+const fT=T=>(T>=1e4||T<1)?sci(T,1)+' K':num(T,3)+' K';
+const pct=x=>x>0.999?'> 99,9 %':x<0.001?'< 0,1 %':num(100*x,3)+' %';
+
+/* ----- Beispiele (typische Größenordnungen) ----- */
+const EX=[
+  {id:'ism',name:'Interstellares Gas (warm, ionisiert)',sh:'Interstellares Gas',n:1e5,T:8e3,Z:1},
+  {id:'sw',name:'Sonnenwind (bei der Erde)',sh:'Sonnenwind',n:5e6,T:1e5,Z:1},
+  {id:'iono',name:'Ionosphäre (F-Schicht)',sh:'Ionosphäre',n:1e12,T:1.5e3,Z:1},
+  {id:'cor',name:'Sonnenkorona',sh:'Korona',n:1e14,T:1.5e6,Z:1},
+  {id:'flame',name:'Flamme',sh:'Flamme',n:1e16,T:2e3,Z:1},
+  {id:'ucp',name:'Ultrakaltes Plasma (lasergekühlte Atome)',sh:'Ultrakaltes Plasma',n:1e16,T:5,Z:1},
+  {id:'glow',name:'Niederdruck-Gasentladung (ICP, Leuchtstoffröhre)',sh:'Gasentladung',n:1e17,T:3.5e4,Z:1},
+  {id:'tok',name:'Tokamak (ITER)',sh:'Tokamak',n:1e20,T:1.5e8,Z:1},
+  {id:'light',name:'Blitzkanal',sh:'Blitz',n:1e24,T:3e4,Z:1},
+  {id:'na',name:'Leitungselektronen in Natrium',sh:'Natrium',n:2.65e28,T:300,Z:1},
+  {id:'jup',name:'Jupiter-Inneres (metallischer Wasserstoff)',sh:'Jupiter-Inneres',n:1e30,T:1.5e4,Z:1},
+  {id:'icfhs',name:'Trägheitsfusion: heißer Kern',sh:'ICF-Kern',n:3e31,T:6e7,Z:1},
+  {id:'sun',name:'Sonnenkern',sh:'Sonnenkern',n:6e31,T:1.57e7,Z:1},
+  {id:'icfsh',name:'Trägheitsfusion: dichte Brennstoffschale',sh:'ICF-Schale',n:2e32,T:2e6,Z:1},
+  {id:'wd',name:'Weißer Zwerg (Kern aus Kohlenstoff)',sh:'Weißer Zwerg',n:3e35,T:1e7,Z:6}
+];
+const EXM=Object.fromEntries(EX.map(e=>[e.id,e]));
+
+/* ----- Zustand ----- */
+const DEF={lgN:17,lgT:L10(3.5e4),Z:1,sel:'glow'};
+const SHOWDEF={cont:true,ion:true,saha:true,rel:true,adi:false,ex:true};
+let st=Object.assign({},DEF), show=Object.assign({},SHOWDEF), p=null, dirty=true, hoverEx=null, dragging=false;
+
+/* ----- Regler ----- */
+const PDEF={
+  lgN:{box:'#ctl-n',lab:'Elektronendichte <i>n</i><sub>e</sub>',min:N0,max:N1,step:0.05,fmt:v=>sci(Math.pow(10,v),1)+' m⁻³',hint:'Ziehen nach rechts: dichter'},
+  lgT:{box:'#ctl-T',lab:'Temperatur <i>T</i>',min:T0,max:T1,step:0.05,fmt:v=>fT(Math.pow(10,v)),hint:'1 eV entspricht 11 600 K'}
+};
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
+    w.innerHTML=`<div class="row"><label for="p-${k}">${d.lab}</label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}" min="${d.min}" max="${d.max}" step="${d.step}"><div class="hint">${d.hint}</div>`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{st[k]=parseFloat(inp.value);st.sel=null;sync();});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  const sel=$('#example');
+  sel.innerHTML='<option value="">— eigener Punkt —</option>'+EX.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  sel.addEventListener('change',()=>{if(sel.value)selectEx(sel.value);else{st.sel=null;sync();}});
+  document.querySelectorAll('#segZ button').forEach(b=>b.addEventListener('click',()=>{st.Z=+b.dataset.z;sync();}));
+  for(const k in SHOWDEF)$('#o-'+k).addEventListener('change',e=>{show[k]=e.target.checked;buildLegend();drawMap();});
+  $('#defaults').addEventListener('click',()=>{st=Object.assign({},DEF);show=Object.assign({},SHOWDEF);syncShow();sync();});
+}
+function syncShow(){for(const k in show)$('#o-'+k).checked=show[k];buildLegend();}
+function clampSt(){st.lgN=Math.max(N0,Math.min(N1,st.lgN));st.lgT=Math.max(T0,Math.min(T1,st.lgT));}
+function selectEx(id){const e=EXM[id];st.lgN=L10(e.n);st.lgT=L10(e.T);st.Z=e.Z;st.sel=id;sync();}
+function sync(){clampSt();
+  for(const k in PDEF){$('#p-'+k).value=st[k];$('#o-'+k).textContent=PDEF[k].fmt(st[k]);}
+  $('#example').value=st.sel||'';
+  document.querySelectorAll('#segZ button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.z===st.Z)));
+  dirty=true;}
+
+/* ----- Aufgaben ----- */
+const TASKS=[
+  {t:'<b>Das Laborplasma.</b> Schätze zuerst: Wie viele Elektronen befinden sich in der Debye-Kugel einer Niederdruck-Gasentladung? Hundert, eine Million? Lies dann <i class="m">N</i><sub>D</sub> ab und vergleiche im Längenbild <i class="m">λ</i><sub>D</sub> mit <i class="m">a</i>. Warum ist Debye-Hückel hier eine sehr gute Näherung?',ex:'glow',lab:'Standard'},
+  {t:'<b>Vorhersage: Sonnenkern.</b> 1,6·10<sup>7</sup> K, aber 150-mal dichter als Wasser. Ideal oder nicht? Klassisch oder entartet? Lege dich fest und prüfe dann <i class="m">Γ</i> und <i class="m">Θ</i>. Die Elektronen-Wellenpakete sind im Teilchenbild schon so groß wie der Teilchenabstand.',ex:'sun'},
+  {t:'<b>Verdichten bei fester Temperatur.</b> Der Punkt sitzt bei 10<sup>4</sup> K. Klicke in die Karte und schiebe ihn mit <kbd>→</kbd> zu höheren Dichten. <i class="m">Γ</i><sub>eff</sub> steigt zuerst wie <i class="m">n</i><sup>1/3</sup>, erreicht bei etwa 3·10<sup>27</sup> m<sup>−3</sup> ein Maximum und fällt dann wieder. Warum? Vergleiche, wie Coulomb-Energie und Fermi-Energie mit <i class="m">n</i> wachsen.',set:{lgN:20,lgT:4,Z:1}},
+  {t:'<b>Adiabatisch verdichten.</b> Die gestrichelte Adiabate <i class="m">T</i> ∝ <i class="m">n</i><sup>2/3</sup> läuft parallel zur Linie <i class="m">T</i> = <i class="m">T</i><sub>F</sub>. Was folgt daraus für <i class="m">Θ</i> beim schnellen Zusammendrücken, und was für <i class="m">Γ</i>? Warum muss der Brennstoff bei der Trägheitsfusion möglichst kalt verdichtet werden, damit er die entartete Schale erreicht?',ex:'icfsh',show:{adi:true}},
+  {t:'<b>Nicht-ideal bei kleiner Dichte.</b> Ein ultrakaltes Plasma ist mit 10<sup>16</sup> m<sup>−3</sup> extrem dünn und trotzdem nicht-ideal. Warum? Der Punkt liegt aber weit rechts der Saha-Linie: Im Gleichgewicht würden die Elektronen rekombinieren. Solche Plasmen existieren nur für Mikrosekunden. Liegt auch die Ionosphäre rechts der Saha-Linie? Woher kommt dort die Ionisation?',ex:'ucp'},
+  {t:'<b>Metall als Plasma.</b> Die Leitungselektronen in Natrium sind stark entartet. Im Längenbild ist die klassische Debye-Länge etwa 30-mal <i>kleiner</i> als <i class="m">a</i>: Die Debye-Hückel-Formel liefert hier Unsinn. Abgeschirmt wird durch das entartete Elektronengas (Thomas-Fermi), <i class="m">λ</i><sub>s</sub> hängt dann von <i class="m">E</i><sub>F</sub> statt von <i class="m">T</i> ab. Was passiert mit <i class="m">Θ</i> und <i class="m">Γ</i><sub>eff</sub>, wenn du das Metall auf 3000 K erhitzt?',ex:'na'},
+  {t:'<b>Weißer Zwerg.</b> Die Elektronen sind entartet, ideal und fast relativistisch (<i class="m">p</i><sub>F</sub> ≈ 0,8 <i class="m">m</i><sub>e</sub><i class="m">c</i>). Die Kohlenstoffionen dagegen sind stark gekoppelt (<i class="m">Γ</i><sub>i</sub> ≈ 36). Kühle den Stern ab (<kbd>↓</kbd>), bis die Ionen die Linie <i class="m">Γ</i><sub>i</sub> = 175 erreichen, und beobachte das Teilchenbild. Diese Kristallisation wurde 2019 mit dem Gaia-Satelliten an der Abkühlung weißer Zwerge nachgewiesen.',ex:'wd'},
+  {t:'<b>Druckionisation.</b> Im Jupiter-Inneren ist es mit 1,5·10<sup>4</sup> K für die Saha-Gleichung viel zu kalt, und trotzdem ist der Wasserstoff metallisch. Vergleiche im Längenbild den Teilchenabstand <i class="m">a</i> mit dem Bohr-Radius <i class="m">a</i><sub>B</sub>. Warum können hier keine Atome mehr existieren?',ex:'jup'}
+];
+(function(){const ol=$('#tasks');TASKS.forEach(t=>{const li=document.createElement('li');
+  li.innerHTML=`<p>${t.t}</p><button class="btn" type="button">${t.lab||'Einstellen'}</button>`;
+  li.querySelector('button').addEventListener('click',()=>{
+    show=Object.assign({},SHOWDEF,t.show||{});syncShow();
+    if(t.ex)selectEx(t.ex);else{st=Object.assign({},st,t.set,{sel:null});sync();}
+    $('#map').focus({preventScroll:true});});
+  ol.appendChild(li);});})();
+
+/* ----- Kennzahlen und Statuszeile ----- */
+function updateKZ(){
+  const cls=(v,lim,c)=>v>=lim?` class="hi ${c}"`:'';
+  const thc=p.Th<1?' class="hi deg"':'';
+  let s=`<div class="gh">Ort</div>
+  <dt>Elektronendichte <i>n</i><sub>e</sub></dt><dd>${sci(p.ne,1)} m⁻³</dd>
+  <dt>Temperatur <i>T</i></dt><dd>${fT(p.T)}</dd>
+  <dt>thermische Energie <i>k</i><sub>B</sub><i>T</i></dt><dd>${fE(p.kT)}</dd>
+  <div class="gh">Kopplung</div>
+  <dt>Teilchenabstand <i>a</i></dt><dd>${fLen(p.a)}</dd>
+  <dt>Coulomb-Energie <i>e</i>²/(4π<i>ε</i>₀<i>a</i>)</dt><dd>${fE(p.Ec)}</dd>
+  <dt>Kopplung <i>Γ</i> (klassisch)</dt><dd${cls(p.G,1,'nid')}>${fmt(p.G)}</dd>
+  <dt>Debye-Länge <i>λ</i><sub>D</sub></dt><dd>${fLen(p.lD)}</dd>
+  <dt>Elektronen in Debye-Kugel <i>N</i><sub>D</sub></dt><dd>${fmt(p.ND)}</dd>
+  <div class="gh">Entartung</div>
+  <dt>Fermi-Energie <i>E</i><sub>F</sub></dt><dd>${fE(p.EF)}</dd>
+  <dt>Fermi-Temperatur <i>T</i><sub>F</sub></dt><dd>${fT(p.TF)}</dd>
+  <dt>Entartung <i>Θ</i> = <i>T</i>/<i>T</i><sub>F</sub></dt><dd${thc}>${fmt(p.Th)}</dd>
+  <dt>de-Broglie-Länge <i>λ</i><sub>th</sub></dt><dd>${fLen(p.lth)}</dd>
+  <div class="gh">Beides zusammen</div>
+  <dt>Kopplung <i>Γ</i><sub>eff</sub></dt><dd${cls(p.Geff,1,'nid')}>${fmt(p.Geff)}</dd>
+  <dt>Abschirmlänge <i>λ</i><sub>s</sub></dt><dd>${fLen(p.ls)}</dd>
+  <dt>Ionenkopplung <i>Γ</i><sub>i</sub> (${ION[p.Z].sym})</dt><dd${cls(p.Gi,1,'nid')}>${fmt(p.Gi)}</dd>
+  <dt>Coulomb-Logarithmus ln <i>Λ</i></dt><dd>${num(p.lnL,2)}</dd>
+  <dt>Plasmafrequenz <i>f</i><sub>p</sub></dt><dd>${fFreq(p.fp)}</dd>`;
+  if(p.Z===1)s+=`<dt>Ionisationsgrad H (Saha)</dt><dd>${p.ne<1e27?pct(p.xH):'—'}</dd>`;
+  $('#kz').innerHTML=s;
+}
+function statusText(){
+  const deg=p.Th<1,nid=p.Geff>=1;let h,t;
+  if(!deg&&!nid){
+    if(p.Geff<0.1){h='Klassisch und ideal.';t=`${fmt(p.ND)} Elektronen teilen sich eine Debye-Kugel. Die Wechselwirkung ist eine kleine Störung: Ideales Gasgesetz, Debye-Hückel und kinetische Theorie gelten.`;}
+    else{h='Klassisch, schwach gekoppelt.';t=`Γ = ${fmt(p.Geff)}: Korrekturen zum idealen Gas sind schon spürbar, nur noch ${fmt(p.ND)} Elektronen in der Debye-Kugel.`;}
+  }else if(nid&&!deg){h='<span class="sw-nid">Klassisch, nicht-ideal.</span>';t=`Die Coulomb-Energie übertrifft die thermische Energie (Γ = ${fmt(p.G)}). Weniger als ein Elektron in der Debye-Kugel: Debye-Hückel versagt.`;}
+  else if(deg&&!nid){h='<span class="sw-deg">Entartet und ideal.</span>';t=`Θ = ${fmt(p.Th)}: Die Elektronen füllen die Fermi-Kugel. Ihre typische Energie E<sub>F</sub> = ${fE(p.EF)} ist groß gegen k<sub>B</sub>T und gegen die Coulomb-Energie (Γ<sub>eff</sub> = ${fmt(p.Geff)}).`;}
+  else{h='<span class="sw-nid">Nicht-ideal</span> <span class="sw-deg">und entartet</span> (warme dichte Materie).';t=`Coulomb-, Fermi- und thermische Energie sind vergleichbar (Γ<sub>eff</sub> = ${fmt(p.Geff)}, Θ = ${fmt(p.Th)}). Weder klassische noch ideale Näherungen gelten.`;}
+  const x=[];
+  if(p.Gi>=175)x.push(`Die Ionen bilden ein Coulomb-Gitter (Γ<sub>i</sub> = ${fmt(p.Gi)}).`);
+  else if(p.Gi>=1&&!nid)x.push(`Die Ionen sind dagegen stark gekoppelt (Γ<sub>i</sub> = ${fmt(p.Gi)}).`);
+  if(p.Z===1&&p.ne<1e27&&p.xH<0.5)x.push(`Im thermischen Gleichgewicht wäre Wasserstoff hier überwiegend neutral (Saha: ${pct(p.xH)} ionisiert).`);
+  if(!deg&&p.Th<5)x.push(`Die Entartung macht sich schon bemerkbar (Θ = ${fmt(p.Th)}).`);
+  if(p.relT>0.1||p.relF>0.3)x.push('Relativistische Effekte werden wichtig.');
+  const name=st.sel?`<b>${EXM[st.sel].name}:</b> `:'';
+  $('#status').innerHTML=`${name}<b>${h}</b> ${t} ${x.join(' ')}`;
+}
+
+/* ----- Zeichenhilfen ----- */
+let C={},dpr=1;
+function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={stage:g('--stage'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),accent:g('--accent'),i:g('--c-i'),e:g('--c-e'),scr:g('--c-scr'),
+    nid:g('--c-nid'),nidl:g('--c-nid-l'),deg:g('--c-deg'),degl:g('--c-deg-l'),ion:g('--c-ion'),saha:g('--c-saha'),rel:g('--c-rel'),regA:parseFloat(g('--reg-a'))||0.26,
+    mono:g('--f-mono')||'monospace',ui:g('--f-ui')||'sans-serif',math:g('--f-math')||'serif'};}
+function ctxOf(cv){const r=cv.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function rgb(col){if(col.startsWith('#')&&col.length===7){const n=parseInt(col.slice(1),16);return [n>>16,(n>>8)&255,n&255];}return [128,128,128];}
+function hexA(col,a){const [r,g,b]=rgb(col);return `rgba(${r},${g},${b},${a})`;}
+function halo(c,txt,x,y){c.save();c.strokeStyle=hexA(C.stage,0.92);c.lineWidth=4;c.lineJoin='round';c.strokeText(txt,x,y);c.restore();c.fillText(txt,x,y);}
+// Text mit Indizes: "Γ_{eff}", "n^{2/3}"; Ausrichtung über align, Grundlinie wie c.textBaseline
+function rich(c,s,x,y,o){o=o||{};const sz=o.size||11.5,wt=o.weight||600,fam=o.fam||C.ui,parts=[],re=/([_^])\{([^}]*)\}/g;let last=0,m;
+  while((m=re.exec(s))){if(m.index>last)parts.push([s.slice(last,m.index),0]);parts.push([m[2],m[1]==='_'?1:-1]);last=re.lastIndex;}
+  if(last<s.length)parts.push([s.slice(last),0]);
+  const fnt=k=>`${wt} ${k?sz*0.74:sz}px ${fam}`;let W=0;for(const q of parts){c.font=fnt(q[1]);W+=c.measureText(q[0]).width;}
+  const al=o.align||'left';let px=al==='center'?x-W/2:al==='right'?x-W:x;const ta=c.textAlign;c.textAlign='left';
+  for(const q of parts){c.font=fnt(q[1]);const dy=q[1]===1?sz*0.3:q[1]===-1?-sz*0.42:0;if(o.halo!==false)halo(c,q[0],px,y+dy);else c.fillText(q[0],px,y+dy);px+=c.measureText(q[0]).width;}
+  c.textAlign=ta;return W;}
+
+/* ----- Karte ----- */
+let M=null, regCache={key:'',cv:null};
+function regionImage(w,h){
+  const key=`${w}x${h}|${C.stage}|${C.nid}|${C.deg}|${C.regA}`;if(regCache.key===key)return regCache.cv;
+  const gw=Math.max(2,Math.ceil(w/2)),gh=Math.max(2,Math.ceil(h/2));
+  const cv=document.createElement('canvas');cv.width=gw;cv.height=gh;const cx=cv.getContext('2d');const img=cx.createImageData(gw,gh),d=img.data;
+  const sb=rgb(C.stage),nd=rgb(C.nid),dg=rgb(C.deg),A=C.regA,sg=z=>1/(1+Math.exp(-z));
+  for(let j=0;j<gh;j++){const kT=KB*Math.pow(10,T1-(j+0.5)/gh*(T1-T0));
+    for(let i=0;i<gw;i++){const n=Math.pow(10,N0+(i+0.5)/gw*(N1-N0)),Ec=KC/aOf(n),EF=EFC*Math.pow(n,2/3);
+      const an=A*sg(5*L10(Ec/Math.hypot(kT,EF))),ad=A*sg(-5*L10(kT/EF)),o=4*(j*gw+i);
+      for(let q=0;q<3;q++){let v=sb[q]*(1-ad)+dg[q]*ad;v=v*(1-an)+nd[q]*an;d[o+q]=v;}d[o+3]=255;}}
+  cx.putImageData(img,0,0);regCache={key,cv};return cv;}
+function drawMap(){if(!p)return;const cv=$('#map');const {c,W,H}=ctxOf(cv);
+  const L=64,R=60,T=12,B=46,w=W-L-R,h=H-T-B;
+  const X=lg=>L+(lg-N0)/(N1-N0)*w, Y=lg=>T+h-(lg-T0)/(T1-T0)*h;
+  M={L,T,w,h,X,Y,W,H,ex:[]};
+  c.imageSmoothingEnabled=true;c.drawImage(regionImage(w,h),L,T,w,h);
+  // Gitter
+  c.lineWidth=1;c.strokeStyle=hexA(C.muted,0.16);
+  for(let k=N0;k<=N1;k+=2){c.beginPath();c.moveTo(X(k)+0.5,T);c.lineTo(X(k)+0.5,T+h);c.stroke();}
+  for(let k=T0;k<=T1;k++){c.beginPath();c.moveTo(L,Y(k)+0.5);c.lineTo(L+w,Y(k)+0.5);c.stroke();}
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  const curve=(f,col,lw,dash,a=N0,b=N1)=>{const pts=[];const nS=700;for(let s=0;s<=nS;s++){const x=a+(b-a)*s/nS,y=f(x);pts.push(y===null?null:[x,y]);}
+    c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;
+    for(const q of pts){if(!q){pen=false;continue;}const px=X(q[0]),py=Y(q[1]);pen?c.lineTo(px,py):c.moveTo(px,py);pen=true;}c.stroke();c.setLineDash([]);return pts;};
+  const geffCurve=(G0,col,lw,dash)=>{const tip=lgN_tip(G0);const f=x=>{if(x>=tip)return null;const y=lgT_Geff(x,G0);return y===null?T0-3:y;};
+    const pts=curve(f,col,lw,dash,N0,tip-1e-9);c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);
+    // senkrechter Abschluss der Zunge
+    const lastY=lgT_Geff(tip-1e-4,G0);c.beginPath();c.moveTo(X(tip-1e-4),Y(lastY===null?T0-3:lastY));c.lineTo(X(tip),Y(T0-3));c.stroke();c.setLineDash([]);return pts;};
+  // Höhenlinien der Kopplung
+  if(show.cont)for(const G0 of [0.01,0.1,10,100])geffCurve(G0,hexA(C.nidl,0.75),1,[2,3]);
+  // Saha
+  let sahaPts=null;
+  if(show.saha){c.strokeStyle=C.saha;c.lineWidth=1.6;c.setLineDash([7,4]);c.beginPath();let pen=false;sahaPts=[];
+    for(let s=0;s<=500;s++){const lgT=2.8+s*(5.8-2.8)/500,lgN=L10(sahaS(Math.pow(10,lgT)));if(lgN>27){pen=false;continue;}sahaPts.push([lgN,lgT]);const px=X(lgN),py=Y(lgT);pen?c.lineTo(px,py):c.moveTo(px,py);pen=true;}
+    c.stroke();c.setLineDash([]);}
+  // Ionenlinien
+  if(show.ion){curve(x=>lgT_Gi(x,1,st.Z),C.ion,1.4,[6,4]);curve(x=>lgT_Gi(x,175,st.Z),C.ion,2,[]);curve(x=>lgT_iq(x,st.Z),C.ion,1.4,[2,3]);}
+  // relativistisch
+  if(show.rel){c.strokeStyle=C.rel;c.lineWidth=1.3;c.setLineDash([5,4]);c.beginPath();c.moveTo(L,Y(LGT_REL));c.lineTo(L+w,Y(LGT_REL));c.moveTo(X(LGN_REL),T);c.lineTo(X(LGN_REL),T+h);c.stroke();c.setLineDash([]);}
+  // Hauptlinien
+  geffCurve(1,C.nidl,2.6,[]);
+  curve(lgT_TF,C.degl,2.6,[]);
+  // Adiabate
+  if(show.adi){curve(x=>st.lgT+2/3*(x-st.lgN),C.accent,1.8,[8,5]);}
+  c.restore();
+  // Achsen
+  c.strokeStyle=C.line;c.lineWidth=1;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.fillStyle=C.muted;c.font=`11px ${C.mono}`;c.textAlign='center';c.textBaseline='top';
+  for(let k=N0;k<=N1;k+=2)c.fillText('10'+sup(k),X(k),T+h+5);
+  rich(c,'Elektronendichte n_{e} (m⁻³)',L+w/2,T+h+24,{size:12,weight:400,align:'center',halo:false});
+  c.font=`11px ${C.mono}`;c.textAlign='right';c.textBaseline='middle';
+  for(let k=T0;k<=T1;k++)c.fillText('10'+sup(k),L-6,Y(k));
+  c.textAlign='left';const evK=L10(QE/KB);
+  for(let k=-4;k<=6;k++){const y=Y(k+evK);if(y<T-1||y>T+h+1)continue;c.fillText('10'+sup(k),L+w+6,y);c.strokeStyle=C.muted;c.beginPath();c.moveTo(L+w,y);c.lineTo(L+w+3,y);c.stroke();}
+  c.save();c.font=`12px ${C.ui}`;c.textAlign='center';c.translate(14,T+h/2);c.rotate(-Math.PI/2);c.fillText('Temperatur T (K)',0,0);c.restore();
+  c.save();c.font=`12px ${C.ui}`;c.textAlign='center';c.translate(W-12,T+h/2);c.rotate(Math.PI/2);c.textBaseline='middle';rich(c,'k_{B}T (eV)',0,0,{size:12,weight:400,align:'center',halo:false});c.restore();
+  // Gebietsnamen
+  const zone=(lgN,lgT,txt,col,size,it)=>{c.font=`${it?'italic ':''}600 ${size}px ${C.ui}`;c.fillStyle=col;c.textAlign='center';c.textBaseline='middle';halo(c,txt,X(lgN),Y(lgT));};
+  zone(10,8.3,'klassisch · ideal',C.muted,15);
+  zone(23.2,1.6,'nicht-ideal',C.nidl,15);
+  zone(33.2,1.4,'entartet · ideal',C.degl,15);
+  zone(28.15,3.42,'warme dichte',C.ink,11,true);zone(28.15,3.12,'Materie',C.ink,11,true);
+  // Linienbeschriftungen entlang der Kurven
+  const lab=(lgN,lgT,lgN2,lgT2,txt,col,wt,dy)=>{if(lgT===null||lgT2===null)return;const x1=X(lgN),y1=Y(lgT),x2=X(lgN2),y2=Y(lgT2);
+    if(x1<L+4||x1>L+w-4||y1<T+8||y1>T+h-8)return;const ang=Math.atan2(y2-y1,x2-x1);
+    c.save();c.translate(x1,y1);c.rotate(ang);c.fillStyle=col;c.textBaseline='bottom';rich(c,txt,0,dy||-3,{weight:wt||600,align:'center'});c.restore();};
+  const onG=(G0,lgT)=>{// lg n auf der klassischen Flanke der Γ-Linie zu gegebenem lg T
+    let lo=N0,hi=lgN_tip(G0);for(let k=0;k<60;k++){const m=(lo+hi)/2,y=lgT_Geff(m,G0);if(y!==null&&y<lgT)lo=m;else hi=m;}return lo;};
+  if(show.cont&&w>560)for(const [G0,s] of [[0.01,'Γ = 0,01'],[0.1,'Γ = 0,1'],[10,'Γ = 10'],[100,'Γ = 100']]){const x=onG(G0,0.55);lab(x,lgT_Geff(x,G0),x+0.6,lgT_Geff(x+0.6,G0),s,C.nidl,500);}
+  {const x=onG(1,1.0);lab(x,lgT_Geff(x,1),x+0.6,lgT_Geff(x+0.6,1),'Γ = 1',C.nidl,700);}
+  lab(34.3,lgT_TF(34.3),34.9,lgT_TF(34.9),'T = T_{F}  (Θ = 1)',C.degl,700);
+  if(show.ion){const x1=34-5*L10(st.Z);lab(x1,lgT_Gi(x1,1,st.Z),x1+0.6,lgT_Gi(x1+0.6,1,st.Z),'Γ_{i} = 1',C.ion,600);
+    lab(33.3,lgT_Gi(33.3,175,st.Z),33.9,lgT_Gi(33.9,175,st.Z),'Γ_{i} = 175: Ionen kristallisieren',C.ion,600,14);
+    const xq=34.6;lab(xq,lgT_iq(xq,st.Z),xq+0.5,lgT_iq(xq+0.5,st.Z),'Ionen: Quanteneffekte',C.ion,600,12);}
+  if(show.saha&&sahaPts&&sahaPts.length>5){let k=sahaPts.findIndex(q=>q[1]>3.55);if(k>0&&k<sahaPts.length-3)lab(sahaPts[k][0],sahaPts[k][1],sahaPts[k+3][0],sahaPts[k+3][1],'H zu 50 % ionisiert (Saha)',C.saha,600,-3);
+    const q=sahaPts.find(q=>q[0]>12.5);if(q){c.font=`italic 11px ${C.ui}`;c.fillStyle=C.saha;c.textAlign='left';c.textBaseline='top';halo(c,'darunter überwiegend neutral',X(q[0]),Y(q[1])+6);}}
+  if(show.rel){c.fillStyle=C.rel;c.textBaseline='bottom';rich(c,'k_{B}T = m_{e}c²',L+6,Y(LGT_REL)-3,{size:11});
+    c.save();c.translate(X(LGN_REL)-4,T+h-8);c.rotate(-Math.PI/2);rich(c,'p_{F} = m_{e}c',0,0,{size:11});c.restore();}
+  // Beispiele
+  const placed=[];
+  const cur={x:X(st.lgN),y:Y(st.lgT)};const curR=[cur.x-12,cur.y-12,24,24];
+  const hit=(r)=>placed.some(q=>r[0]<q[0]+q[2]&&r[0]+r[2]>q[0]&&r[1]<q[1]+q[3]&&r[1]+r[3]>q[1]);
+  if(!show.ex)placed.push(curR);
+  if(show.ex){
+    for(const e of EX){const x=X(L10(e.n)),y=Y(L10(e.T));M.ex.push({id:e.id,x,y});placed.push([x-5,y-5,10,10]);}
+    c.font=`11.5px ${C.ui}`;
+    const order=EX.slice().sort((a,b)=>(b.id===st.sel)-(a.id===st.sel));
+    for(const e of order){const x=X(L10(e.n)),y=Y(L10(e.T)),tw=c.measureText(e.sh).width,th=13;
+      const cand=[[x+8,y-th/2],[x-8-tw,y-th/2],[x-tw/2,y-8-th],[x-tw/2,y+8],[x+6,y-6-th],[x+6,y+5],[x-6-tw,y-6-th],[x-6-tw,y+5]];
+      let pos=null;for(const q of (e.id===st.sel?cand.map(q=>[q[0]+(q[0]>x?5:q[0]+tw<x?-5:0),q[1]+(q[1]>y?5:q[1]+th<y?-5:0)]):cand)){const r=[q[0]-2,q[1]-1,tw+4,th+2];if(r[0]<L+2||r[0]+r[2]>L+w-2||r[1]<T+2||r[1]+r[3]>T+h-2)continue;if(!hit(r)){pos=q;placed.push(r);break;}}
+      e._lab=pos;if(e===order[0]&&!placed.includes(curR))placed.push(curR);}
+    for(const e of EX){const x=X(L10(e.n)),y=Y(L10(e.T)),on=e.id===st.sel,hv=e.id===hoverEx;
+      c.beginPath();c.arc(x,y,on||hv?5.5:4.2,0,2*Math.PI);c.fillStyle=on?C.accent:C.ink;c.fill();c.lineWidth=1.5;c.strokeStyle=C.stage;c.stroke();
+      if(e._lab){c.font=`${on||hv?'600 ':''}11.5px ${C.ui}`;c.fillStyle=on?C.accent:C.ink;c.textAlign='left';c.textBaseline='top';halo(c,e.sh,e._lab[0],e._lab[1]);}}
+    if(hoverEx&&hoverEx!==st.sel){const e=EXM[hoverEx],x=X(L10(e.n)),y=Y(L10(e.T));c.font=`600 12px ${C.ui}`;const tw=c.measureText(e.name).width+12;
+      let bx=Math.min(L+w-tw-2,Math.max(L+2,x-tw/2)),by=y-34;if(by<T+2)by=y+12;
+      c.fillStyle=C.ink;c.fillRect(bx,by,tw,20);c.fillStyle=C.stage;c.textAlign='left';c.textBaseline='middle';c.fillText(e.name,bx+6,by+10);}
+  }
+  // Cursor
+  c.strokeStyle=hexA(C.accent,0.55);c.lineWidth=1;c.setLineDash([3,3]);c.beginPath();c.moveTo(L,cur.y);c.lineTo(cur.x,cur.y);c.moveTo(cur.x,T+h);c.lineTo(cur.x,cur.y);c.stroke();c.setLineDash([]);
+  c.beginPath();c.arc(cur.x,cur.y,8,0,2*Math.PI);c.lineWidth=2.5;c.strokeStyle=C.accent;c.stroke();
+  c.beginPath();c.arc(cur.x,cur.y,2.5,0,2*Math.PI);c.fillStyle=C.accent;c.fill();
+  const tag=`Γ_{eff} = ${fmt(p.Geff)}    Θ = ${fmt(p.Th)}`;c.textBaseline='middle';c.fillStyle='rgba(0,0,0,0)';
+  const tw=rich(c,tag,-9999,-9999,{size:12,halo:false})+14;
+  let tx=cur.x+14,ty=cur.y-30;if(tx+tw>L+w-2)tx=cur.x-14-tw;if(ty<T+2)ty=cur.y+14;
+  c.fillStyle=C.accent;c.fillRect(tx,ty,tw,20);c.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--on-accent').trim()||'#fff';rich(c,tag,tx+7,ty+10,{size:12,halo:false});
+}
+function exAt(x,y){if(!M||!show.ex)return null;let best=null,bd=12;for(const e of M.ex){const d=Math.hypot(e.x-x,e.y-y);if(d<bd){bd=d;best=e.id;}}return best;}
+function ptFromXY(x,y){st.lgN=N0+(x-M.L)/M.w*(N1-N0);st.lgT=T0+(M.T+M.h-y)/M.h*(T1-T0);st.sel=null;sync();}
+const mapCv=$('#map');
+mapCv.addEventListener('pointerdown',e=>{if(!M)return;const r=mapCv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  if(x<M.L||x>M.L+M.w||y<M.T||y>M.T+M.h)return;mapCv.focus({preventScroll:true});
+  const id=exAt(x,y);if(id){selectEx(id);return;}
+  dragging=true;mapCv.setPointerCapture(e.pointerId);ptFromXY(x,y);});
+mapCv.addEventListener('pointermove',e=>{if(!M)return;const r=mapCv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  if(dragging){ptFromXY(Math.max(M.L,Math.min(M.L+M.w,x)),Math.max(M.T,Math.min(M.T+M.h,y)));return;}
+  const id=exAt(x,y);mapCv.style.cursor=id?'pointer':'crosshair';if(id!==hoverEx){hoverEx=id;drawMap();}});
+['pointerup','pointercancel'].forEach(ev=>mapCv.addEventListener(ev,()=>{dragging=false;dirty=true;}));
+mapCv.addEventListener('pointerleave',()=>{if(hoverEx){hoverEx=null;drawMap();}});
+mapCv.addEventListener('keydown',e=>{const s=e.shiftKey?0.5:0.05;let used=true;
+  if(e.key==='ArrowLeft')st.lgN-=s;else if(e.key==='ArrowRight')st.lgN+=s;else if(e.key==='ArrowUp')st.lgT+=s;else if(e.key==='ArrowDown')st.lgT-=s;else used=false;
+  if(used){e.preventDefault();st.lgN=Math.round(st.lgN*100)/100;st.lgT=Math.round(st.lgT*100)/100;st.sel=null;sync();}});
+
+/* ----- Teilchenbild: Ionen per Monte-Carlo, Elektronen als Wellenpakete ----- */
+const PB={cols:8,rows:8,d:1.8};PB.N=PB.cols*PB.rows;PB.Lx=PB.cols*PB.d;PB.Ly=PB.rows*PB.d*Math.sqrt(3)/2;
+const ions={x:new Float64Array(PB.N),y:new Float64Array(PB.N)};
+let els={x:[],y:[],vx:[],vy:[]}, mc={G:-1,lam:1,step:0.3,seeded:false};
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mimg=(d,L)=>d-L*Math.round(d/L), wrap=(v,L)=>{v%=L;return v<0?v+L:v;};
+function seedLattice(){let k=0;for(let r=0;r<PB.rows;r++)for(let q=0;q<PB.cols;q++){ions.x[k]=(q+0.25+0.5*(r%2))*PB.d;ions.y[k]=(r+0.5)*PB.d*Math.sqrt(3)/2;k++;}mc.seeded=true;}
+function seedElectrons(n){els={x:[],y:[],vx:[],vy:[]};for(let k=0;k<n;k++){els.x.push(Math.random()*PB.Lx);els.y.push(Math.random()*PB.Ly);const a=Math.random()*2*Math.PI;els.vx.push(Math.cos(a));els.vy.push(Math.sin(a));}}
+const RC2=Math.pow(Math.min(PB.Lx,PB.Ly)/2,2);
+function eOne(i,x,y){let s=0;const lam=mc.lam;for(let j=0;j<PB.N;j++){if(j===i)continue;const dx=mimg(x-ions.x[j],PB.Lx),dy=mimg(y-ions.y[j],PB.Ly),r2=dx*dx+dy*dy;
+  if(r2<RC2){const r=Math.max(0.04,Math.sqrt(r2));s+=Math.exp(-r/lam)/r;}}return mc.G*s;}
+function mcSweeps(n,maxStep){for(let s=0;s<n;s++){let acc=0;
+  for(let k=0;k<PB.N;k++){const i=(Math.random()*PB.N)|0,x0=ions.x[i],y0=ions.y[i];
+    const x1=wrap(x0+(Math.random()*2-1)*mc.step,PB.Lx),y1=wrap(y0+(Math.random()*2-1)*mc.step,PB.Ly);
+    const dE=mc.G>1e-6?eOne(i,x1,y1)-eOne(i,x0,y0):0;
+    if(dE<=0||Math.random()<Math.exp(-dE)){ions.x[i]=x1;ions.y[i]=y1;acc++;}}
+  const rate=acc/PB.N;mc.step*=rate>0.5?1.15:rate<0.3?0.85:1;mc.step=Math.max(1e-4,Math.min(maxStep,mc.step));}}
+function updateParticles(){const G=p.Gi,lam=p.ls/p.ai;
+  if(!mc.seeded||(G>=140&&mc.G<140))seedLattice();
+  mc.G=G;mc.lam=Math.max(0.05,lam);
+  if(els.x.length!==PB.N*p.Z)seedElectrons(PB.N*p.Z);
+  mc.step=Math.max(mc.step,0.05);mcSweeps(dragging?20:120,PB.d);}
+let grid=null;
+function drawPic(dt){if(!p)return;const cv=$('#pic');const {c,W,H}=ctxOf(cv);
+  const padB=40,sc=Math.min((W-8)/PB.Lx,(H-padB-8)/PB.Ly),bw=PB.Lx*sc,bh=PB.Ly*sc,ox=(W-bw)/2,oy=4;
+  c.fillStyle=C.stage;c.fillRect(ox,oy,bw,bh);
+  // Elektronen bewegen
+  if(dt>0&&!reduceMotion){const v=1.2*dt;for(let k=0;k<els.x.length;k++){if(Math.random()<0.01){const a=Math.random()*2*Math.PI;els.vx[k]=Math.cos(a);els.vy[k]=Math.sin(a);}
+    els.x[k]=wrap(els.x[k]+v*els.vx[k],PB.Lx);els.y[k]=wrap(els.y[k]+v*els.vy[k],PB.Ly);}}
+  // Elektronen: Wellenpakete mit Halbwertsbreite λ_th
+  const fwhm=p.lth/p.ai,sigPx=fwhm/2.355*sc,ne=els.x.length,Ka=0.30;
+  c.save();c.beginPath();c.rect(ox,oy,bw,bh);c.clip();
+  if(sigPx<1.6){c.fillStyle=C.e;for(let k=0;k<ne;k++){c.beginPath();c.arc(ox+els.x[k]*sc,oy+els.y[k]*sc,2.6,0,2*Math.PI);c.fill();}}
+  else if(3*sigPx>Math.min(bw,bh)/2){c.fillStyle=hexA(C.e,Ka);c.fillRect(ox,oy,bw,bh);}
+  else{const cs=Math.max(2,sigPx/3),gw=Math.ceil(bw/cs),gh=Math.ceil(bh/cs),sc2=sigPx/cs,R=Math.ceil(3*sc2);
+    if(!grid||grid.gw!==gw||grid.gh!==gh){const g=document.createElement('canvas');g.width=gw;g.height=gh;grid={gw,gh,cv:g,a:new Float32Array(gw*gh),b:new Float32Array(gw*gh)};}
+    const A=grid.a,Bf=grid.b;A.fill(0);
+    for(let k=0;k<ne;k++){const i=Math.min(gw-1,(els.x[k]*sc/cs)|0),j=Math.min(gh-1,(els.y[k]*sc/cs)|0);A[j*gw+i]+=1;}
+    const ker=[];let ks=0;for(let q=-R;q<=R;q++){const v=Math.exp(-q*q/(2*sc2*sc2));ker.push(v);ks+=v;}for(let q=0;q<ker.length;q++)ker[q]/=ks;
+    for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){let s=0;for(let q=-R;q<=R;q++){let ii=i+q;ii=((ii%gw)+gw)%gw;s+=A[j*gw+ii]*ker[q+R];}Bf[j*gw+i]=s;}
+    for(let i=0;i<gw;i++)for(let j=0;j<gh;j++){let s=0;for(let q=-R;q<=R;q++){let jj=j+q;jj=((jj%gh)+gh)%gh;s+=Bf[jj*gw+i]*ker[q+R];}A[j*gw+i]=s;}
+    const mean=ne/(gw*gh),gc=grid.cv.getContext('2d'),img=gc.createImageData(gw,gh),d=img.data,[r,g,b]=rgb(C.e);
+    for(let k=0;k<gw*gh;k++){const al=Math.min(0.88,Ka*A[k]/mean);d[4*k]=r;d[4*k+1]=g;d[4*k+2]=b;d[4*k+3]=al*255;}
+    gc.putImageData(img,0,0);c.imageSmoothingEnabled=true;c.drawImage(grid.cv,ox,oy,gw*cs,gh*cs);}
+  // Ionen
+  const ri=Math.max(4,Math.min(8.5,0.2*PB.d*sc));
+  for(let k=0;k<PB.N;k++){const x=ox+ions.x[k]*sc,y=oy+ions.y[k]*sc;
+    for(const [dx,dy] of [[0,0],[bw,0],[-bw,0],[0,bh],[0,-bh]]){const xx=x+dx,yy=y+dy;if(xx<ox-ri||xx>ox+bw+ri||yy<oy-ri||yy>oy+bh+ri)continue;
+      c.fillStyle=hexA(C.i,0.22);c.strokeStyle=C.i;c.lineWidth=1.3;c.beginPath();c.arc(xx,yy,ri,0,2*Math.PI);c.fill();c.stroke();
+      c.beginPath();c.moveTo(xx-ri*0.5,yy);c.lineTo(xx+ri*0.5,yy);c.moveTo(xx,yy-ri*0.5);c.lineTo(xx,yy+ri*0.5);c.stroke();}}
+  // Abschirmlänge um das mittlere Ion
+  let k0=0,bd=1e9;for(let k=0;k<PB.N;k++){const d=Math.hypot(ions.x[k]-PB.Lx/2,ions.y[k]-PB.Ly/2);if(d<bd){bd=d;k0=k;}}
+  const rs=p.ls/p.ai*sc,cx0=ox+ions.x[k0]*sc,cy0=oy+ions.y[k0]*sc;
+  const rsIn=rs<0.75*Math.max(bw,bh);
+  if(rsIn){c.strokeStyle=C.scr;c.lineWidth=2;c.setLineDash([6,4]);c.fillStyle=hexA(C.scr,0.07);c.beginPath();c.arc(cx0,cy0,Math.max(rs,2),0,2*Math.PI);c.fill();c.stroke();c.setLineDash([]);}
+  c.beginPath();c.arc(cx0,cy0,ri+3,0,2*Math.PI);c.strokeStyle=C.scr;c.lineWidth=2;c.stroke();
+  c.restore();
+  c.strokeStyle=C.line;c.lineWidth=1;c.strokeRect(ox+0.5,oy+0.5,bw-1,bh-1);
+  // Maßstab
+  const y0=oy+bh+15;c.strokeStyle=C.ink;c.lineWidth=1.5;c.beginPath();c.moveTo(ox,y0);c.lineTo(ox+p.a/p.ai*sc,y0);c.moveTo(ox,y0-4);c.lineTo(ox,y0+4);c.moveTo(ox+p.a/p.ai*sc,y0-4);c.lineTo(ox+p.a/p.ai*sc,y0+4);c.stroke();
+  c.font=`11px ${C.ui}`;c.fillStyle=C.muted;c.textAlign='left';c.textBaseline='middle';c.fillText(`a = ${fLen(p.a)} (mittlerer Elektronenabstand)`,ox+p.a/p.ai*sc+8,y0);
+  c.fillStyle=C.scr;rich(c,rsIn?'– – Abschirmlänge λ_{s} um das markierte Ion':`Abschirmlänge λ_{s} = ${fmt(p.ls/p.a)} a: Kreis größer als das Bild`,ox,y0+16,{size:11,weight:400,halo:false});
+}
+function picNote(){
+  const G=p.Gi;let ion;
+  if(G<0.3)ion='ungeordnet wie in einem Gas';else if(G<10)ion='erste Nahordnung: Nachbarn halten Abstand';else if(G<175)ion='flüssigkeitsartig, deutliche Nahordnung';else ion='Coulomb-Kristall (Gitter)';
+  const r=p.lth/p.a;let el;
+  if(r<0.1)el='punktförmig, klassisch';else if(r<0.5)el='ausgedehnte, aber noch getrennte Wellenpakete';else if(p.Th>=1)el='Wellenpakete überlappen: Quanteneffekte setzen ein';else el='Wellenpakete überlappen stark: ein entartetes Fermi-Gas';
+  $('#picNote').innerHTML=`<b style="color:var(--c-i)">Ionen</b> (Γ<sub>i</sub> = ${fmt(G)}): ${ion}. <b style="color:var(--c-e)">Elektronen</b> (λ<sub>th</sub> = ${fmt(r)} a): ${el}.`;
+}
+
+/* ----- Längenvergleich ----- */
+function drawLen(){if(!p)return;const {c,W,H}=ctxOf($('#len'));
+  const rows=[
+    {lab:'Landau-Länge b',sub:'b/a = Γ',v:p.b,col:C.nidl},
+    {lab:'Debye-Länge λ_{D}',sub:'klassisch',v:p.lD,col:C.scr},
+    {lab:'Abschirmlänge λ_{s}',sub:'mit Entartung',v:p.ls,col:C.scr,dash:true},
+    {lab:'de-Broglie-Länge λ_{th}',sub:'Wellenpaket',v:p.lth,col:C.e},
+    {lab:'Bohr-Radius a_{B}',sub:'Atomgröße',v:AB,col:C.muted}
+  ];
+  const Lp=Math.min(150,W*0.36),Rp=10,T=22,B=30,w=W-Lp-Rp,h=H-T-B,lo=-5,hi=5;
+  const X=v=>Lp+(Math.max(lo,Math.min(hi,v))-lo)/(hi-lo)*w;
+  // Hintergrund: kleiner / größer als a
+  c.fillStyle=hexA(C.muted,0.06);c.fillRect(Lp,T,X(0)-Lp,h);
+  c.font=`11px ${C.ui}`;c.fillStyle=C.muted;c.textBaseline='bottom';c.textAlign='center';
+  c.fillText('kleiner als a',(Lp+X(0))/2,T-4);c.fillText('größer als a',(X(0)+Lp+w)/2,T-4);
+  c.strokeStyle=C.grid;c.lineWidth=1;for(let k=lo;k<=hi;k++){c.beginPath();c.moveTo(X(k)+0.5,T);c.lineTo(X(k)+0.5,T+h);c.stroke();}
+  c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;c.textBaseline='top';for(let k=lo;k<=hi;k+=1){if(w<260&&k%2)continue;c.fillText(k===0?'1':'10'+sup(k),X(k),T+h+4);}
+  c.font=`11px ${C.ui}`;c.fillText('Länge / a (logarithmisch)',Lp+w/2,T+h+17);
+  c.strokeStyle=C.ink;c.lineWidth=1.6;c.beginPath();c.moveTo(X(0),T);c.lineTo(X(0),T+h);c.stroke();
+  const rh=h/rows.length;
+  rows.forEach((r,k)=>{const y=T+rh*(k+0.5),lv=L10(r.v/p.a),xv=X(lv),x0=X(0);
+    c.textBaseline='alphabetic';c.fillStyle=C.ink;rich(c,r.lab,Lp-10,y-1,{size:12,align:'right',halo:false});c.textAlign='right';
+    c.font=`11px ${C.ui}`;c.fillStyle=C.muted;c.textBaseline='top';c.fillText(`${r.sub} · ${fLen(r.v)}`,Lp-10,y+1);
+    c.strokeStyle=r.col;c.lineWidth=5;c.lineCap='round';c.setLineDash(r.dash?[6,5]:[]);c.beginPath();c.moveTo(x0,y);c.lineTo(xv,y);c.stroke();c.setLineDash([]);c.lineCap='butt';
+    c.fillStyle=r.col;c.beginPath();
+    if(lv>hi){c.moveTo(xv+2,y);c.lineTo(xv-8,y-6);c.lineTo(xv-8,y+6);}else if(lv<lo){c.moveTo(xv-2,y);c.lineTo(xv+8,y-6);c.lineTo(xv+8,y+6);}else c.arc(xv,y,5.5,0,2*Math.PI);
+    c.fill();
+    const txt=fmt(r.v/p.a)+' a';c.font=`600 11px ${C.mono}`;c.textBaseline='bottom';
+    const right=xv<Lp+w*0.75;c.textAlign=right?'left':'right';c.fillStyle=r.col;halo(c,txt,right?Math.max(xv,x0)+8:Math.min(xv,x0)-8,y-4);
+  });
+}
+function lenNote(){
+  const it=[];
+  it.push(p.lD>p.a*3?'λ<sub>D</sub> ≫ a: viele Teilchen schirmen gemeinsam ab (ideal).':p.lD>p.a?'λ<sub>D</sub> nur wenig größer als a: Übergangsbereich.':'λ<sub>D</sub> &lt; a: klassische Abschirmung ergibt keinen Sinn mehr.');
+  it.push(p.lth<0.3*p.a?'λ<sub>th</sub> ≪ a: klassische Teilchen.':'λ<sub>th</sub> ≳ a: Quanteneffekte, Pauli-Prinzip.');
+  if(p.a<3*AB)it.push('a ≈ a<sub>B</sub> oder kleiner: Für gebundene Atome ist kein Platz mehr (Druckionisation).');
+  $('#lenNote').innerHTML=it.join(' ');
+}
+
+/* ----- Legende ----- */
+function sw(col,dash,lw=2){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="${col}" stroke-width="${lw}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;}
+function box(col){return `<svg width="14" height="12" aria-hidden="true"><rect x="1" y="1" width="12" height="10" rx="2" fill="${col}"/></svg>`;}
+function buildLegend(){const it=[[box('color-mix(in srgb, var(--c-nid) 45%, transparent)'),'nicht-ideal (Γ<sub>eff</sub> &gt; 1)'],[box('color-mix(in srgb, var(--c-deg) 45%, transparent)'),'entartet (Θ &lt; 1)'],
+  [sw('var(--c-nid-l)',null,2.6),'Γ<sub>eff</sub> = 1'],[sw('var(--c-deg-l)',null,2.6),'T = T<sub>F</sub>']];
+  if(show.cont)it.push([sw('var(--c-nid-l)','2 3',1.2),'Höhenlinien Γ<sub>eff</sub>']);
+  if(show.ion)it.push([sw('var(--c-ion)','6 4',1.4),'Γ<sub>i</sub> = 1'],[sw('var(--c-ion)',null,2),'Γ<sub>i</sub> = 175'],[sw('var(--c-ion)','2 3',1.4),'Ionen entartet']);
+  if(show.saha)it.push([sw('var(--c-saha)','7 4',1.6),'Saha: H halb ionisiert']);
+  if(show.rel)it.push([sw('var(--c-rel)','5 4',1.3),'relativistisch']);
+  if(show.adi)it.push([sw('var(--accent)','8 5',1.8),'Adiabate']);
+  $('#legend').innerHTML=it.map(([s,t])=>`<span>${s}${t}</span>`).join('');}
+
+/* ----- Schleife ----- */
+let lastTs=0;
+function update(){p=phys(Math.pow(10,st.lgN),Math.pow(10,st.lgT),st.Z);updateParticles();updateKZ();statusText();picNote();lenNote();drawMap();drawLen();}
+function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(dirty){dirty=false;readColors();update();}
+  if(p){if(!reduceMotion)mcSweeps(1,0.06*PB.d);drawPic(dt);}
+  requestAnimationFrame(frameLoop);}
+function redrawAll(){readColors();dpr=Math.min(2,window.devicePixelRatio||1);if(p){drawMap();drawLen();drawPic(0);}}
+new ResizeObserver(redrawAll).observe($('.mapwrap'));new ResizeObserver(redrawAll).observe($('#pic').parentElement);new ResizeObserver(redrawAll).observe($('#len').parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+dpr=Math.min(2,window.devicePixelRatio||1);
+buildControls();syncShow();
+{const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
+  const id=h.find(k=>EXM[k]);if(h.includes('adi')){show.adi=true;syncShow();}selectEx(id||'glow');}
+requestAnimationFrame(frameLoop);
+</script>
+
+</body>
+</html>
