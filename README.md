@@ -10,6 +10,7 @@ Jede App ist eine einzelne, eigenständige HTML-Datei ohne externe Abhängigkeit
 | [`plasmawave/`](plasmawave/) | **Plasmaspiegel** – EM-Welle trifft auf ein Plasma: 1D-FDTD-Simulation von Reflexion, Eindringen und Transmission (Cutoff bei der Plasmafrequenz) |
 | [`plasmakarte/`](plasmakarte/) | **Plasma-Landkarte** – Dichte-Temperatur-Karte idealer, nicht-idealer und entarteter Plasmen mit Teilchenbild, Längenvergleich und Beispielen vom Sonnenwind bis zum Weißen Zwerg |
 | [`kopplung/`](kopplung/) | **Kopplungslabor** – stark gekoppelte Plasmen: 2D-Molekulardynamik geladener Teilchen (Yukawa) vom Gas über die Flüssigkeit zum Coulomb-Kristall, mit Paarkorrelation g(r), Phasendiagramm und Umrechnung auf Staubplasma, Ionenfalle und Elektronen auf Helium |
+| [`entartung/`](entartung/) | **Entartungslabor** – das Elektronengas vom klassischen bis zum entarteten Grenzfall: Fermi-Kugel im Impulsraum, Fermi-Dirac gegen Maxwell-Boltzmann, Entartungsdruck, Debye- und Thomas-Fermi-Abschirmung, Masse-Radius-Beziehung weißer Zwerge mit Chandrasekhar-Grenze |
 
 Pro Ordner:
 
