@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newtons Kanonenball</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  /* Layout wie die übrigen Labore: links Parameter, Mitte Bahnansicht + Diagramme, rechts Physik und Aufgaben */
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --c-earth:#cddcea; --c-edge:#55728c; --c-moon:#dcdbd5; --c-ast:#ddd0bd; --c-mtn:#7d6b55; --c-atm:#5d9ad8;
+  --c-flat:#7b3aa6; --c-circ:#2c8540; --c-sp0:#2563c9; --c-sp1:#0e8a7f; --c-sp2:#d9741a; --c-sp3:#c4234a; --c-drag:#b4480f;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --c-earth:#1a2c3d; --c-edge:#6f93b4; --c-moon:#36393c; --c-ast:#3c342b; --c-mtn:#ad977b; --c-atm:#4d8fd0;
+    --c-flat:#c48cf0; --c-circ:#5cc46a; --c-sp0:#62a1ff; --c-sp1:#3fc1b4; --c-sp2:#ffa043; --c-sp3:#ff6b7f; --c-drag:#ffa36e; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --c-earth:#1a2c3d; --c-edge:#6f93b4; --c-moon:#36393c; --c-ast:#3c342b; --c-mtn:#ad977b; --c-atm:#4d8fd0;
+  --c-flat:#c48cf0; --c-circ:#5cc46a; --c-sp0:#62a1ff; --c-sp1:#3fc1b4; --c-sp2:#ffa043; --c-sp3:#ff6b7f; --c-drag:#ffa36e; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1720px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+header.top .units{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr) 350px;grid-template-areas:"params stage info";align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{grid-area:params;padding:12px 14px 14px;min-width:0}
+.stage{grid-area:stage;min-width:0;display:flex;flex-direction:column;gap:10px}
+.info{grid-area:info;padding:16px 18px;min-width:0}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.seg button{all:unset;text-align:center;padding:6px 2px;cursor:pointer;font-size:12.5px;font-weight:500;line-height:1.2}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i,dl.kz dt i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chkrow{display:flex;gap:7px;align-items:flex-start;font-size:13px;margin-bottom:8px;cursor:pointer}
+.chkrow input{accent-color:var(--accent);margin-top:3px}
+.chkrow small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.chkrow.dis{opacity:.5;cursor:not-allowed}
+.ctl-tip{font-size:11.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.ctl-tip kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.btnrow .btn.primary{flex:1 1 100%;padding:7px 10px;font-size:14px}
+select.sel{min-width:0;max-width:100%;font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%;margin-bottom:10px}
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz dd.hi{font-weight:600;color:var(--accent)}
+dl.kz .gh{grid-column:1/-1;font-family:var(--f-head);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+dl.kz .gh:first-child{margin-top:0;padding-top:0;border-top:0}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.status{font-size:13px;color:var(--muted);min-height:2.9em}
+.status b{color:var(--ink);font-weight:600}
+.viewwrap{position:relative;height:clamp(380px,56vh,640px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+#view{cursor:grab;touch-action:none}
+#view.drag{cursor:grabbing}
+#view:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.zoombar{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:4px}
+.zoombar .stp{width:28px;height:28px;background:var(--panel);font-size:16px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.trio{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.cwrap{position:relative;height:250px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.note b{color:var(--ink);font-weight:600}
+.info h3{font-family:var(--f-head);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;text-wrap:balance}
+.info p{margin:0 0 10px;max-width:65ch}
+.info b{font-weight:600}
+.formula{font-family:var(--f-math);font-size:17px;line-height:1.55;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 2px;margin:4px 0 12px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+.formula i{font-style:italic}
+.formula small{font-family:var(--f-ui);font-size:12px;color:var(--muted);display:block;white-space:normal;line-height:1.3;margin-bottom:2px}
+.formula>div{white-space:nowrap}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.92em;line-height:1.15;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.frac>span:last-child{padding:0 3px}
+.sqrt{border-top:1px solid currentColor;padding:0 2px;margin-left:1px}
+.info h4{font-family:var(--f-head);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 6px}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.tasks li:first-child{border-top:0}
+.tasks li p{margin:0}
+.tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
+.m{font-family:var(--f-math)}
+.foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
+@media (max-width:1500px){.trio{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.trio>:first-child{grid-column:1/-1}}
+@media (max-width:1280px){
+  .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
+  .trio{grid-template-columns:minmax(0,1fr)}
+  .trio>:first-child{grid-column:auto}
+  header.top .units{margin-left:0}
+  .viewwrap{height:clamp(320px,62vh,520px)}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <h1>Newtons Kanonenball</h1>
+  <p class="sub">Vom Wurf zur Umlaufbahn: Wann fällt eine Kugel um die Erde herum?</p>
+  <span class="units">Punktmasse · ruhender Zentralkörper · SI-Einheiten</span>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Beispiel</h2>
+    <select class="sel" id="example" aria-label="Beispiel wählen"></select>
+    <h2 class="lab">Himmelskörper</h2>
+    <div class="seg" style="--n:3" id="segBody" role="group" aria-label="Himmelskörper">
+      <button type="button" data-b="E">Erde</button><button type="button" data-b="M">Mond</button><button type="button" data-b="A">Asteroid</button>
+    </div>
+    <h2 class="lab">Abschuss</h2>
+    <div id="ctl-h"></div>
+    <div id="ctl-v"></div>
+    <div id="ctl-a"></div>
+    <div class="btnrow">
+      <button class="btn primary" type="button" id="fire">Feuer!</button>
+      <button class="btn" type="button" id="schar" title="Mehrere Schüsse mit wachsender Geschwindigkeit, wie in Newtons Zeichnung">Bahnschar</button>
+      <button class="btn" type="button" id="clear">Bahnen löschen</button>
+    </div>
+    <h2 class="lab">Modell und Anzeige</h2>
+    <label class="chkrow"><input type="checkbox" id="o-flat"><span>Vergleich: flache Erde<small>Konstantes <i class="m">g</i> nach unten, ebener Boden: die Wurfparabel aus der Schule (gestrichelt).</small></span></label>
+    <label class="chkrow" id="row-drag"><input type="checkbox" id="o-drag"><span>Luftwiderstand<small>Nur Erde: Luftdichte nimmt mit der Höhe exponentiell ab.</small></span></label>
+    <div id="ctl-b" class="ctl"><label for="proj">Geschoss</label><select class="sel" id="proj" style="margin:2px 0 4px"></select><div class="hint" id="h-proj"></div></div>
+    <label class="chkrow"><input type="checkbox" id="o-prev" checked><span>Bahnvorschau<small>Dünn gestrichelt: wohin der nächste Schuss fliegt.</small></span></label>
+    <label class="chkrow"><input type="checkbox" id="o-circ" checked><span>Kreis durch die Kanone<small>Auf diesem Kreis fliegt die Kugel bei <i class="m">v</i><sub>1</sub> und waagerechtem Abschuss.</small></span></label>
+    <h2 class="lab">Zeit und Ansicht</h2>
+    <div id="ctl-w"></div>
+    <label class="chkrow"><input type="checkbox" id="o-autow" checked><span>Zeitraffer automatisch<small>Jeder Schuss dauert dann etwa 7 Sekunden.</small></span></label>
+    <div class="btnrow"><button class="btn" type="button" id="pause">Pause</button><button class="btn" type="button" id="defaults">Standardwerte</button></div>
+    <div class="seg" style="--n:3" id="segView" role="group" aria-label="Ausschnitt">
+      <button type="button" data-v="auto">Automatisch</button><button type="button" data-v="near">Nahbereich</button><button type="button" data-v="earth">Ganzer Körper</button>
+    </div>
+    <p class="ctl-tip">Ansicht: Mausrad oder <kbd>+</kbd> <kbd>−</kbd> zoomt, Ziehen verschiebt. In der Ansicht feuert <kbd>Leertaste</kbd>, <kbd>0</kbd> stellt „Automatisch“ ein.</p>
+    <hr class="sep">
+    <h2 class="lab">Kennzahlen</h2>
+    <dl class="kz" id="kz"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="plotbox">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="viewwrap">
+        <canvas class="full" id="view" tabindex="0" aria-label="Bahnansicht: Kanone auf einem Berg, Himmelskörper und Flugbahnen. Mausrad zoomt, Ziehen verschiebt, Leertaste feuert."></canvas>
+        <div class="zoombar"><button type="button" class="stp" id="zin" aria-label="hineinzoomen">+</button><button type="button" class="stp" id="zout" aria-label="herauszoomen">−</button></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="trio">
+      <div class="panel boxp">
+        <h2 class="lab">Wurfweite gegen Abschussgeschwindigkeit</h2>
+        <div class="cwrap"><canvas class="full" id="rng" aria-label="Wurfweite entlang der Oberfläche gegen die Abschussgeschwindigkeit, runde gegen flache Erde"></canvas></div>
+        <div class="note" id="rngNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Höhe über dem Boden</h2>
+        <div class="cwrap"><canvas class="full" id="alt" aria-label="Höhe der Kugel über der Oberfläche als Funktion der Zeit"></canvas></div>
+        <div class="note" id="altNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Fallen gegen Krümmung</h2>
+        <div class="cwrap"><canvas class="full" id="fall" aria-label="Skizze: Fallstrecke der Kugel in der ersten Sekunde gegen die Absenkung des Kreises um den Mittelpunkt"></canvas></div>
+        <div class="note" id="fallNote"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel info" id="info">
+    <h3>Vom Wurf zur Umlaufbahn</h3>
+    <p>In seiner Schrift <i>De mundi systemate</i> (posthum 1728) zeichnete Newton einen sehr hohen Berg, auf dem eine Kanone waagerecht feuert. Je schneller die Kugel, desto weiter fliegt sie, bis sie die Erde gar nicht mehr erreicht: Sie <b>fällt</b> zwar ständig, doch die Erdoberfläche krümmt sich unter ihr ebenso schnell weg. Aus dem Wurf ist eine Umlaufbahn geworden.</p>
+    <div class="formula">
+      <div><small>Kreisbahn: Schwerkraft liefert die Zentripetalkraft</small><span class="frac"><span><i>m v</i><sup>2</sup></span><span><i>r</i></span></span> = <span class="frac"><span><i>G M m</i></span><span><i>r</i><sup>2</sup></span></span> &nbsp;⇒&nbsp; <i>v</i><sub>1</sub> = √<span class="sqrt"><i>GM</i>/<i>r</i></span> = √<span class="sqrt"><i>g r</i></span></div>
+      <div><small>Flucht: Gesamtenergie null</small><span class="frac"><span>1</span><span>2</span></span><i>m v</i><sup>2</sup> − <span class="frac"><span><i>G M m</i></span><span><i>r</i></span></span> = 0 &nbsp;⇒&nbsp; <i>v</i><sub>2</sub> = √2 · <i>v</i><sub>1</sub></div>
+      <div><small>Fallstrecke = Absenkung des Kreises</small><span class="frac"><span>1</span><span>2</span></span><i>g t</i><sup>2</sup> = <span class="frac"><span>(<i>v t</i>)<sup>2</sup></span><span>2<i>r</i></span></span> &nbsp;⇔&nbsp; <i>v</i><sup>2</sup> = <i>g r</i></div>
+      <div><small>Wurfparabel auf flacher Erde</small><i>y</i>(<i>x</i>) = <i>h</i> + <i>x</i> tan <i>α</i> − <span class="frac"><span><i>g x</i><sup>2</sup></span><span>2<i>v</i><sub>0</sub><sup>2</sup> cos<sup>2</sup><i>α</i></span></span></div>
+    </div>
+    <p><b>Fallen und verfehlen.</b> In der ersten Sekunde fällt jede Kugel 4,9 m, egal wie schnell sie fliegt. Die Erdoberfläche sinkt gegenüber der Waagerechten nach <i class="m">s</i> Metern um <i class="m">s</i><sup>2</sup>/(2<i class="m">R</i>) ab, nach 7,9 km also ebenfalls um 4,9 m. Wer in einer Sekunde 7,9 km weit fliegt, fällt genau so schnell, wie die Erde „wegkrümmt“. Deshalb sind Astronauten auf der ISS schwerelos: Sie fallen ständig, zusammen mit ihrer Station.</p>
+    <p><b>Parabel oder Ellipse?</b> Die Wurfparabel setzt ein überall gleiches, parallel nach unten zeigendes <i class="m">g</i> und einen ebenen Boden voraus. Mit dem 1/<i class="m">r</i><sup>2</sup>-Gesetz ist jede Bahn ein Kegelschnitt mit dem Erdmittelpunkt im Brennpunkt. Ein kurzer Wurf ist das Stück um den fernsten Punkt (Apozentrum) einer sehr schlanken Ellipse, die beinahe durch den Mittelpunkt führt. Bei kleinen Geschwindigkeiten ist die Parabel eine hervorragende Näherung.</p>
+    <p><b>Mond und Apfel.</b> Newtons Schluss: Dieselbe Schwerkraft, die den Apfel fallen lässt, hält den Mond auf seiner Bahn. Der Mond ist etwa 60 Erdradien entfernt; dort ist die Schwerebeschleunigung <i class="m">g</i>/60<sup>2</sup> ≈ 2,7 mm/s². Genau diese Zentripetalbeschleunigung 4π<sup>2</sup><i class="m">r</i>/<i class="m">T</i><sup>2</sup> folgt aus der Umlaufzeit von 27,3 Tagen.</p>
+    <p><b>Warum schießt niemand mit Kanonen in den Orbit?</b> In der dichten Luft am Boden verliert eine Kugel mit 8 km/s ihre Energie in Sekunden. Raketen steigen deshalb zuerst steil aus der Atmosphäre und beschleunigen dann waagerecht. Und eine einmal abgefeuerte Kugel kehrt ohne weiteren Schub immer wieder zum Abschusspunkt zurück; der Berg müsste also oberhalb der Atmosphäre liegen.</p>
+    <p><b>Wie stark bremst die Luft?</b> Die Widerstandskraft wächst mit der Luftdichte <i class="m">ρ</i>, der Stirnfläche <i class="m">A</i> und dem Quadrat der Geschwindigkeit. Der Widerstandsbeiwert <i class="m">c</i><sub>w</sub> beschreibt die Form (Kugel ≈ 0,47, Stromlinie ≈ 0,1–0,3). Teilt man durch die Masse, erhält man die Bremsbeschleunigung:</p>
+    <div class="formula">
+      <div><i>F</i><sub>L</sub> = <span class="frac"><span>1</span><span>2</span></span><i>ρ</i> <i>c</i><sub>w</sub> <i>A</i> <i>v</i><sup>2</sup> &nbsp;⇒&nbsp; <i>a</i><sub>L</sub> = <span class="frac"><span><i>F</i><sub>L</sub></span><span><i>m</i></span></span> = <span class="frac"><span><i>ρ</i> <i>v</i><sup>2</sup></span><span>2<i>β</i></span></span>, &nbsp; <i>β</i> = <span class="frac"><span><i>m</i></span><span><i>c</i><sub>w</sub><i>A</i></span></span></div>
+    </div>
+    <p>Alles, was am Geschoss selbst zählt, steckt im <b>ballistischen Koeffizienten</b> <i class="m">β</i> (Masse pro wirksamer Stirnfläche, in kg/m²). Ein schwerer, schlanker Körper hat ein großes <i class="m">β</i> und wird kaum gebremst, ein leichter, breiter (Tischtennisball) ein kleines. Bei einer massiven Kugel wächst <i class="m">β</i> proportional zum Durchmesser: Große Kugeln fliegen weiter. Raumkapseln haben absichtlich ein kleines <i class="m">β</i>, damit sie beim Wiedereintritt schon hoch oben in dünner Luft abbremsen.</p>
+    <h4>Aufgaben</h4>
+    <ol class="tasks" id="tasks"></ol>
+  </aside>
+</div>
+<p class="foot">Modell: Punktmasse im Schwerefeld eines kugelsymmetrischen, ruhenden und nicht rotierenden Himmelskörpers (Erde: <i class="m">GM</i> = 3,986·10<sup>14</sup> m³/s², <i class="m">R</i> = 6371 km; Mond: <i class="m">GM</i> = 4,905·10<sup>12</sup> m³/s², <i class="m">R</i> = 1737 km; Modell-Asteroid: Kugel mit <i class="m">R</i> = 10 km und Dichte 2 g/cm³). Der Berg wird als senkrechte Klippe auf der Schussseite behandelt; Aufschlag heißt Erreichen des Radius <i class="m">R</i>. Bahnen werden mit dem Runge-Kutta-Verfahren 4. Ordnung und an die Bahn angepasster Schrittweite integriert, der Aufschlagzeitpunkt durch Intervallhalbierung bestimmt. Die Wurfweiten-Kurven ohne Luft sind analytisch aus den Kegelschnittformeln berechnet. „Flache Erde“: ebener Boden in Höhe der Bergfußes, konstantes <i class="m">g</i> = <i class="m">GM</i>/<i class="m">R</i><sup>2</sup> senkrecht nach unten. Luftwiderstand: Kraft ½<i class="m">ρ</i><i class="m">c</i><sub>w</sub><i class="m">A</i><i class="m">v</i><sup>2</sup> gegen die Geschwindigkeit, zusammengefasst im ballistischen Koeffizienten <i class="m">β</i> = <i class="m">m</i>/(<i class="m">c</i><sub>w</sub><i class="m">A</i>) mit konstantem <i class="m">c</i><sub>w</sub> (typische Werte für kleine Geschwindigkeiten; im Überschall ist <i class="m">c</i><sub>w</sub> einer Kugel eher 0,9); isotherme Atmosphäre <i class="m">ρ</i> = 1,225 kg/m³ · e<sup>−<i class="m">z</i>/8,5 km</sup>, oberhalb 150 km vernachlässigt; die Luft ruht (keine Mitrotation, kein Wind). Aufheizen, Verdampfen und Schallmauer-Effekte (<i class="m">c</i><sub>w</sub> hängt in Wirklichkeit von der Machzahl ab) sind nicht modelliert. Zum Vergleich: eine eiserne 12-Pfund-Kugel (5,4 kg, 11,7 cm) hat <i class="m">β</i> ≈ 1000 kg/m².</p>
+</div>
+
+<script>
+/*CORE-START*/
+const G=6.6743e-11;
+const BOD={
+  E:{id:'E',name:'Erde',gen:'der Erde',GM:3.986004418e14,R:6.371e6,atm:true,vmax:13000},
+  M:{id:'M',name:'Mond',gen:'des Mondes',GM:4.9048695e12,R:1.7374e6,atm:false,vmax:2800},
+  A:{id:'A',name:'Asteroid',gen:'des Asteroiden',GM:G*4/3*Math.PI*1e12*2000,R:1e4,atm:false,vmax:12}
+};
+const RHO0=1.225,HS=8500,ATM_TOP=150e3;
+// Beschleunigung; P.flat: konstantes g nach −y, Boden bei y = R
+function deriv(s,P,o){const x=s[0],y=s[1],vx=s[2],vy=s[3];let ax,ay,alt;
+  if(P.flat){ax=0;ay=-P.g0;alt=y-P.R;}else{const r2=x*x+y*y,r=Math.sqrt(r2),f=-P.GM/(r2*r);ax=f*x;ay=f*y;alt=r-P.R;}
+  if(P.k&&alt<ATM_TOP){const rho=RHO0*Math.exp(-Math.max(alt,0)/HS),d=P.k*rho*Math.hypot(vx,vy);ax-=d*vx;ay-=d*vy;}
+  o[0]=vx;o[1]=vy;o[2]=ax;o[3]=ay;}
+const K1=[0,0,0,0],K2=[0,0,0,0],K3=[0,0,0,0],K4=[0,0,0,0],TMP=[0,0,0,0];
+function rk4(s,dt,P){deriv(s,P,K1);for(let i=0;i<4;i++)TMP[i]=s[i]+0.5*dt*K1[i];deriv(TMP,P,K2);for(let i=0;i<4;i++)TMP[i]=s[i]+0.5*dt*K2[i];
+  deriv(TMP,P,K3);for(let i=0;i<4;i++)TMP[i]=s[i]+dt*K3[i];deriv(TMP,P,K4);const n=[0,0,0,0];for(let i=0;i<4;i++)n[i]=s[i]+dt/6*(K1[i]+2*K2[i]+2*K3[i]+K4[i]);return n;}
+const below=(s,P)=>P.flat?s[1]<P.R:s[0]*s[0]+s[1]*s[1]<P.R*P.R;
+// Bahn integrieren. Start in (0, R+h), Schuss Richtung +x, Winkel α gegen die Waagerechte.
+// Ergebnis: Stützstellen (t, x, y, vx, vy), Bahntyp, Flugzeit, Wurfweite (Bogen bzw. x), Extremhöhen.
+function simulate(P,opt){opt=opt||{};const store=opt.store!==false,maxRev=opt.maxRev||(P.k?25:1);
+  const r0=P.R+P.h;let s=[0,r0,P.v*Math.cos(P.al),P.v*Math.sin(P.al)],t=0;
+  const T=[0],X=[0],Y=[r0],VX=[s[2]],VY=[s[3]];
+  let phi=0,pa=0,hmax=P.h,hmin=P.h,hminRev=P.h,type='open',period=null,rev=0;
+  const rEsc=Math.max(25*P.R,4*r0),maxSteps=opt.maxSteps||(P.k?900000:300000);
+  for(let n=0;n<maxSteps;n++){
+    const x=s[0],y=s[1],vx=s[2],vy=s[3],v=Math.hypot(vx,vy);let dt,alt;
+    if(P.flat){alt=y-P.R;dt=0.003*Math.max((v+Math.sqrt(2*P.g0*Math.max(alt,0)))/P.g0,1e-4);}
+    else{const r=Math.hypot(x,y),g=P.GM/(r*r);alt=r-P.R;dt=0.003*Math.min(Math.sqrt(r*r*r/P.GM),Math.max((v+Math.sqrt(2*g*Math.max(alt,0)))/g,1e-4));}
+    if(P.k&&alt<ATM_TOP&&v>0){const kr=P.k*RHO0*Math.exp(-Math.max(alt,0)/HS)*v;dt=Math.min(dt,0.03/kr);}
+    let ns=rk4(s,dt,P);
+    if(below(ns,P)){let a=0,b=dt;for(let i=0;i<50;i++){const m=(a+b)/2;if(below(rk4(s,m,P),P))b=m;else a=m;}
+      ns=rk4(s,b,P);// genau auf die Oberfläche setzen
+      if(P.flat)ns[1]=P.R;else{const f=P.R/Math.hypot(ns[0],ns[1]);ns[0]*=f;ns[1]*=f;}
+      dt=b;type='impact';}
+    t+=dt;
+    if(!P.flat){const ang=Math.atan2(ns[0],ns[1]);let d=ang-pa;if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;phi+=d;pa=ang;}
+    const alt2=P.flat?ns[1]-P.R:Math.hypot(ns[0],ns[1])-P.R;
+    if(alt2>hmax)hmax=alt2;if(alt2<hmin)hmin=alt2;if(alt2<hminRev)hminRev=alt2;
+    if(!P.flat&&type!=='impact'&&phi>=2*Math.PI*(rev+1)){
+      rev++;
+      if(!P.k||hminRev>ATM_TOP){// geschlossene Bahn: exakt auf den Startpunkt zurück
+        const d=Math.atan2(ns[0],ns[1])-Math.atan2(s[0],s[1]),dd=d<0?d+2*Math.PI:d,fr=dd>0?(phi-2*Math.PI*rev)/dd:0;
+        t-=dt*Math.min(1,Math.max(0,fr));period=t/rev;s=[0,r0,P.v*Math.cos(P.al),P.v*Math.sin(P.al)];
+        if(store){T.push(t);X.push(0);Y.push(r0);VX.push(s[2]);VY.push(s[3]);}type='orbit';phi=2*Math.PI*rev;break;}
+      hminRev=Infinity;
+      if(rev>=maxRev){s=ns;if(store){T.push(t);X.push(s[0]);Y.push(s[1]);VX.push(s[2]);VY.push(s[3]);}type='decay';break;}
+    }
+    s=ns;
+    if(store){T.push(t);X.push(s[0]);Y.push(s[1]);VX.push(s[2]);VY.push(s[3]);}
+    if(type==='impact')break;
+    if(!P.flat){const r=Math.hypot(s[0],s[1]);if(r>rEsc&&(s[2]*s[2]+s[3]*s[3])/2-P.GM/r>=0){type='escape';break;}}
+  }
+  const range=P.flat?s[0]:P.R*phi;
+  return {P,T,X,Y,VX,VY,type,tEnd:t,period,range,phi,rev,hmax,hmin};}
+// Bahnelemente ohne Luft (Kegelschnitt um den Mittelpunkt)
+function elements(GM,r0,v,al){const eps=v*v/2-GM/r0,hA=r0*v*Math.cos(al),p=hA*hA/GM,e=Math.sqrt(Math.max(0,1+2*eps*hA*hA/(GM*GM)));
+  const a=eps<0?-GM/(2*eps):Infinity,rp=p/(1+e),ra=e<1?p/(1-e):Infinity,T=eps<0?2*Math.PI*Math.sqrt(a*a*a/GM):null;return {eps,hA,p,e,a,rp,ra,T};}
+// Wurfweite (Bogenlänge auf der Oberfläche) ohne Luft, analytisch; Infinity = kein Aufschlag
+function rangeRound(GM,R,h,v,al){const r0=R+h,E=elements(GM,r0,v,al);if(E.rp>=R)return Infinity;
+  const vr=v*Math.sin(al),f0=Math.atan2(vr*E.hA/GM,E.p/r0-1),c=Math.max(-1,Math.min(1,(E.p/R-1)/E.e)),ac=Math.acos(c);
+  let fi;if(f0<0)fi=-ac;else if(E.eps<0)fi=2*Math.PI-ac;else return Infinity;return R*(fi-f0);}
+function rangeFlat(g,h,v,al){const s=Math.sin(al),c=Math.cos(al);return v*c*(v*s+Math.sqrt(v*v*s*s+2*g*h))/g;}
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const NF=(d)=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let m=x/Math.pow(10,e);if(Math.abs(+m.toFixed(d))>=10){m/=10;e++;}return (NF(d).format(m)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−');}
+function fLen(m,sig=3){if(m===null||!isFinite(m))return '—';const a=Math.abs(m);if(a===0)return '0';
+  if(a>=1e9)return sci(m/1e3,2)+' km';if(a>=1e3)return num(m/1e3,Math.max(sig,Math.min(5,Math.floor(Math.log10(a/1e3))+1)))+' km';
+  if(a>=1)return num(m,sig)+' m';if(a>=1e-2)return num(m*100,sig)+' cm';if(a>=1e-3||a===0)return num(m*1e3,sig)+' mm';return sci(m,1)+' m';}
+const fV=v=>!isFinite(v)?'—':Math.abs(v)>=1000?num(v/1000,3)+' km/s':num(v,3)+' m/s';
+function fDur(s){if(s===null||!isFinite(s))return '—';if(s<60)return num(s,3)+' s';if(s<3600)return num(s/60,3)+' min';if(s<172800)return num(s/3600,3)+' h';return num(s/86400,3)+' d';}
+const fMass=m=>m>=1000?num(m/1000,3)+' t':m>=1?num(m,3)+' kg':num(m*1000,3)+' g';
+const fAcc=a=>a>=0.1?num(a,3)+' m/s²':num(a*1000,3)+' mm/s²';
+
+/* ----- Zustand ----- */
+const DEF={body:'E',lgH:6,v:6000,alpha:0,drag:false,proj:'k12',flat:false,prev:true,circ:true,autoW:true,lgW:2.5,sel:'newton',view:'auto'};
+let st=Object.assign({},DEF);
+const EX=[
+  {id:'newton',name:'Newtons Berg (1000 km hoch)',body:'E',h:1e6,v:6000,alpha:0},
+  {id:'kugel',name:'Kanonenkugel: 500 m/s unter 45°',body:'E',h:10,v:500,alpha:45,drag:false},
+  {id:'kugelLuft',name:'… dieselbe Kugel mit Luftwiderstand',body:'E',h:10,v:500,alpha:45,drag:true,proj:'k12'},
+  {id:'everest',name:'Mount Everest: waagerecht mit 7,9 km/s',body:'E',h:8849,v:7900,alpha:0},
+  {id:'everestLuft',name:'… dasselbe mit Luftwiderstand',body:'E',h:8849,v:7900,alpha:0,drag:true,proj:'k12'},
+  {id:'iss',name:'In ISS-Höhe (408 km), 7,67 km/s',body:'E',h:408e3,v:7669,alpha:0},
+  {id:'flucht',name:'Fluchtgeschwindigkeit 11,2 km/s',body:'E',h:8849,v:11200,alpha:0},
+  {id:"mondbahn",name:"Der Mond als Kanonenkugel (60 Erdradien)",body:"E",h:3.78e8,v:1018,alpha:0},
+  {id:'mond',name:'Mond: Kraterrand (5 km), 1,68 km/s',body:'M',h:5000,v:1678,alpha:0},
+  {id:'ast',name:'Asteroid: einen Ball in den Orbit werfen',body:'A',h:2,v:7.48,alpha:0}
+];
+const EXM=Object.fromEntries(EX.map(e=>[e.id,e]));
+// Geschosse für den Luftwiderstand: Masse m, Durchmesser d, Widerstandsbeiwert c_w (typische Werte)
+const PROJ=[
+  {id:'tt',name:'Tischtennisball',m:0.0027,d:0.040,cw:0.5},
+  {id:'fb',name:'Fußball',m:0.43,d:0.22,cw:0.25},
+  {id:'golf',name:'Golfball',m:0.0459,d:0.0427,cw:0.25},
+  {id:'musk',name:'Musketenkugel (Blei)',m:0.032,d:0.0175,cw:0.47},
+  {id:'apollo',name:'Raumkapsel (Apollo)',m:5600,d:3.9,cw:1.3},
+  {id:'k12',name:'12-Pfund-Kanonenkugel',m:5.4,d:0.117,cw:0.47},
+  {id:'gran',name:'Granate (155 mm)',m:43,d:0.155,cw:0.3},
+  {id:'pfeil',name:'Wolfram-Pfeil (3 × 60 cm)',m:8.2,d:0.03,cw:0.3}
+];
+const PROJM=Object.fromEntries(PROJ.map(q=>[q.id,q]));
+const betaOf=id=>{const q=PROJM[id]||PROJM.k12;return q.m/(q.cw*Math.PI*q.d*q.d/4);};
+const rhoAt=h=>h<ATM_TOP?RHO0*Math.exp(-h/HS):0;
+const B=()=>BOD[st.body];
+const hMaxLg=b=>Math.log10(62*BOD[b].R);
+function params(s,flat){const b=BOD[s.body];return {GM:b.GM,R:b.R,h:Math.pow(10,s.lgH),v:s.v,al:s.alpha*Math.PI/180,k:(s.drag&&b.atm)?0.5/betaOf(s.proj):0,g0:b.GM/(b.R*b.R),flat:!!flat};}
+const keyOf=s=>[s.body,s.lgH.toFixed(4),s.v.toFixed(6),s.alpha,s.drag&&BOD[s.body].atm?s.proj:'-'].join('|');
+
+/* ----- Regler ----- */
+const PDEF={
+  lgH:{box:'#ctl-h',lab:'Berghöhe <i>h</i>',min:()=>0,max:()=>hMaxLg(st.body),step:()=>0.01,get:()=>st.lgH,set:v=>st.lgH=v,fmt:()=>fLen(Math.pow(10,st.lgH)),hint:()=>`logarithmisch, 1 m bis 62 Radien ${B().gen}`},
+  v:{box:'#ctl-v',lab:'Geschwindigkeit <i>v</i><sub>0</sub>',min:()=>0,max:()=>B().vmax,step:()=>B().vmax/1300,get:()=>st.v,set:v=>st.v=v,fmt:()=>fV(st.v),hint:()=>{const r0=B().R+Math.pow(10,st.lgH),v1=Math.sqrt(B().GM/r0);return `<i class="m">v</i><sub>0</sub>/<i class="m">v</i><sub>1</sub> = ${num(st.v/v1,3)} (in dieser Höhe)`;}},
+  alpha:{box:'#ctl-a',lab:'Abschusswinkel <i>α</i>',min:()=>-30,max:()=>80,step:()=>1,get:()=>st.alpha,set:v=>st.alpha=v,fmt:()=>num(st.alpha,3)+'°',hint:()=>'gegen die Waagerechte; 0° = Newtons Schuss'},
+  lgW:{box:'#ctl-w',lab:'Zeitraffer',min:()=>0,max:()=>4.5,step:()=>0.05,get:()=>st.lgW,set:v=>{st.lgW=v;st.autoW=false;},fmt:()=>num(Math.pow(10,st.lgW),2)+' ×',hint:()=>'Simulationszeit pro Sekunde',noSim:true}
+};
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
+    w.innerHTML=`<div class="row"><label for="p-${k}">${d.lab}</label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}"><div class="hint" id="h-${k}"></div>`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{d.set(parseFloat(inp.value));if(!d.noSim)st.sel=null;sync(!d.noSim);});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  const sel=$('#example');sel.innerHTML='<option value="">— eigene Werte —</option>'+EX.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  sel.addEventListener('change',()=>{if(sel.value)selectEx(sel.value);else{st.sel=null;sync(false);}});
+  document.querySelectorAll('#segBody button').forEach(b=>b.addEventListener('click',()=>{if(st.body!==b.dataset.b)setBody(b.dataset.b);}));
+  document.querySelectorAll('#segView button').forEach(b=>b.addEventListener('click',()=>{st.view=b.dataset.v;camJump=false;sync(false);}));
+  $('#o-flat').addEventListener('change',e=>{st.flat=e.target.checked;sync(true);});
+  $('#o-drag').addEventListener('change',e=>{st.drag=e.target.checked;st.sel=null;sync(true);});
+  $('#proj').innerHTML=PROJ.map(q=>`<option value="${q.id}">${q.name}</option>`).join('');
+  $('#proj').addEventListener('change',e=>{st.proj=e.target.value;st.sel=null;sync(true);});
+  $('#o-prev').addEventListener('change',e=>{st.prev=e.target.checked;sync(false);});
+  $('#o-circ').addEventListener('change',e=>{st.circ=e.target.checked;sync(false);});
+  $('#o-autow').addEventListener('change',e=>{st.autoW=e.target.checked;if(st.autoW&&active)autoWarp(active);sync(false);});
+  $('#defaults').addEventListener('click',()=>{st=Object.assign({},DEF);shots=[];active=null;selectEx(DEF.sel);});
+  $('#fire').addEventListener('click',fire);
+  $('#schar').addEventListener('click',schar);
+  $('#clear').addEventListener('click',()=>{shots=[];active=null;viewDirty=true;dirty=true;});
+  $('#pause').addEventListener('click',()=>{paused=!paused;$('#pause').textContent=paused?'Weiter':'Pause';});
+}
+function setBody(b){// Geschwindigkeit und Höhe auf den neuen Körper umrechnen (gleiches v/v1, gleiche h/R)
+  const o=BOD[st.body],n=BOD[b],r=st.v/Math.sqrt(o.GM/o.R);st.lgH=Math.max(0,Math.min(hMaxLg(b),st.lgH+Math.log10(n.R/o.R)));
+  st.v=Math.min(n.vmax,r*Math.sqrt(n.GM/n.R));st.body=b;st.sel=null;shots=[];active=null;camJump=true;sync(true);}
+function selectEx(id){const e=EXM[id];if(st.body!==e.body){shots=[];active=null;camJump=true;}
+  st.body=e.body;st.lgH=Math.log10(e.h);st.v=e.v;st.alpha=e.alpha;st.drag=!!e.drag;if(e.proj)st.proj=e.proj;st.sel=id;sync(true);}
+let cur=null,curFlat=null,dirty=true,viewDirty=true,rngCache=null,dragCurve=null,dragTimer=null;
+function sync(resim){
+  st.lgH=Math.max(0,Math.min(hMaxLg(st.body),st.lgH));st.v=Math.max(0,Math.min(B().vmax,st.v));
+  if(resim||!cur)recompute();
+  for(const k in PDEF){const d=PDEF[k],inp=$('#p-'+k);inp.min=d.min();inp.max=d.max();inp.step=d.step();inp.value=d.get();$('#o-'+k).textContent=d.fmt();$('#h-'+k).innerHTML=d.hint();}
+  $('#example').value=st.sel||'';$('#o-flat').checked=st.flat;$('#o-drag').checked=st.drag&&B().atm;$('#o-drag').disabled=!B().atm;$('#row-drag').classList.toggle('dis',!B().atm);
+  $('#ctl-b').hidden=!(st.drag&&B().atm);$('#proj').value=st.proj;$('#h-proj').innerHTML=projHint();$('#o-prev').checked=st.prev;$('#o-circ').checked=st.circ;$('#o-autow').checked=st.autoW;
+  document.querySelectorAll('#segBody button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.b===st.body)));
+  document.querySelectorAll('#segView button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===st.view)));
+  dirty=true;viewDirty=true;}
+function recompute(){const P=params(st,false);cur=simulate(P);cur.key=keyOf(st);curFlat=simulate(params(st,true));
+  const r0=P.R+P.h;cur.el=elements(P.GM,r0,P.v,P.al);
+  // Wurfweite mit Luft als Kurve: verzögert, weil viele Simulationen nötig sind
+  dragCurve=null;clearTimeout(dragTimer);if(P.k){const s0=Object.assign({},st);dragTimer=setTimeout(()=>{dragCurve=computeDragCurve(s0);dirty=true;},220);}}
+function computeDragCurve(s0){const N=70,b=BOD[s0.body],out=[];for(let i=1;i<=N;i++){const v=b.vmax*i/N,P=params(Object.assign({},s0,{v}),false);
+  const r=simulate(P,{store:false,maxRev:1,maxSteps:200000});out.push([v,r.type==='impact'?r.range:Infinity]);}return {key:[s0.body,s0.lgH,s0.alpha,s0.proj].join('|'),pts:out};}
+
+/* ----- Schüsse ----- */
+let shots=[],active=null,tAnim=0,paused=false;
+function shotDuration(sh){if(sh.type==='orbit')return sh.period;if(sh.type==='escape'){// bis zum Verlassen der Ansicht reicht
+    const lim=Math.max(4*sh.P.R,2.5*(sh.P.R+sh.P.h));for(let i=0;i<sh.T.length;i++)if(Math.hypot(sh.X[i],sh.Y[i])>lim)return sh.T[i];}return sh.tEnd;}
+function autoWarp(sh){const d=Math.max(shotDuration(sh),st.flat?sh.flat.tEnd:0);st.lgW=Math.max(0,Math.min(4.5,Math.log10(Math.max(1,d/7))));}
+function makeShot(s){const P=params(s,false),sh=(keyOf(s)===cur.key)?cur:simulate(P);const r0=P.R+P.h;
+  const out=Object.assign({},sh,{v:s.v,v1:Math.sqrt(P.GM/r0),key:keyOf(s),el:elements(P.GM,r0,P.v,P.al),flat:simulate(params(s,true))});
+  out.col=speedCol(out.v/out.v1);return out;}
+function fire(){const sh=makeShot(st);shots.push(sh);if(shots.length>14)shots.shift();active=sh;tAnim=0;if(st.autoW)autoWarp(sh);paused=false;$('#pause').textContent='Pause';
+  if(st.view==='manual')st.view='auto';sync(false);}
+function schar(){const P=params(st,false),v1=Math.sqrt(P.GM/(P.R+P.h)),fr=[0.35,0.5,0.62,0.72,0.8,0.87,0.93,0.97,1.0];shots=[];
+  for(const f of fr){const sh=makeShot(Object.assign({},st,{v:Math.min(B().vmax,f*v1),alpha:0}));sh.done=true;shots.push(sh);}
+  active=shots[shots.length-1];active.done=false;tAnim=0;if(st.autoW)autoWarp(active);paused=false;$('#pause').textContent='Pause';
+  st.view='auto';sync(false);}
+
+/* ----- Aufgaben ----- */
+const TASKS=[
+  {t:'<b>Newtons Bild.</b> Klicke „Bahnschar“: Die Kanone feuert mit wachsender Geschwindigkeit. Wie wächst die Wurfweite, wenn sich <i class="m">v</i><sub>0</sub> der Kreisbahngeschwindigkeit <i class="m">v</i><sub>1</sub> nähert? Vergleiche mit dem Diagramm „Wurfweite“.',ex:'newton',lab:'Einstellen'},
+  {t:'<b>Parabel als Näherung.</b> Schalte „flache Erde“ ein und feuere die Kanonenkugel (500 m/s, 45°). Um wie viel unterscheiden sich die Wurfweiten? Ab welcher Geschwindigkeit liegen flache und runde Erde um mehr als 10 % auseinander?',ex:'kugel',flat:true},
+  {t:'<b>Fallen gegen Krümmung.</b> Vom Mount Everest mit 7,9 km/s: Lies in der Skizze „erste Sekunde“ ab, wie weit die Kugel fällt und wie weit der Kreis um den Erdmittelpunkt in dieser Zeit absinkt. Leite daraus <i class="m">v</i><sub>1</sub> = √(<i class="m">gR</i>) her.',ex:'everest'},
+  {t:'<b>Schwerelos auf der ISS.</b> In 408 km Höhe reichen 7,67 km/s für die Kreisbahn. Warum weniger als am Boden? Wie lange dauert ein Umlauf? Die Astronauten sind nicht ohne Schwerkraft: <i class="m">g</i> ist dort noch knapp 90 % des Bodenwerts.',ex:'iss'},
+  {t:'<b>Schräg nach oben?</b> Bleib in ISS-Höhe bei <i class="m">v</i><sub>0</sub> = <i class="m">v</i><sub>1</sub> und stelle <i class="m">α</i> = 20° ein. Die Energie ist dieselbe wie bei der Kreisbahn, trotzdem schlägt die Kugel auf. Warum muss man für eine Umlaufbahn waagerecht schießen?',set:{body:'E',lgH:Math.log10(408e3),v:7669,alpha:20,drag:false}},
+  {t:'<b>Ab ins All.</b> Mit 11,2 km/s kehrt die Kugel nie zurück. Probiere 11,0 km/s: Wie weit fliegt sie hinaus, und wie lange dauert es, bis sie zurückkommt? Warum ist <i class="m">v</i><sub>2</sub> genau √2 · <i class="m">v</i><sub>1</sub>?',ex:'flucht'},
+  {t:'<b>Die Luft bremst.</b> Feuere vom Mount Everest mit und ohne Luftwiderstand. Wie weit kommt die Kugel mit Luft? Probiere andere Geschosse aus: Welches kommt am weitesten, und warum hilft „schwer und schlank“ (großes <i class="m">β</i>)? Und die 500-m/s-Kugel: Wie stark schrumpft ihre Reichweite?',ex:'everestLuft'},
+  {t:'<b>Mond und Asteroid.</b> Auf dem Mond genügen 1,68 km/s für eine Bahn knapp über dem Boden. Auf einem 10-km-Asteroiden reicht ein kräftiger Wurf mit 7,5 m/s. Wie lange dauert dort ein Umlauf? Wie schnell müsste man laufen, um abzuheben?',ex:'ast'},
+  {t:'<b>Der Mond fällt.</b> Stelle die Kanone 60 Erdradien hoch und feuere mit 1,02 km/s: Das ist die Mondbahn. Vergleiche <i class="m">g</i> in dieser Höhe mit 9,81 m/s² / 60² und die Umlaufzeit mit 27,3 Tagen. Das war Newtons Beweis, dass Apfel und Mond derselben Kraft folgen.',ex:'mondbahn'}
+];
+(function(){const ol=$('#tasks');TASKS.forEach(t=>{const li=document.createElement('li');
+  li.innerHTML=`<p>${t.t}</p><button class="btn" type="button">${t.lab||'Einstellen'}</button>`;
+  li.querySelector('button').addEventListener('click',()=>{st.flat=!!t.flat;
+    if(t.ex)selectEx(t.ex);else{if(t.set.body!==st.body){shots=[];active=null;camJump=true;}st=Object.assign({},st,t.set,{sel:null});sync(true);}
+    if(t.ex==='newton')schar();else fire();});
+  ol.appendChild(li);});})();
+
+/* ----- Farben und Zeichenhilfen ----- */
+let C={},dpr=1;
+function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={stage:g('--stage'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),accent:g('--accent'),earth:g('--c-earth'),edge:g('--c-edge'),moon:g('--c-moon'),ast:g('--c-ast'),
+    mtn:g('--c-mtn'),atm:g('--c-atm'),flat:g('--c-flat'),circ:g('--c-circ'),drag:g('--c-drag'),sp:[g('--c-sp0'),g('--c-sp1'),g('--c-sp2'),g('--c-sp3')],mono:g('--f-mono')||'monospace',ui:g('--f-ui')||'sans-serif'};
+  for(const s of shots)s.col=speedCol(s.v/s.v1);}
+function ctxOf(cv){const r=cv.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function rgb(col){if(col.startsWith('#')&&col.length===7){const n=parseInt(col.slice(1),16);return [n>>16,(n>>8)&255,n&255];}return [128,128,128];}
+function hexA(col,a){const [r,g,b]=rgb(col);return `rgba(${r},${g},${b},${a})`;}
+const SPS=[0,0.6,1,Math.SQRT2];
+function speedCol(x){const cs=C.sp||['#2563c9','#0e8a7f','#d9741a','#c4234a'];x=Math.max(0,Math.min(SPS[3],x));let i=0;while(i<2&&x>SPS[i+1])i++;
+  const f=(x-SPS[i])/(SPS[i+1]-SPS[i]),a=rgb(cs[i]),b=rgb(cs[i+1]);return '#'+a.map((q,k)=>Math.round(q+(b[k]-q)*f).toString(16).padStart(2,'0')).join('');}
+function halo(c,txt,x,y){c.save();c.strokeStyle=hexA(C.stage,0.92);c.lineWidth=4;c.lineJoin='round';c.strokeText(txt,x,y);c.restore();c.fillText(txt,x,y);}
+function rich(c,s,x,y,o){o=o||{};const sz=o.size||11.5,wt=o.weight||500,parts=[],re=/([_^])\{([^}]*)\}/g;let last=0,m;
+  while((m=re.exec(s))){if(m.index>last)parts.push([s.slice(last,m.index),0]);parts.push([m[2],m[1]==='_'?1:-1]);last=re.lastIndex;}
+  if(last<s.length)parts.push([s.slice(last),0]);
+  const fnt=k=>`${o.italic?'italic ':''}${wt} ${k?sz*0.74:sz}px ${C.ui}`;let W=0;for(const q of parts){c.font=fnt(q[1]);W+=c.measureText(q[0]).width;}
+  const al=o.align||'left';let px=al==='center'?x-W/2:al==='right'?x-W:x;const ta=c.textAlign;c.textAlign='left';
+  for(const q of parts){c.font=fnt(q[1]);const dy=q[1]===1?sz*0.3:q[1]===-1?-sz*0.42:0;if(o.halo)halo(c,q[0],px,y+dy);else c.fillText(q[0],px,y+dy);px+=c.measureText(q[0]).width;}
+  c.textAlign=ta;return W;}
+function arrow(c,x0,y0,x1,y1,col,lw){const a=Math.atan2(y1-y0,x1-x0),L=Math.hypot(x1-x0,y1-y0),hs=Math.min(8,0.45*L);c.strokeStyle=col;c.fillStyle=col;c.lineWidth=lw||1.6;
+  c.beginPath();c.moveTo(x0,y0);c.lineTo(x1-Math.cos(a)*hs*0.6,y1-Math.sin(a)*hs*0.6);c.stroke();
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x1-hs*Math.cos(a-0.4),y1-hs*Math.sin(a-0.4));c.lineTo(x1-hs*Math.cos(a+0.4),y1-hs*Math.sin(a+0.4));c.closePath();c.fill();}
+function idxAt(T,t){let a=0,b=T.length-1;if(t<=T[0])return 0;if(t>=T[b])return b;while(b-a>1){const m=(a+b)>>1;if(T[m]<=t)a=m;else b=m;}return a;}
+function stateAt(sh,t){const T=sh.T,i=idxAt(T,t),j=Math.min(T.length-1,i+1),f=T[j]>T[i]?(t-T[i])/(T[j]-T[i]):0,L=(A)=>A[i]+(A[j]-A[i])*f;
+  return {x:L(sh.X),y:L(sh.Y),vx:L(sh.VX),vy:L(sh.VY),i};}
+
+/* ----- Kamera ----- */
+let cam={x:0,y:6.4e6,s:1e-4},camT=null,camJump=true,VW=800,VH=500;
+function boxCam(x0,x1,y0,y1,W,H){const m=0.12,w=Math.max(x1-x0,1e-9),h=Math.max(y1-y0,1e-9),s=Math.min(W*(1-2*m)/w,(H*(1-2*m))/h);return {x:(x0+x1)/2,y:(y0+y1)/2,s};}
+function viewTarget(W,H){const P=params(st,false),r0=P.R+P.h;
+  if(st.view==='earth'){const rr=Math.max(1.15*P.R,1.08*r0);return boxCam(-rr,rr,-rr,rr,W,H);}
+  // Kasten um Berg und Bahn
+  const sh=active&&active.key===keyOf(st)?active:(active||cur);let x0=-0.3*P.h,x1=0.3*P.h,y0=P.R,y1=r0;
+  const ext=(X,Y,lim)=>{for(let i=0;i<X.length;i++){const x=X[i],y=Y[i];if(lim&&x*x+y*y>lim*lim)continue;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}};
+  const lim=Math.max(3*P.R,2.2*r0);
+  if(st.view==='near'){const f=curFlat;ext(f.X,f.Y);const xf=f.X[f.X.length-1];ext([xf*1.05],[P.R]);}
+  else{ext(sh.X,sh.Y,lim);if(st.flat&&curFlat)ext(curFlat.X,curFlat.Y,lim);}
+  const span=Math.max(x1-x0,y1-y0,4*P.h,8);const cx=(x0+x1)/2,cy=(y0+y1)/2;
+  return boxCam(cx-span/2*Math.max(1,(x1-x0)/span),cx+span/2*Math.max(1,(x1-x0)/span),Math.min(y0,cy-span/2*0.5),Math.max(y1,cy+span/2*0.5),W,H);}
+function stepCam(dt){if(st.view==='manual'||!camT)return false;const k=camJump?1:1-Math.exp(-dt*4.5);camJump=false;
+  const ls=Math.log(cam.s),lt=Math.log(camT.s);const d=Math.abs(ls-lt)+Math.hypot(cam.x-camT.x,cam.y-camT.y)*camT.s/VW;if(d<1e-4)return false;
+  // Mittelpunkt in Bildschirmeinheiten interpolieren, damit der Zoom nicht „wegschwingt“
+  cam.s=Math.exp(ls+(lt-ls)*k);cam.x+=(camT.x-cam.x)*k;cam.y+=(camT.y-cam.y)*k;return true;}
+
+/* ----- Bahnansicht ----- */
+function drawView(){const cv=$('#view'),{c,W,H}=ctxOf(cv);VW=W;VH=H;const P=params(st,false),Bd=B(),R=Bd.R,r0=R+P.h,s=cam.s;
+  const sx=x=>W/2+(x-cam.x)*s,sy=y=>H/2-(y-cam.y)*s;
+  // Kreis/Ring als Pfad: bei großem Zoom nur der sichtbare Bogen als Polygon (Genauigkeit)
+  const arcPts=(rad)=>{const th=Math.atan2(cam.y,cam.x),half=Math.min(Math.PI,1.6*Math.hypot(W,H)/2/s/rad+0.002),N=600,pts=[];
+    for(let i=0;i<=N;i++){const a=th-half+2*half*i/N;pts.push([sx(rad*Math.cos(a)),sy(rad*Math.sin(a))]);}return pts;};
+  const ring=(r1,r2)=>{c.beginPath();if(r2*s<2e5){c.arc(sx(0),sy(0),r2*s,0,2*Math.PI);if(r1>0){c.moveTo(sx(r1),sy(0));c.arc(sx(0),sy(0),r1*s,0,2*Math.PI,true);}}
+    else{const o=arcPts(r2);o.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));const inn=arcPts(Math.max(r1,r2-3*Math.hypot(W,H)/s));inn.reverse().forEach(p=>c.lineTo(p[0],p[1]));c.closePath();}};
+  const circle=(rad)=>{c.beginPath();if(rad*s<2e5)c.arc(sx(0),sy(0),rad*s,0,2*Math.PI);else arcPts(rad).forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));};
+  // Atmosphäre
+  if(Bd.atm){c.fillStyle=hexA(C.atm,(st.drag?0.11:0.06));for(const hl of [100e3,40e3,18e3,8e3]){ring(R,R+hl);c.fill('evenodd');}}
+  // Himmelskörper
+  c.fillStyle=Bd.id==='E'?C.earth:Bd.id==='M'?C.moon:C.ast;ring(0,R);c.fill('evenodd');
+  c.strokeStyle=C.edge;c.lineWidth=1.4;circle(R);c.stroke();
+  // Kreis durch die Kanone
+  if(st.circ){c.strokeStyle=hexA(C.circ,0.8);c.lineWidth=1.3;c.setLineDash([2,4]);circle(r0);c.stroke();c.setLineDash([]);}
+  // flache Erde
+  const showFlat=st.flat;
+  if(showFlat){const yy=sy(R);c.strokeStyle=C.flat;c.lineWidth=1.2;c.setLineDash([7,5]);c.beginPath();c.moveTo(0,yy);c.lineTo(W,yy);c.stroke();c.setLineDash([]);
+    c.fillStyle=C.flat;c.textBaseline='bottom';const lx=Math.max(8,Math.min(W-120,sx(0)-140));rich(c,'flache Erde',lx,yy-3,{size:11.5,weight:600,halo:true});}
+  const poly=(X,Y,n,col,lw,dash)=>{if(n<2)return;c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let lx=null,ly=null;
+    for(let i=0;i<n;i++){const x=sx(X[i]),y=sy(Y[i]);if(i===0)c.moveTo(x,y);else if(i===n-1||Math.abs(x-lx)+Math.abs(y-ly)>0.7){c.lineTo(x,y);}else continue;lx=x;ly=y;}c.stroke();c.setLineDash([]);};
+  // Vorschau
+  if(st.prev&&!(active&&active.key===cur.key)){poly(cur.X,cur.Y,cur.X.length,hexA(C.ink,0.55),1.2,[4,4]);if(showFlat)poly(curFlat.X,curFlat.Y,curFlat.X.length,hexA(C.flat,0.7),1.2,[4,4]);}
+  // frühere Schüsse
+  for(const sh of shots){if(sh===active)continue;poly(sh.X,sh.Y,sh.X.length,sh.col,1.8);mark(sh,sh.X.length-1,0.75);}
+  // aktiver Schuss
+  let ball=null,fball=null;
+  if(active){const sh=active,dur=sh.type==='orbit'?sh.period:sh.tEnd;let t=sh.done?dur:tAnim,full=false;
+    if(sh.type==='orbit'&&t>=sh.period){full=true;t=t%sh.period;}
+    if(sh.done&&sh.type!=='orbit')t=sh.tEnd;
+    const S=stateAt(sh,Math.min(t,sh.tEnd));
+    if(full)poly(sh.X,sh.Y,sh.X.length,sh.col,2.4);else{poly(sh.X,sh.Y,S.i+1,sh.col,2.4);c.strokeStyle=sh.col;c.lineWidth=2.4;c.beginPath();c.moveTo(sx(sh.X[S.i]),sy(sh.Y[S.i]));c.lineTo(sx(S.x),sy(S.y));c.stroke();}
+    ball=S;if(!full&&t>=sh.tEnd)mark(sh,sh.X.length-1,1);
+    if(showFlat){const f=sh.flat,tf=Math.min(sh.done?f.tEnd:tAnim,f.tEnd),F=stateAt(f,tf);poly(f.X,f.Y,F.i+1,C.flat,1.8,[6,4]);fball=F;if(tf>=f.tEnd)mark(f,f.X.length-1,1,C.flat);}}
+  // Berg (Klippe auf der Schussseite) und Kanone
+  drawMountain(c,sx,sy,R,P.h);
+  const px=sx(0),py=sy(r0),al=P.al;c.save();c.translate(px,py);c.rotate(-al);c.fillStyle=C.ink;c.fillRect(-3,-4,22,8);c.restore();
+  c.fillStyle=C.ink;c.beginPath();c.arc(px,py+2,5,0,2*Math.PI);c.fill();c.fillStyle=C.stage;c.beginPath();c.arc(px,py+2,2,0,2*Math.PI);c.fill();
+  // Kugeln
+  if(fball){c.fillStyle=C.stage;c.strokeStyle=C.flat;c.lineWidth=2;c.beginPath();c.arc(sx(fball.x),sy(fball.y),5,0,2*Math.PI);c.fill();c.stroke();}
+  if(ball){const bx=sx(ball.x),by=sy(ball.y);c.fillStyle=active.col;c.strokeStyle=C.stage;c.lineWidth=1.5;c.beginPath();c.arc(bx,by,6,0,2*Math.PI);c.fill();c.stroke();
+    const vv=Math.hypot(ball.vx,ball.vy);if(vv>0&&!(active.type==='impact'&&tAnim>=active.tEnd&&!active.done)&&!(active.done&&active.type!=='orbit')){const L=44*vv/active.v1;arrow(c,bx,by,bx+ball.vx/vv*L,by-ball.vy/vv*L,active.col,1.8);}}
+  // Maßstab
+  scaleBar(c,W,H,s);
+  // Hinweis, wenn Kugel außerhalb
+  if(ball){const bx=sx(ball.x),by=sy(ball.y);if(bx<0||bx>W||by<0||by>H){c.fillStyle=C.muted;c.font=`12px ${C.ui}`;c.textAlign='left';c.textBaseline='top';c.fillText('Kugel außerhalb des Ausschnitts',10,10);}}}
+function mark(sh,i,a,col){if(sh.type!=='impact')return;const c=$('#view').getContext('2d'),s=cam.s,x=VW/2+(sh.X[i]-cam.x)*s,y=VH/2-(sh.Y[i]-cam.y)*s;
+  c.strokeStyle=col||sh.col;c.globalAlpha=a;c.lineWidth=1.8;c.beginPath();for(let k=0;k<4;k++){const q=k*Math.PI/4+Math.PI/8;c.moveTo(x+3*Math.cos(q),y+3*Math.sin(q));c.lineTo(x+7*Math.cos(q),y+7*Math.sin(q));}c.stroke();c.globalAlpha=1;}
+function drawMountain(c,sx,sy,R,h){// Klippe: senkrecht bei Winkel 0, Hang nach links (−x)
+  if(h>0.5*R){// „Berg“ höher als ein halber Radius: als schlanker Turm
+    c.strokeStyle=C.mtn;c.lineWidth=3;c.beginPath();c.moveTo(sx(0),sy(R));c.lineTo(sx(0),sy(R+h));c.stroke();return;}
+  const w=Math.min(0.5,1.1*h/R),N=24,pts=[];const pt=(ang,r)=>[sx(r*Math.sin(ang)),sy(r*Math.cos(ang))];
+  pts.push(pt(0,R*(1-1e-7)));pts.push(pt(0,R+h));
+  for(let i=1;i<=N;i++){const f=i/N,ang=-w*f,rr=R+h*(1-f)*(1-0.35*f*(1-f)*4*0.25);pts.push(pt(ang,rr));}
+  for(let i=N;i>=0;i--){const ang=-w*i/N;pts.push(pt(ang,R*(1-1e-7)));}
+  c.fillStyle=C.mtn;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();}
+function scaleBar(c,W,H,s){const target=W*0.18/s,e=Math.floor(Math.log10(target)),cand=[1,2,5,10].map(k=>k*Math.pow(10,e));let L=cand[0];for(const q of cand)if(q<=target)L=q;
+  const px=L*s,x0=14,y0=H-14;c.strokeStyle=C.ink;c.lineWidth=1.5;c.beginPath();c.moveTo(x0,y0-5);c.lineTo(x0,y0);c.lineTo(x0+px,y0);c.lineTo(x0+px,y0-5);c.stroke();
+  c.fillStyle=C.ink;c.font=`11px ${C.mono}`;c.textAlign='center';c.textBaseline='bottom';halo(c,fLen(L,1),x0+px/2,y0-3);}
+
+/* ----- Diagramm: Wurfweite ----- */
+function axisV(vmax){const step=vmax>=8000?1000:vmax>=2000?500:vmax>=500?100:2;return step;}
+function drawRange(){const {c,W,H}=ctxOf($('#rng'));const Bd=B(),P=params(st,false),r0=P.R+P.h;const L=66,Rr=12,T=12,Bm=38,w=W-L-Rr,h=H-T-Bm;
+  const top=Math.log10(2*Math.PI*Bd.R),bot=top-6.5;const X=v=>L+v/Bd.vmax*w,Y=lg=>T+h-(lg-bot)/(top+0.25-bot)*h;
+  // Kurven (analytisch, ohne Luft)
+  const key=[st.body,st.lgH,st.alpha].join('|');if(!rngCache||rngCache.key!==key){const N=500,rd=[],fl=[];
+    for(let i=0;i<=N;i++){const v=Bd.vmax*i/N;rd.push([v,rangeRound(P.GM,P.R,P.h,v,P.al)]);fl.push([v,rangeFlat(P.g0,P.h,v,P.al)]);}rngCache={key,rd,fl};}
+  c.strokeStyle=C.grid;c.lineWidth=1;c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;
+  for(let k=Math.ceil(bot);k<=Math.floor(top);k++){const y=Y(k);c.beginPath();c.moveTo(L,y+0.5);c.lineTo(L+w,y+0.5);c.stroke();c.textAlign='right';c.textBaseline='middle';c.fillText(fLen(Math.pow(10,k),1),L-5,y);}
+  const vs=axisV(Bd.vmax);for(let v=0;v<=Bd.vmax+1e-9;v+=vs){const x=X(v);c.beginPath();c.moveTo(x+0.5,T);c.lineTo(x+0.5,T+h);c.stroke();c.textAlign='center';c.textBaseline='top';c.fillText(Bd.vmax>=1000?num(v/1000,2):num(v,2),x,T+h+4);}
+  rich(c,Bd.vmax>=1000?'Abschussgeschwindigkeit v_{0} (km/s)':'Abschussgeschwindigkeit v_{0} (m/s)',L+w/2,T+h+25,{size:11.5,align:'center'});
+  // Bereich ohne Aufschlag
+  c.fillStyle=hexA(C.circ,0.12);let inR=false,xa=0;for(const [v,r] of rngCache.rd){const no=!isFinite(r);if(no&&!inR){inR=true;xa=X(v);}if(!no&&inR){inR=false;c.fillRect(xa,T,X(v)-xa,h);}}if(inR)c.fillRect(xa,T,L+w-xa,h);
+  const ytop=Y(top);c.strokeStyle=hexA(C.circ,0.8);c.setLineDash([3,3]);c.beginPath();c.moveTo(L,ytop);c.lineTo(L+w,ytop);c.stroke();c.setLineDash([]);
+  c.fillStyle=C.circ;c.textAlign='left';c.textBaseline='bottom';rich(c,'einmal ganz herum',L+4,ytop-2,{size:10.5,weight:600,halo:true});
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  const curve=(pts,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;
+    for(const [v,r] of pts){if(!(r>0)){pen=false;continue;}const y=isFinite(r)?Y(Math.log10(r)):T-5;if(!isFinite(r)){if(pen)c.lineTo(X(v),y);pen=false;continue;}pen?c.lineTo(X(v),y):c.moveTo(X(v),y);pen=true;}c.stroke();c.setLineDash([]);};
+  curve(rngCache.fl,C.flat,1.8,[6,4]);curve(rngCache.rd,C.accent,2.4);
+  const dk=[st.body,st.lgH,st.alpha,st.proj].join('|');if(P.k&&dragCurve&&dragCurve.key===dk)curve([[0,0],...dragCurve.pts],C.drag,2,[2,3]);
+  // v1, v2 in Abschusshöhe
+  const v1=Math.sqrt(P.GM/r0),v2=Math.SQRT2*v1;for(const [v,lab] of [[v1,'v_{1}'],[v2,'v_{2}']]){if(v>Bd.vmax)continue;const x=X(v);c.strokeStyle=C.muted;c.setLineDash([2,3]);c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();c.setLineDash([]);
+    c.fillStyle=C.muted;rich(c,lab,x+3,T+h-6,{size:11,weight:600,halo:true});}
+  // Schüsse
+  for(const sh of shots){if(sh.type!=='impact'||sh.range<=0||sh.P.h!==P.h||sh.P.al!==P.al||sh.P.R!==P.R)continue;c.fillStyle=sh.col;c.strokeStyle=C.stage;c.lineWidth=1.2;c.beginPath();c.arc(X(sh.v),Y(Math.log10(sh.range)),4.5,0,2*Math.PI);c.fill();c.stroke();}
+  // aktuelle Geschwindigkeit
+  const xv=X(st.v);c.strokeStyle=C.ink;c.lineWidth=1.2;c.beginPath();c.moveTo(xv,T);c.lineTo(xv,T+h);c.stroke();
+  const rr=rangeRound(P.GM,P.R,P.h,st.v,P.al),rf=rangeFlat(P.g0,P.h,st.v,P.al);
+  if(rf>0){c.fillStyle=C.flat;c.beginPath();c.arc(xv,Y(Math.log10(rf)),3.5,0,2*Math.PI);c.fill();}
+  if(rr>0&&isFinite(rr)){c.fillStyle=C.accent;c.beginPath();c.arc(xv,Y(Math.log10(rr)),4,0,2*Math.PI);c.fill();}
+  c.restore();
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.save();c.translate(10,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.fillStyle=C.muted;c.font=`11.5px ${C.ui}`;c.textBaseline='middle';c.fillText('Wurfweite (log.)',0,0);c.restore();
+  let n=`<span style="color:var(--accent)">━</span> runde Erde, 1/r² &nbsp;<span style="color:var(--c-flat)">╍</span> flache Erde`+(P.k?` &nbsp;<span style="color:var(--c-drag)">┅</span> rund mit Luft`:'')+'. ';
+  if(!isFinite(rr))n+=`Bei ${fV(st.v)} <b>kein Aufschlag</b> (grüner Bereich).`;
+  else if(rf>0)n+=`Bei ${fV(st.v)}: rund <b>${fLen(rr)}</b>, flach <b>${fLen(rf)}</b> (${rr>=rf?'+':'−'}${num(Math.abs(rr/rf-1)*100,2)} %).`;
+  $('#rngNote').innerHTML=n;}
+
+/* ----- Diagramm: Höhe über der Zeit ----- */
+function tUnit(t){return t<120?[1,'s']:t<7200?[60,'min']:t<3*86400?[3600,'h']:[86400,'d'];}
+function niceStep(x){const e=Math.pow(10,Math.floor(Math.log10(x))),m=x/e;return (m<1.5?1:m<3.5?2:m<7.5?5:10)*e;}
+function drawAlt(){const {c,W,H}=ctxOf($('#alt'));const P=params(st,false);const L=66,Rr=10,T=12,Bm=38,w=W-L-Rr,h=H-T-Bm;
+  const sh=cur,f=st.flat?curFlat:null;let tE=sh.type==='orbit'?sh.period:sh.tEnd;if(sh.type==='escape')tE=shotDuration(sh);if(f)tE=Math.max(tE,f.tEnd);if(!(tE>0))tE=1;
+  let hm=Math.max(sh.hmax,P.h);if(f)hm=Math.max(hm,f.hmax);if(sh.type==='escape')hm=Math.min(hm,Math.max(4*P.R,2.5*(P.R+P.h))-P.R);hm*=1.12;
+  const [tu,tn]=tUnit(tE),X=t=>L+t/tE*w,Y=z=>T+h-z/hm*h;
+  c.strokeStyle=C.grid;c.lineWidth=1;c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;
+  const ts=niceStep(tE/tu/5)*tu;for(let t=0;t<=tE*1.0001;t+=ts){const x=X(t);c.beginPath();c.moveTo(x+0.5,T);c.lineTo(x+0.5,T+h);c.stroke();c.textAlign='center';c.textBaseline='top';c.fillText(num(t/tu,3),x,T+h+4);}
+  const zs=niceStep(hm/5);for(let z=0;z<=hm;z+=zs){const y=Y(z);c.beginPath();c.moveTo(L,y+0.5);c.lineTo(L+w,y+0.5);c.stroke();c.textAlign='right';c.textBaseline='middle';c.fillText(fLen(z,2),L-5,y);}
+  rich(c,`Zeit t (${tn})`,L+w/2,T+h+25,{size:11.5,align:'center'});
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  const plot=(r,flat,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let lx=-9;for(let i=0;i<r.T.length;i++){const x=X(r.T[i]);if(i&&i<r.T.length-1&&x-lx<0.5)continue;lx=x;
+    const z=flat?r.Y[i]-P.R:Math.hypot(r.X[i],r.Y[i])-P.R;i?c.lineTo(x,Y(z)):c.moveTo(x,Y(z));}c.stroke();c.setLineDash([]);};
+  if(f)plot(f,true,C.flat,1.8,[6,4]);plot(sh,false,C.accent,2.2);
+  if(active&&active.key===cur.key&&!active.done){const t=active.type==='orbit'?tAnim%active.period:Math.min(tAnim,active.tEnd);if(t<=tE){const S=stateAt(active,t);const x=X(t);c.strokeStyle=hexA(C.ink,0.5);c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();
+    c.fillStyle=active.col;c.beginPath();c.arc(x,Y(Math.hypot(S.x,S.y)-P.R),4.5,0,2*Math.PI);c.fill();}}
+  c.restore();c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  
+  const tt={impact:`Aufschlag nach <b>${fDur(sh.tEnd)}</b>`,orbit:`ein Umlauf: <b>${fDur(sh.period)}</b>`,escape:'Die Kugel entkommt',decay:`nach ${sh.rev} Umläufen noch in der Bahn`,open:'—'}[sh.type];
+  $('#altNote').innerHTML=`${tt}`+(sh.type==='escape'?'.':`; größte Höhe ${fLen(sh.hmax)}.`)+(f?` Flache Erde: Aufschlag nach ${fDur(f.tEnd)}.`:'');}
+
+/* ----- Skizze: Fallen gegen Krümmung ----- */
+function drawFall(){const {c,W,H}=ctxOf($('#fall'));const P=params(st,false),r0=P.R+P.h,g=P.GM/(r0*r0),v1=Math.sqrt(g*r0),v=st.v,ts=1;
+  const L=14,Rr=14,T=22,Bm=30,w=W-L-Rr,h=H-T-Bm;const sMax=1.25*Math.max(v,v1)*ts,fall=0.5*g*ts*ts,dMax=Math.max(fall,sMax*sMax/(2*r0))*1.25;
+  const X=x=>L+x/sMax*w,Y=d=>T+d/dMax*h;
+  // Kreis um den Mittelpunkt (Absenkung s²/2r)
+  c.fillStyle=hexA(C.edge,0.18);c.beginPath();c.moveTo(X(0),Y(0));for(let i=0;i<=80;i++){const x=sMax*i/80;c.lineTo(X(x),Y(x*x/(2*r0)));}c.lineTo(L+w,T+h);c.lineTo(L,T+h);c.closePath();c.fill();
+  c.strokeStyle=C.edge;c.lineWidth=1.8;c.beginPath();for(let i=0;i<=80;i++){const x=sMax*i/80;i?c.lineTo(X(x),Y(x*x/(2*r0))):c.moveTo(X(x),Y(x*x/(2*r0)));}c.stroke();
+  // Waagerechte
+  c.strokeStyle=C.muted;c.lineWidth=1.2;c.setLineDash([5,4]);c.beginPath();c.moveTo(X(0),Y(0));c.lineTo(L+w,Y(0));c.stroke();c.setLineDash([]);
+  c.fillStyle=C.muted;c.textBaseline='bottom';c.textAlign='right';rich(c,'ohne Schwerkraft: geradeaus',L+w,Y(0)-3,{size:10.5,align:'right',halo:true});
+  // Bahn der Kugel (Parabel, 0…1 s)
+  const col=speedCol(v/v1);
+  if(v>0){c.strokeStyle=col;c.lineWidth=2.4;c.beginPath();for(let i=0;i<=60;i++){const t=ts*i/60;const x=v*t,d=0.5*g*t*t;i?c.lineTo(X(x),Y(d)):c.moveTo(X(x),Y(d));}c.stroke();
+    for(const t of [0.25,0.5,0.75,1]){c.fillStyle=col;c.beginPath();c.arc(X(v*t),Y(0.5*g*t*t),t===1?5:3,0,2*Math.PI);c.fill();}}
+  else{c.strokeStyle=col;c.lineWidth=2.4;c.beginPath();c.moveTo(X(0),Y(0));c.lineTo(X(0),Y(fall));c.stroke();}
+  // Pfeile bei x = v·1 s
+  const xs=v*ts,xp=X(xs),drop=xs*xs/(2*r0);
+  arrow(c,xp,Y(0),xp,Y(fall),col,1.6);
+  if(xs>0){arrow(c,Math.min(L+w-3,xp+9),Y(0),Math.min(L+w-3,xp+9),Y(drop),C.edge,1.6);}
+  c.fillStyle=C.edge;c.textBaseline='bottom';rich(c,P.h<0.01*P.R?'Erdoberfläche (Kreis um den Mittelpunkt)':'Kreis um den Mittelpunkt durch die Kanone',L+4,T+h+Bm-6,{size:10.5,halo:true});
+  const rel=drop/fall;let t=`In 1 s fliegt die Kugel <b>${fLen(xs)}</b> weit und fällt <b>${fLen(fall,2)}</b>. Der Kreis sinkt dort um <b>${fLen(drop,2)}</b> ab`;
+  t+=v===0?'.':rel<0.98?` – die Kugel kommt ihm näher (Aufschlag, falls er der Boden ist).`:rel>1.02?' – der Boden „fällt“ schneller weg als die Kugel: sie steigt relativ zum Kreis.':' – genau gleich: <b>Kreisbahn</b>.';
+  $('#fallNote').innerHTML=t+' Höhe stark überhöht.';}
+
+/* ----- Kennzahlen und Status ----- */
+function projText(q){return `<i class="m">m</i> = ${fMass(q.m)}, <i class="m">d</i> = ${fLen(q.d)}, <i class="m">c</i><sub>w</sub> = ${num(q.cw,2)}`;}
+function projHint(){const q=PROJM[st.proj],h=Math.pow(10,st.lgH),a=rhoAt(h)*st.v*st.v/(2*betaOf(st.proj)),g=B().GM/Math.pow(B().R+h,2);
+  return `${projText(q)}. Daraus <i class="m">β</i> = <i class="m">m</i>/(<i class="m">c</i><sub>w</sub><i class="m">A</i>) ≈ ${num(betaOf(st.proj),3)} kg/m². Beim Abschuss bremst die Luft mit ${a>=0.01*g?num(a/g,2)+'-facher Erdbeschleunigung':'weniger als 1 % von <i class="m">g</i>'}.`;}
+function typeText(sh){return {impact:'Aufschlag',orbit:sh.el&&sh.el.e<0.01?'Kreisbahn':'Ellipse',escape:sh.el&&Math.abs(sh.el.e-1)<0.003?'Parabel (Flucht)':'Hyperbel (Flucht)',decay:'Bahn, sinkt (Luft)',open:'—'}[sh.type];}
+function updateKZ(){const Bd=B(),P=params(st,false),r0=P.R+P.h,g=P.GM/(r0*r0),v1=Math.sqrt(P.GM/r0),v2=Math.SQRT2*v1,E=cur.el;
+  let s=`<div class="gh">${Bd.name}</div>
+  <dt><i>g</i> am Boden</dt><dd>${fAcc(P.g0)}</dd>
+  <dt><i>v</i><sub>1</sub> am Boden</dt><dd>${fV(Math.sqrt(P.GM/P.R))}</dd>
+  <dt><i>v</i><sub>2</sub> am Boden</dt><dd>${fV(Math.sqrt(2*P.GM/P.R))}</dd>
+  <div class="gh">In Abschusshöhe</div>
+  <dt><i>g</i>(<i>h</i>)</dt><dd>${fAcc(g)}</dd>
+  <dt>Kreisbahn <i>v</i><sub>1</sub></dt><dd${Math.abs(st.v/v1-1)<0.01?' class="hi"':''}>${fV(v1)}</dd>
+  <dt>Flucht <i>v</i><sub>2</sub></dt><dd${st.v>=v2?' class="hi"':''}>${fV(v2)}</dd>
+  <dt><i>v</i><sub>0</sub>/<i>v</i><sub>1</sub></dt><dd>${num(st.v/v1,3)}</dd>
+  ${P.k?(()=>{const q=PROJM[st.proj],bt=betaOf(st.proj),a=rhoAt(P.h)*st.v*st.v/(2*bt);return `<div class="gh">Geschoss</div>
+  <dt>Masse <i>m</i></dt><dd>${fMass(q.m)}</dd>
+  <dt>Durchmesser <i>d</i>, <i>c</i><sub>w</sub></dt><dd>${fLen(q.d)}, ${num(q.cw,2)}</dd>
+  <dt>ballistischer Koeffizient <i>β</i></dt><dd>${num(bt,3)} kg/m²</dd>
+  <dt>Luftdichte am Start</dt><dd>${rhoAt(P.h)>1e-4?num(rhoAt(P.h),3)+' kg/m³':sci(rhoAt(P.h),1)+' kg/m³'}</dd>
+  <dt>Bremsbeschleunigung am Start</dt><dd class="hi">${fAcc(a)}${a>=0.01*P.g0?` (${num(a/P.g0,3)} <i>g</i>)`:''}</dd>`;})():''}
+  <div class="gh">Bahn (runde Erde${P.k?', mit Luft':''})</div>
+  <dt>Bahntyp</dt><dd class="hi">${typeText(cur)}</dd>
+  <dt>Wurfweite (Bogen)</dt><dd>${cur.type==='impact'?fLen(cur.range):'—'}</dd>
+  <dt>Flugzeit</dt><dd>${cur.type==='impact'?fDur(cur.tEnd):'—'}</dd>
+  <dt>größte Höhe</dt><dd>${cur.type==='escape'?'∞':fLen(cur.hmax)}</dd>
+  <dt>Umlaufzeit</dt><dd>${cur.type==='orbit'?fDur(cur.period):'—'}</dd>
+  <dt>Exzentrizität <i>e</i></dt><dd>${num(E.e,3)}</dd>
+  <dt>tiefster Bahnpunkt (ohne Boden)</dt><dd>${fLen(E.rp-P.R)}</dd>`;
+  if(st.flat){const f=curFlat;s+=`<div class="gh">Flache Erde, <i>g</i> konstant</div><dt>Wurfweite</dt><dd>${fLen(f.range)}</dd><dt>Flugzeit</dt><dd>${fDur(f.tEnd)}</dd><dt>größte Höhe</dt><dd>${fLen(f.hmax)}</dd>`;}
+  $('#kz').innerHTML=s;}
+function statusText(){const P=params(st,false),v1=Math.sqrt(P.GM/(P.R+P.h)),x=st.v/v1,E=cur.el;const name=st.sel?`<b>${EXM[st.sel].name}:</b> `:'';let t;
+  if(cur.type==='impact'){t=`<b>Aufschlag</b> nach ${fLen(cur.range)} und ${fDur(cur.tEnd)}.`;
+    if(cur.rev>0)t+=` Die Luft hat die Kugel nach ${cur.rev} Umläufen heruntergeholt.`;
+    else if(P.k){const rr=rangeRound(P.GM,P.R,P.h,st.v,P.al);t+=isFinite(rr)?` Ohne Luft wären es ${fLen(rr)}.`:' Ohne Luft käme sie gar nicht herunter.';}
+    else if(x>0.3&&Math.abs(P.al)<1e-9)t+=` Mit ${num(x*100,2)} % der Kreisbahngeschwindigkeit krümmt sich der Boden schon spürbar unter der Kugel weg.`;
+    if(E.rp<P.R&&E.e<1&&x>0.9&&st.alpha!==0&&!P.k)t+=' Schräg geschossen läuft die Ellipse durch den Körper: ohne Boden käme die Kugel bis '+fLen(E.rp)+' an den Mittelpunkt heran.';}
+  else if(cur.type==='orbit')t=E.e<0.01?`<b>Kreisbahn.</b> Die Kugel fällt ständig, verfehlt den Boden aber immer: Umlauf in ${fDur(cur.period)}.`:`<b>Ellipse.</b> Die Kugel kehrt nach ${fDur(cur.period)} zur Kanone zurück, ${E.ra-P.R>P.h?'größte Höhe '+fLen(E.ra-P.R):'tiefster Punkt '+fLen(E.rp-P.R)+' über dem Boden'}.`;
+  else if(cur.type==='escape')t=`<b>Flucht.</b> Mit ${fV(st.v)} ≥ <i class="m">v</i><sub>2</sub> = ${fV(Math.SQRT2*v1)} reicht die Bewegungsenergie, um dem Schwerefeld ganz zu entkommen.`;
+  else if(cur.type==='decay')t=`<b>Die Bahn sinkt.</b> Nach ${cur.rev} Umläufen ist die Kugel noch oben, aber jeder Durchgang durch die Luft kostet Energie.`;
+  else t='—';
+  if(active&&active.key===cur.key&&!active.done&&active.type!=='orbit'&&tAnim<active.tEnd)t+=' <span class="m">(fliegt …)</span>';
+  $('#status').innerHTML=name+t;}
+function sw(col,dash,lw=2.4){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="${col}" stroke-width="${lw}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;}
+function buildLegend(){const g=`<svg width="70" height="10" aria-hidden="true"><defs><linearGradient id="gsp"><stop offset="0" stop-color="var(--c-sp0)"/><stop offset="${0.6/1.414}" stop-color="var(--c-sp1)"/><stop offset="${1/1.414}" stop-color="var(--c-sp2)"/><stop offset="1" stop-color="var(--c-sp3)"/></linearGradient></defs><rect width="70" height="10" rx="2" fill="url(#gsp)"/></svg>`;
+  const it=[[g,'Farbe nach v₀: langsam (blau) · v₁ (orange) · v₂ (rot)']];
+  if(st.prev)it.push([sw('var(--ink)','4 4',1.2),'Vorschau']);
+  if(st.circ)it.push([sw('var(--c-circ)','2 4',1.4),'Kreis durch die Kanone']);
+  if(st.flat)it.push([sw('var(--c-flat)','6 4',1.8),'flache Erde, konstantes <i class="m">g</i>']);
+  if(st.drag&&B().atm)it.push([`<svg width="24" height="10" aria-hidden="true"><rect width="24" height="10" rx="2" fill="var(--c-atm)" opacity=".35"/></svg>`,'Atmosphäre (Höhe überzeichnet sichtbar ab großem Zoom)']);
+  $('#legend').innerHTML=it.map(([s,t])=>`<span>${s}${t}</span>`).join('');}
+
+/* ----- Bedienung der Ansicht ----- */
+function zoomAt(f,px,py){const cv=$('#view'),r=cv.getBoundingClientRect();if(px===undefined){px=r.width/2;py=r.height/2;}
+  const wx=cam.x+(px-r.width/2)/cam.s,wy=cam.y-(py-r.height/2)/cam.s;cam.s=Math.max(1e-9,Math.min(1e5,cam.s*f));cam.x=wx-(px-r.width/2)/cam.s;cam.y=wy+(py-r.height/2)/cam.s;st.view='manual';sync(false);}
+(function(){const cv=$('#view');const pts=new Map();let pinch=null;
+  cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);cv.classList.add('drag');if(pts.size===2){const [a,b]=[...pts.values()];pinch=Math.hypot(a[0]-b[0],a[1]-b[1]);}});
+  cv.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const o=pts.get(e.pointerId);
+    if(pts.size===1){cam.x-=(e.clientX-o[0])/cam.s;cam.y+=(e.clientY-o[1])/cam.s;if(st.view!=='manual'){st.view='manual';sync(false);}viewDirty=true;}
+    pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===2&&pinch){const [a,b]=[...pts.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]),r=cv.getBoundingClientRect();zoomAt(d/pinch,(a[0]+b[0])/2-r.left,(a[1]+b[1])/2-r.top);pinch=d;}});
+  const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;if(!pts.size)cv.classList.remove('drag');};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('keydown',e=>{const k=e.key,step=60/cam.s;
+    if(k===' '||k==='Enter'){e.preventDefault();fire();}
+    else if(k==='+'||k==='='){e.preventDefault();zoomAt(1.4);}else if(k==='-'||k==='_'){e.preventDefault();zoomAt(1/1.4);}
+    else if(k==='0'){e.preventDefault();st.view='auto';sync(false);}
+    else if(k.startsWith('Arrow')){e.preventDefault();if(k==='ArrowLeft')cam.x-=step;if(k==='ArrowRight')cam.x+=step;if(k==='ArrowUp')cam.y+=step;if(k==='ArrowDown')cam.y-=step;st.view='manual';sync(false);}});
+  $('#zin').addEventListener('click',()=>zoomAt(1.5));$('#zout').addEventListener('click',()=>zoomAt(1/1.5));})();
+
+/* ----- Schleife ----- */
+let lastTs=0,kzTimer=0;
+function updateStatic(){readColors();updateKZ();statusText();buildLegend();drawRange();drawAlt();drawFall();}
+function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;let need=viewDirty;
+  if(dirty){dirty=false;updateStatic();need=true;}
+  const r=$('#view').getBoundingClientRect();if(st.view!=='manual')camT=viewTarget(r.width,r.height);if(stepCam(dt))need=true;
+  if(active&&!active.done&&!paused){const dur=active.type==='orbit'?Infinity:shotDuration(active)<active.tEnd&&active.type==='escape'?shotDuration(active)*1.5:Math.max(active.tEnd,st.flat?active.flat.tEnd:0);
+    if(tAnim<dur){tAnim+=dt*Math.pow(10,st.lgW);need=true;kzTimer+=dt;if(kzTimer>0.12){kzTimer=0;drawAlt();statusText();}if(tAnim>=dur){tAnim=dur;statusText();}}}
+  if(need){viewDirty=false;drawView();}
+  requestAnimationFrame(frameLoop);}
+function redrawAll(){dpr=Math.min(2,window.devicePixelRatio||1);dirty=true;viewDirty=true;}
+for(const id of ['#view','#rng','#alt','#fall'])new ResizeObserver(redrawAll).observe($(id).parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+dpr=Math.min(2,window.devicePixelRatio||1);
+readColors();
+buildControls();
+{const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
+  const id=h.find(k=>EXM[k]);selectEx(id||DEF.sel);if(h.includes('flat')){st.flat=true;sync(true);}
+  if(h.includes('schar'))schar();else if(h.includes('fire'))fire();
+  const tw=h.find(k=>k.startsWith('t='));if(tw&&active){tAnim=parseFloat(tw.slice(2));paused=true;}}
+requestAnimationFrame(frameLoop);
+</script>
+
+</body>
+</html>
