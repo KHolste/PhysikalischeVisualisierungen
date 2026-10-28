@@ -100,7 +100,7 @@ canvas.full{position:absolute;inset:0;width:100%;height:100%}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
 .legend span{display:flex;align-items:center;gap:5px}
 .legend svg{flex:none}
-.trio{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:10px}
+.trio{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .boxp{padding:10px 12px;min-width:0}
 .cwrap{position:relative;height:250px}
 .note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
@@ -124,14 +124,12 @@ canvas.full{position:absolute;inset:0;width:100%;height:100%}
 .tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
 .m{font-family:var(--f-math)}
 .foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
-@media (max-width:1500px){.trio{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.trio>:first-child{grid-column:1/-1}}
 @media (max-width:1280px){
   .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
 }
 @media (max-width:860px){
   .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
   .trio{grid-template-columns:minmax(0,1fr)}
-  .trio>:first-child{grid-column:auto}
   header.top .units{margin-left:0}
   .viewwrap{height:clamp(320px,62vh,520px)}
 }
@@ -193,11 +191,6 @@ canvas.full{position:absolute;inset:0;width:100%;height:100%}
     </div>
     <div class="trio">
       <div class="panel boxp">
-        <h2 class="lab">Wurfweite gegen Abschussgeschwindigkeit</h2>
-        <div class="cwrap"><canvas class="full" id="rng" aria-label="Wurfweite entlang der Oberfläche gegen die Abschussgeschwindigkeit, runde gegen flache Erde"></canvas></div>
-        <div class="note" id="rngNote"></div>
-      </div>
-      <div class="panel boxp">
         <h2 class="lab">Höhe über dem Boden</h2>
         <div class="cwrap"><canvas class="full" id="alt" aria-label="Höhe der Kugel über der Oberfläche als Funktion der Zeit"></canvas></div>
         <div class="note" id="altNote"></div>
@@ -221,6 +214,8 @@ canvas.full{position:absolute;inset:0;width:100%;height:100%}
     </div>
     <p><b>Fallen und verfehlen.</b> In der ersten Sekunde fällt jede Kugel 4,9 m, egal wie schnell sie fliegt. Die Erdoberfläche sinkt gegenüber der Waagerechten nach <i class="m">s</i> Metern um <i class="m">s</i><sup>2</sup>/(2<i class="m">R</i>) ab, nach 7,9 km also ebenfalls um 4,9 m. Wer in einer Sekunde 7,9 km weit fliegt, fällt genau so schnell, wie die Erde „wegkrümmt“. Deshalb sind Astronauten auf der ISS schwerelos: Sie fallen ständig, zusammen mit ihrer Station.</p>
     <p><b>Parabel oder Ellipse?</b> Die Wurfparabel setzt ein überall gleiches, parallel nach unten zeigendes <i class="m">g</i> und einen ebenen Boden voraus. Mit dem 1/<i class="m">r</i><sup>2</sup>-Gesetz ist jede Bahn ein Kegelschnitt mit dem Erdmittelpunkt im Brennpunkt. Ein kurzer Wurf ist das Stück um den fernsten Punkt (Apozentrum) einer sehr schlanken Ellipse, die beinahe durch den Mittelpunkt führt. Bei kleinen Geschwindigkeiten ist die Parabel eine hervorragende Näherung.</p>
+    <p><b>Umlauf schon unter <i class="m">v</i><sub>1</sub>.</b> Auf einem hohen Berg muss die Kugel nicht ganz <i class="m">v</i><sub>1</sub> erreichen. Ist sie etwas langsamer, wird die Kanone zum höchsten Punkt einer Ellipse. Die Kugel fällt der Erde näher, bleibt aber in der Umlaufbahn, solange der tiefste Punkt über dem Boden liegt. Die Grenze folgt aus Energie- und Drehimpulserhaltung zwischen Abschuss (<i class="m">r</i><sub>0</sub> = <i class="m">R</i> + <i class="m">h</i>) und Streifpunkt (<i class="m">R</i>):</p>
+    <div class="formula"><div><i>v</i><sub>min</sub> = <i>v</i><sub>1</sub>(<i>h</i>) · √(2<i>R</i>/(<i>R</i> + <i>r</i><sub>0</sub>)) &nbsp;<small>waagerechter Schuss; am Boden ist <i>v</i><sub>min</sub> = <i>v</i><sub>1</sub></small></div></div>
     <p><b>Mond und Apfel.</b> Newtons Schluss: Dieselbe Schwerkraft, die den Apfel fallen lässt, hält den Mond auf seiner Bahn. Der Mond ist etwa 60 Erdradien entfernt; dort ist die Schwerebeschleunigung <i class="m">g</i>/60<sup>2</sup> ≈ 2,7 mm/s². Genau diese Zentripetalbeschleunigung 4π<sup>2</sup><i class="m">r</i>/<i class="m">T</i><sup>2</sup> folgt aus der Umlaufzeit von 27,3 Tagen.</p>
     <p><b>Warum schießt niemand mit Kanonen in den Orbit?</b> In der dichten Luft am Boden verliert eine Kugel mit 8 km/s ihre Energie in Sekunden. Raketen steigen deshalb zuerst steil aus der Atmosphäre und beschleunigen dann waagerecht. Und eine einmal abgefeuerte Kugel kehrt ohne weiteren Schub immer wieder zum Abschusspunkt zurück; der Berg müsste also oberhalb der Atmosphäre liegen.</p>
     <p><b>Wie stark bremst die Luft?</b> Die Widerstandskraft wächst mit der Luftdichte <i class="m">ρ</i>, der Stirnfläche <i class="m">A</i> und dem Quadrat der Geschwindigkeit. Der Widerstandsbeiwert <i class="m">c</i><sub>w</sub> beschreibt die Form (Kugel ≈ 0,47, Stromlinie ≈ 0,1–0,3). Teilt man durch die Masse, erhält man die Bremsbeschleunigung:</p>
@@ -293,11 +288,13 @@ function simulate(P,opt){opt=opt||{};const store=opt.store!==false,maxRev=opt.ma
 // Bahnelemente ohne Luft (Kegelschnitt um den Mittelpunkt)
 function elements(GM,r0,v,al){const eps=v*v/2-GM/r0,hA=r0*v*Math.cos(al),p=hA*hA/GM,e=Math.sqrt(Math.max(0,1+2*eps*hA*hA/(GM*GM)));
   const a=eps<0?-GM/(2*eps):Infinity,rp=p/(1+e),ra=e<1?p/(1-e):Infinity,T=eps<0?2*Math.PI*Math.sqrt(a*a*a/GM):null;return {eps,hA,p,e,a,rp,ra,T};}
+// kleinste Geschwindigkeit für einen Umlauf ohne Luft: tiefster Bahnpunkt r_p gerade auf der Oberfläche (null = keine gebundene Bahn möglich)
+function vMinOrbit(GM,R,r0,al){const ok=v=>elements(GM,r0,v,al).rp>=R*(1+1e-12);const v2=Math.sqrt(2*GM/r0)*(1-1e-9);
+  if(!ok(v2))return null;if(Math.abs(al)<1e-12)return Math.sqrt(2*GM*R/(r0*(R+r0)));let a=0,b=v2;for(let k=0;k<60;k++){const m=(a+b)/2;if(ok(m))b=m;else a=m;}return b;}
 // Wurfweite (Bogenlänge auf der Oberfläche) ohne Luft, analytisch; Infinity = kein Aufschlag
 function rangeRound(GM,R,h,v,al){const r0=R+h,E=elements(GM,r0,v,al);if(E.rp>=R)return Infinity;
   const vr=v*Math.sin(al),f0=Math.atan2(vr*E.hA/GM,E.p/r0-1),c=Math.max(-1,Math.min(1,(E.p/R-1)/E.e)),ac=Math.acos(c);
   let fi;if(f0<0)fi=-ac;else if(E.eps<0)fi=2*Math.PI-ac;else return Infinity;return R*(fi-f0);}
-function rangeFlat(g,h,v,al){const s=Math.sin(al),c=Math.cos(al);return v*c*(v*s+Math.sqrt(v*v*s*s+2*g*h))/g;}
 /*CORE-END*/
 </script>
 <script>
@@ -392,7 +389,7 @@ function setBody(b){// Geschwindigkeit und Höhe auf den neuen Körper umrechnen
   st.v=Math.min(n.vmax,r*Math.sqrt(n.GM/n.R));st.body=b;st.sel=null;shots=[];active=null;camJump=true;sync(true);}
 function selectEx(id){const e=EXM[id];if(st.body!==e.body){shots=[];active=null;camJump=true;}
   st.body=e.body;st.lgH=Math.log10(e.h);st.v=e.v;st.alpha=e.alpha;st.drag=!!e.drag;if(e.proj)st.proj=e.proj;st.sel=id;sync(true);}
-let cur=null,curFlat=null,dirty=true,viewDirty=true,rngCache=null,dragCurve=null,dragTimer=null;
+let cur=null,curFlat=null,dirty=true,viewDirty=true;
 function sync(resim){
   st.lgH=Math.max(0,Math.min(hMaxLg(st.body),st.lgH));st.v=Math.max(0,Math.min(B().vmax,st.v));
   if(resim||!cur)recompute();
@@ -404,10 +401,7 @@ function sync(resim){
   dirty=true;viewDirty=true;}
 function recompute(){const P=params(st,false);cur=simulate(P);cur.key=keyOf(st);curFlat=simulate(params(st,true));
   const r0=P.R+P.h;cur.el=elements(P.GM,r0,P.v,P.al);
-  // Wurfweite mit Luft als Kurve: verzögert, weil viele Simulationen nötig sind
-  dragCurve=null;clearTimeout(dragTimer);if(P.k){const s0=Object.assign({},st);dragTimer=setTimeout(()=>{dragCurve=computeDragCurve(s0);dirty=true;},220);}}
-function computeDragCurve(s0){const N=70,b=BOD[s0.body],out=[];for(let i=1;i<=N;i++){const v=b.vmax*i/N,P=params(Object.assign({},s0,{v}),false);
-  const r=simulate(P,{store:false,maxRev:1,maxSteps:200000});out.push([v,r.type==='impact'?r.range:Infinity]);}return {key:[s0.body,s0.lgH,s0.alpha,s0.proj].join('|'),pts:out};}
+}
 
 /* ----- Schüsse ----- */
 let shots=[],active=null,tAnim=0,paused=false;
@@ -426,10 +420,11 @@ function schar(){const P=params(st,false),v1=Math.sqrt(P.GM/(P.R+P.h)),fr=[0.35,
 
 /* ----- Aufgaben ----- */
 const TASKS=[
-  {t:'<b>Newtons Bild.</b> Klicke „Bahnschar“: Die Kanone feuert mit wachsender Geschwindigkeit. Wie wächst die Wurfweite, wenn sich <i class="m">v</i><sub>0</sub> der Kreisbahngeschwindigkeit <i class="m">v</i><sub>1</sub> nähert? Vergleiche mit dem Diagramm „Wurfweite“.',ex:'newton',lab:'Einstellen'},
+  {t:'<b>Newtons Bild.</b> Klicke „Bahnschar“: Die Kanone feuert mit wachsender Geschwindigkeit. Wie wächst die Wurfweite, wenn sich <i class="m">v</i><sub>0</sub> der Kreisbahngeschwindigkeit <i class="m">v</i><sub>1</sub> nähert? Die Wurfweite steht in der Statuszeile und bei den Kennzahlen.',ex:'newton',lab:'Einstellen'},
   {t:'<b>Parabel als Näherung.</b> Schalte „flache Erde“ ein und feuere die Kanonenkugel (500 m/s, 45°). Um wie viel unterscheiden sich die Wurfweiten? Ab welcher Geschwindigkeit liegen flache und runde Erde um mehr als 10 % auseinander?',ex:'kugel',flat:true},
   {t:'<b>Fallen gegen Krümmung.</b> Vom Mount Everest mit 7,9 km/s: Lies in der Skizze „erste Sekunde“ ab, wie weit die Kugel fällt und wie weit der Kreis um den Erdmittelpunkt in dieser Zeit absinkt. Leite daraus <i class="m">v</i><sub>1</sub> = √(<i class="m">gR</i>) her.',ex:'everest'},
   {t:'<b>Schwerelos auf der ISS.</b> In 408 km Höhe reichen 7,67 km/s für die Kreisbahn. Warum weniger als am Boden? Wie lange dauert ein Umlauf? Die Astronauten sind nicht ohne Schwerkraft: <i class="m">g</i> ist dort noch knapp 90 % des Bodenwerts.',ex:'iss'},
+  {t:'<b>Umlauf unter <i class="m">v</i><sub>1</sub>?</b> Aus 1000 km Höhe fliegt die Kugel schon mit 7,27 km/s um die Erde, obwohl <i class="m">v</i><sub>1</sub> dort 7,35 km/s beträgt. Wo liegt der tiefste Punkt der Bahn? Senke <i class="m">v</i><sub>0</sub> schrittweise: Ab welcher Geschwindigkeit schlägt die Kugel auf? Vergleiche mit <i class="m">v</i><sub>min</sub> und erkläre, warum am Boden <i class="m">v</i><sub>min</sub> = <i class="m">v</i><sub>1</sub> gilt.',set:{body:'E',lgH:6,v:7270,alpha:0,drag:false}},
   {t:'<b>Schräg nach oben?</b> Bleib in ISS-Höhe bei <i class="m">v</i><sub>0</sub> = <i class="m">v</i><sub>1</sub> und stelle <i class="m">α</i> = 20° ein. Die Energie ist dieselbe wie bei der Kreisbahn, trotzdem schlägt die Kugel auf. Warum muss man für eine Umlaufbahn waagerecht schießen?',set:{body:'E',lgH:Math.log10(408e3),v:7669,alpha:20,drag:false}},
   {t:'<b>Ab ins All.</b> Mit 11,2 km/s kehrt die Kugel nie zurück. Probiere 11,0 km/s: Wie weit fliegt sie hinaus, und wie lange dauert es, bis sie zurückkommt? Warum ist <i class="m">v</i><sub>2</sub> genau √2 · <i class="m">v</i><sub>1</sub>?',ex:'flucht'},
   {t:'<b>Die Luft bremst.</b> Feuere vom Mount Everest mit und ohne Luftwiderstand. Wie weit kommt die Kugel mit Luft? Probiere andere Geschosse aus: Welches kommt am weitesten, und warum hilft „schwer und schlank“ (großes <i class="m">β</i>)? Und die 500-m/s-Kugel: Wie stark schrumpft ihre Reichweite?',ex:'everestLuft'},
@@ -551,44 +546,6 @@ function scaleBar(c,W,H,s){const target=W*0.18/s,e=Math.floor(Math.log10(target)
   const px=L*s,x0=14,y0=H-14;c.strokeStyle=C.ink;c.lineWidth=1.5;c.beginPath();c.moveTo(x0,y0-5);c.lineTo(x0,y0);c.lineTo(x0+px,y0);c.lineTo(x0+px,y0-5);c.stroke();
   c.fillStyle=C.ink;c.font=`11px ${C.mono}`;c.textAlign='center';c.textBaseline='bottom';halo(c,fLen(L,1),x0+px/2,y0-3);}
 
-/* ----- Diagramm: Wurfweite ----- */
-function axisV(vmax){const step=vmax>=8000?1000:vmax>=2000?500:vmax>=500?100:2;return step;}
-function drawRange(){const {c,W,H}=ctxOf($('#rng'));const Bd=B(),P=params(st,false),r0=P.R+P.h;const L=66,Rr=12,T=12,Bm=38,w=W-L-Rr,h=H-T-Bm;
-  const top=Math.log10(2*Math.PI*Bd.R),bot=top-6.5;const X=v=>L+v/Bd.vmax*w,Y=lg=>T+h-(lg-bot)/(top+0.25-bot)*h;
-  // Kurven (analytisch, ohne Luft)
-  const key=[st.body,st.lgH,st.alpha].join('|');if(!rngCache||rngCache.key!==key){const N=500,rd=[],fl=[];
-    for(let i=0;i<=N;i++){const v=Bd.vmax*i/N;rd.push([v,rangeRound(P.GM,P.R,P.h,v,P.al)]);fl.push([v,rangeFlat(P.g0,P.h,v,P.al)]);}rngCache={key,rd,fl};}
-  c.strokeStyle=C.grid;c.lineWidth=1;c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;
-  for(let k=Math.ceil(bot);k<=Math.floor(top);k++){const y=Y(k);c.beginPath();c.moveTo(L,y+0.5);c.lineTo(L+w,y+0.5);c.stroke();c.textAlign='right';c.textBaseline='middle';c.fillText(fLen(Math.pow(10,k),1),L-5,y);}
-  const vs=axisV(Bd.vmax);for(let v=0;v<=Bd.vmax+1e-9;v+=vs){const x=X(v);c.beginPath();c.moveTo(x+0.5,T);c.lineTo(x+0.5,T+h);c.stroke();c.textAlign='center';c.textBaseline='top';c.fillText(Bd.vmax>=1000?num(v/1000,2):num(v,2),x,T+h+4);}
-  rich(c,Bd.vmax>=1000?'Abschussgeschwindigkeit v_{0} (km/s)':'Abschussgeschwindigkeit v_{0} (m/s)',L+w/2,T+h+25,{size:11.5,align:'center'});
-  // Bereich ohne Aufschlag
-  c.fillStyle=hexA(C.circ,0.12);let inR=false,xa=0;for(const [v,r] of rngCache.rd){const no=!isFinite(r);if(no&&!inR){inR=true;xa=X(v);}if(!no&&inR){inR=false;c.fillRect(xa,T,X(v)-xa,h);}}if(inR)c.fillRect(xa,T,L+w-xa,h);
-  const ytop=Y(top);c.strokeStyle=hexA(C.circ,0.8);c.setLineDash([3,3]);c.beginPath();c.moveTo(L,ytop);c.lineTo(L+w,ytop);c.stroke();c.setLineDash([]);
-  c.fillStyle=C.circ;c.textAlign='left';c.textBaseline='bottom';rich(c,'einmal ganz herum',L+4,ytop-2,{size:10.5,weight:600,halo:true});
-  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
-  const curve=(pts,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;
-    for(const [v,r] of pts){if(!(r>0)){pen=false;continue;}const y=isFinite(r)?Y(Math.log10(r)):T-5;if(!isFinite(r)){if(pen)c.lineTo(X(v),y);pen=false;continue;}pen?c.lineTo(X(v),y):c.moveTo(X(v),y);pen=true;}c.stroke();c.setLineDash([]);};
-  curve(rngCache.fl,C.flat,1.8,[6,4]);curve(rngCache.rd,C.accent,2.4);
-  const dk=[st.body,st.lgH,st.alpha,st.proj].join('|');if(P.k&&dragCurve&&dragCurve.key===dk)curve([[0,0],...dragCurve.pts],C.drag,2,[2,3]);
-  // v1, v2 in Abschusshöhe
-  const v1=Math.sqrt(P.GM/r0),v2=Math.SQRT2*v1;for(const [v,lab] of [[v1,'v_{1}'],[v2,'v_{2}']]){if(v>Bd.vmax)continue;const x=X(v);c.strokeStyle=C.muted;c.setLineDash([2,3]);c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();c.setLineDash([]);
-    c.fillStyle=C.muted;rich(c,lab,x+3,T+h-6,{size:11,weight:600,halo:true});}
-  // Schüsse
-  for(const sh of shots){if(sh.type!=='impact'||sh.range<=0||sh.P.h!==P.h||sh.P.al!==P.al||sh.P.R!==P.R)continue;c.fillStyle=sh.col;c.strokeStyle=C.stage;c.lineWidth=1.2;c.beginPath();c.arc(X(sh.v),Y(Math.log10(sh.range)),4.5,0,2*Math.PI);c.fill();c.stroke();}
-  // aktuelle Geschwindigkeit
-  const xv=X(st.v);c.strokeStyle=C.ink;c.lineWidth=1.2;c.beginPath();c.moveTo(xv,T);c.lineTo(xv,T+h);c.stroke();
-  const rr=rangeRound(P.GM,P.R,P.h,st.v,P.al),rf=rangeFlat(P.g0,P.h,st.v,P.al);
-  if(rf>0){c.fillStyle=C.flat;c.beginPath();c.arc(xv,Y(Math.log10(rf)),3.5,0,2*Math.PI);c.fill();}
-  if(rr>0&&isFinite(rr)){c.fillStyle=C.accent;c.beginPath();c.arc(xv,Y(Math.log10(rr)),4,0,2*Math.PI);c.fill();}
-  c.restore();
-  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
-  c.save();c.translate(10,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.fillStyle=C.muted;c.font=`11.5px ${C.ui}`;c.textBaseline='middle';c.fillText('Wurfweite (log.)',0,0);c.restore();
-  let n=`<span style="color:var(--accent)">━</span> runde Erde, 1/r² &nbsp;<span style="color:var(--c-flat)">╍</span> flache Erde`+(P.k?` &nbsp;<span style="color:var(--c-drag)">┅</span> rund mit Luft`:'')+'. ';
-  if(!isFinite(rr))n+=`Bei ${fV(st.v)} <b>kein Aufschlag</b> (grüner Bereich).`;
-  else if(rf>0)n+=`Bei ${fV(st.v)}: rund <b>${fLen(rr)}</b>, flach <b>${fLen(rf)}</b> (${rr>=rf?'+':'−'}${num(Math.abs(rr/rf-1)*100,2)} %).`;
-  $('#rngNote').innerHTML=n;}
-
 /* ----- Diagramm: Höhe über der Zeit ----- */
 function tUnit(t){return t<120?[1,'s']:t<7200?[60,'min']:t<3*86400?[3600,'h']:[86400,'d'];}
 function niceStep(x){const e=Math.pow(10,Math.floor(Math.log10(x))),m=x/e;return (m<1.5?1:m<3.5?2:m<7.5?5:10)*e;}
@@ -647,6 +604,7 @@ function updateKZ(){const Bd=B(),P=params(st,false),r0=P.R+P.h,g=P.GM/(r0*r0),v1
   <dt><i>v</i><sub>2</sub> am Boden</dt><dd>${fV(Math.sqrt(2*P.GM/P.R))}</dd>
   <div class="gh">In Abschusshöhe</div>
   <dt><i>g</i>(<i>h</i>)</dt><dd>${fAcc(g)}</dd>
+  <dt>Umlauf ab <i>v</i><sub>min</sub>${P.k?' (ohne Luft)':''}</dt><dd${(()=>{const vm=vMinOrbit(P.GM,P.R,r0,P.al);return (vm!==null&&st.v>=vm&&st.v<v1*0.99?' class="hi"':'')+'>'+(vm===null?'—':fV(vm));})()}</dd>
   <dt>Kreisbahn <i>v</i><sub>1</sub></dt><dd${Math.abs(st.v/v1-1)<0.01?' class="hi"':''}>${fV(v1)}</dd>
   <dt>Flucht <i>v</i><sub>2</sub></dt><dd${st.v>=v2?' class="hi"':''}>${fV(v2)}</dd>
   <dt><i>v</i><sub>0</sub>/<i>v</i><sub>1</sub></dt><dd>${num(st.v/v1,3)}</dd>
@@ -672,7 +630,7 @@ function statusText(){const P=params(st,false),v1=Math.sqrt(P.GM/(P.R+P.h)),x=st
     else if(P.k){const rr=rangeRound(P.GM,P.R,P.h,st.v,P.al);t+=isFinite(rr)?` Ohne Luft wären es ${fLen(rr)}.`:' Ohne Luft käme sie gar nicht herunter.';}
     else if(x>0.3&&Math.abs(P.al)<1e-9)t+=` Mit ${num(x*100,2)} % der Kreisbahngeschwindigkeit krümmt sich der Boden schon spürbar unter der Kugel weg.`;
     if(E.rp<P.R&&E.e<1&&x>0.9&&st.alpha!==0&&!P.k)t+=' Schräg geschossen läuft die Ellipse durch den Körper: ohne Boden käme die Kugel bis '+fLen(E.rp)+' an den Mittelpunkt heran.';}
-  else if(cur.type==='orbit')t=E.e<0.01?`<b>Kreisbahn.</b> Die Kugel fällt ständig, verfehlt den Boden aber immer: Umlauf in ${fDur(cur.period)}.`:`<b>Ellipse.</b> Die Kugel kehrt nach ${fDur(cur.period)} zur Kanone zurück, ${E.ra-P.R>P.h?'größte Höhe '+fLen(E.ra-P.R):'tiefster Punkt '+fLen(E.rp-P.R)+' über dem Boden'}.`;
+  else if(cur.type==='orbit')t=E.e<0.01?`<b>Kreisbahn.</b> Die Kugel fällt ständig, verfehlt den Boden aber immer: Umlauf in ${fDur(cur.period)}.`:`<b>Ellipse.</b> Die Kugel kehrt nach ${fDur(cur.period)} zur Kanone zurück, ${E.ra-P.R>P.h?'größte Höhe '+fLen(E.ra-P.R):'tiefster Punkt '+fLen(E.rp-P.R)+' über dem Boden'}.`+(x<0.99?` Das klappt schon unter <i class="m">v</i><sub>1</sub>: Die Kugel fällt bis auf ${fLen(E.rp-P.R)} über dem Boden herab, verfehlt die Erde aber (Umlauf ab <i class="m">v</i><sub>min</sub> = ${fV(vMinOrbit(P.GM,P.R,P.R+P.h,P.al))}).`:'');
   else if(cur.type==='escape')t=`<b>Flucht.</b> Mit ${fV(st.v)} ≥ <i class="m">v</i><sub>2</sub> = ${fV(Math.SQRT2*v1)} reicht die Bewegungsenergie, um dem Schwerefeld ganz zu entkommen.`;
   else if(cur.type==='decay')t=`<b>Die Bahn sinkt.</b> Nach ${cur.rev} Umläufen ist die Kugel noch oben, aber jeder Durchgang durch die Luft kostet Energie.`;
   else t='—';
@@ -708,7 +666,7 @@ function zoomAt(f,px,py){const cv=$('#view'),r=cv.getBoundingClientRect();if(px=
 
 /* ----- Schleife ----- */
 let lastTs=0,kzTimer=0;
-function updateStatic(){readColors();updateKZ();statusText();buildLegend();drawRange();drawAlt();drawFall();}
+function updateStatic(){readColors();updateKZ();statusText();buildLegend();drawAlt();drawFall();}
 function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;let need=viewDirty;
   if(dirty){dirty=false;updateStatic();need=true;}
   const r=$('#view').getBoundingClientRect();if(st.view!=='manual')camT=viewTarget(r.width,r.height);if(stepCam(dt))need=true;
@@ -717,7 +675,7 @@ function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=
   if(need){viewDirty=false;drawView();}
   requestAnimationFrame(frameLoop);}
 function redrawAll(){dpr=Math.min(2,window.devicePixelRatio||1);dirty=true;viewDirty=true;}
-for(const id of ['#view','#rng','#alt','#fall'])new ResizeObserver(redrawAll).observe($(id).parentElement);
+for(const id of ['#view','#alt','#fall'])new ResizeObserver(redrawAll).observe($(id).parentElement);
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
 new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
