@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Potentiallabor</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  /* Layout wie die Plasma-Labore: links Parameter, Mitte Feldkarte + Diagramme, rechts Physik und Aufgaben */
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --pm0:#1b355c; --pm1:#7097bd; --pm2:#f1f4f6; --c-rot:#e0a07a;
+  --c-p1:#1f5fc2; --c-p2:#d0601c; --c-a:#1d7a3a; --c-b:#7b3aa6;
+  --c-kin:#c23a2b; --c-pot:#3157a8; --c-mech:#14202b; --c-heat:#a8326e; --c-probe:#c23a2b;
+  --c-body:#7d8f9e; --c-bodyl:#3b4a57; --c-neutral:#b4480f; --c-fl:#2f4f6f; --c-mgh:#b4480f;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --pm0:#03070b; --pm1:#163049; --pm2:#2d5373; --c-rot:#8a4a26;
+    --c-p1:#62a1ff; --c-p2:#ffa36e; --c-a:#5cc46a; --c-b:#c48cf0;
+    --c-kin:#ff715f; --c-pot:#7aa7ff; --c-mech:#e1e8ed; --c-heat:#f07ab8; --c-probe:#ff715f;
+    --c-body:#56687a; --c-bodyl:#a9bac7; --c-neutral:#ffa36e; --c-fl:#a9c3dc; --c-mgh:#ffa36e; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --pm0:#03070b; --pm1:#163049; --pm2:#2d5373; --c-rot:#8a4a26;
+  --c-p1:#62a1ff; --c-p2:#ffa36e; --c-a:#5cc46a; --c-b:#c48cf0;
+  --c-kin:#ff715f; --c-pot:#7aa7ff; --c-mech:#e1e8ed; --c-heat:#f07ab8; --c-probe:#ff715f;
+  --c-body:#56687a; --c-bodyl:#a9bac7; --c-neutral:#ffa36e; --c-fl:#a9c3dc; --c-mgh:#ffa36e; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1720px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+header.top .units{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr) 350px;grid-template-areas:"params stage info";align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{grid-area:params;padding:12px 14px 14px}
+.stage{grid-area:stage;min-width:0;display:flex;flex-direction:column;gap:10px}
+.info{grid-area:info;padding:16px 18px;min-width:0}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.seg button{all:unset;text-align:center;padding:6px 2px;cursor:pointer;font-size:12.5px;font-weight:500;line-height:1.2}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i,dl.kz dt i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chkrow{display:flex;gap:7px;align-items:flex-start;font-size:13px;margin-bottom:8px;cursor:pointer}
+.chkrow input{accent-color:var(--accent);margin-top:3px}
+.chkrow small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.ctl-tip{font-size:11.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.ctl-tip kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.btnrow .btn{font-size:12px;padding:4px 8px}
+select.sel{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%;margin-bottom:10px}
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz dd.hi{font-weight:600;color:var(--accent)}
+dl.kz .gh{grid-column:1/-1;font-family:var(--f-head);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+dl.kz .gh:first-child{margin-top:0;padding-top:0;border-top:0}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.status{font-size:13px;color:var(--muted);min-height:2.9em}
+.status b{color:var(--ink);font-weight:600}
+.mapwrap{position:relative;height:clamp(360px,54vh,600px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+#map{cursor:grab;touch-action:none}
+#map.drag{cursor:grabbing}
+#map.hit{cursor:pointer}
+#map:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.simbar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;border-top:1px solid var(--line);padding-top:8px}
+.simbar .time{margin-left:auto;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.cwrap{position:relative;height:250px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.note b{color:var(--ink);font-weight:600}
+.info h3{font-family:var(--f-head);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;text-wrap:balance}
+.info p{margin:0 0 10px;max-width:65ch}
+.info b{font-weight:600}
+.formula{font-family:var(--f-math);font-size:17px;line-height:1.55;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 2px;margin:4px 0 12px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+.formula i{font-style:italic}
+.formula small{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.92em;line-height:1.15;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.frac>span:last-child{padding:0 3px}
+.vec{font-weight:700;font-style:normal!important}
+.info h4{font-family:var(--f-head);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 6px}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.tasks li:first-child{border-top:0}
+.tasks li p{margin:0}
+.tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
+.m{font-family:var(--f-math)}
+.foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
+@media (max-width:1500px){.trio{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.trio>:first-child{grid-column:1/-1}}
+@media (max-width:1280px){
+  .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
+  .trio{grid-template-columns:minmax(0,1fr)}
+  .trio>:first-child{grid-column:auto}
+  header.top .units{margin-left:0}
+  .mapwrap{height:clamp(320px,70vw,480px)}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <h1>Potentiallabor</h1>
+  <p class="sub">Konservative Kräfte, Potentialfelder und mechanische Energie</p>
+  <span class="units">ebener Schnitt · ruhende Körper · SI-Einheiten</span>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Beispiel</h2>
+    <select class="sel" id="example" aria-label="Beispiel wählen"></select>
+    <h2 class="lab">Kraftfeld</h2>
+    <div class="seg" style="--n:3" id="segMode" role="group" aria-label="Kraftfeld">
+      <button type="button" data-v="grav">Gravitation</button><button type="button" data-v="hom">homogen</button><button type="button" data-v="wirbel">Wirbelfeld</button>
+    </div>
+    <div data-mode="grav">
+      <h2 class="lab">Anzahl der Körper</h2>
+      <div class="seg" style="--n:3" id="segNb" role="group" aria-label="Anzahl der Körper">
+        <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button>
+      </div>
+      <div id="ctl-M"></div>
+    </div>
+    <div data-mode="hom"><div id="ctl-g"></div></div>
+    <div data-mode="wirbel">
+      <div class="seg" style="--n:2" id="segVt" role="group" aria-label="Art des Wirbelfelds">
+        <button type="button" data-v="rigid">starrer Wirbel</button><button type="button" data-v="line">Linienwirbel</button>
+      </div>
+      <div id="ctl-k"></div>
+    </div>
+    <div id="ctl-view"></div>
+    <hr class="sep">
+    <h2 class="lab">Probekörper (startet bei A)</h2>
+    <div id="ctl-m"></div>
+    <div id="ctl-v"></div>
+    <div class="btnrow" data-mode="grav">
+      <button class="btn" type="button" id="vKreis">v = v<sub>Kreis</sub></button>
+      <button class="btn" type="button" id="vFlucht">v = v<sub>Flucht</sub></button>
+      <button class="btn" type="button" id="vNull">v = 0</button>
+    </div>
+    <div id="ctl-spd"></div>
+    <label class="chkrow"><input type="checkbox" id="o-fric"><span>Reibung (Luftwiderstand)<small>Widerstandskraft <i class="m">F</i><sub>R</sub> = −<i class="m">b m v</i> gegen die Bewegung. Sie wandelt mechanische Energie in Wärme um.</small></span></label>
+    <div id="ctl-b"></div>
+    <hr class="sep">
+    <h2 class="lab">Anzeige</h2>
+    <label class="chkrow"><input type="checkbox" id="o-eq"><span>Potential und Äquipotentiallinien</span></label>
+    <label class="chkrow"><input type="checkbox" id="o-arr"><span>Feldpfeile (Richtung von <i class="m">F</i>)</span></label>
+    <label class="chkrow"><input type="checkbox" id="o-fl"><span>Feldlinien</span></label>
+    <label class="chkrow" data-mode="grav hom"><input type="checkbox" id="o-zero"><span>Nullpunkt: <i class="m">U</i> = 0 bei A<small>sonst <i class="m">U</i> = 0 im Unendlichen (Gravitation) bzw. am Boden (homogen)</small></span></label>
+    <p class="ctl-tip">In der Karte <b>A</b>, <b>B</b>, die Mitte <b>C</b> von Weg 2 und die Körper ziehen; leere Fläche verschiebt den Ausschnitt. Tastatur: Karte anklicken, mit <kbd>A</kbd> <kbd>B</kbd> <kbd>C</kbd> wählen, mit <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> verschieben, <kbd>Leertaste</kbd> startet den Probekörper.</p>
+    <button class="btn" type="button" id="defaults">Standardwerte</button>
+    <hr class="sep">
+    <h2 class="lab">Kennzahlen</h2>
+    <dl class="kz" id="kz"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="plotbox">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="mapwrap"><canvas class="full" id="map" tabindex="0" aria-label="Feldkarte mit Potential, Äquipotentiallinien, Feldpfeilen, den Punkten A und B und zwei Wegen. Ziehen oder Pfeiltasten verschieben die Punkte."></canvas></div>
+      <div class="legend" id="legend"></div>
+      <div class="simbar">
+        <button class="btn pri" type="button" id="run">▶ Probekörper starten</button>
+        <button class="btn" type="button" id="reset">↺ Zurücksetzen</button>
+        <span class="time" id="time" aria-live="off"></span>
+      </div>
+    </div>
+    <div class="trio">
+      <div class="panel boxp">
+        <h2 class="lab">Arbeit des Feldes entlang der Wege</h2>
+        <div class="cwrap"><canvas class="full" id="cw" aria-label="Aufsummierte Arbeit der Feldkraft entlang Weg 1 und Weg 2"></canvas></div>
+        <div class="note" id="cwNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab" id="cuTitle">Potentielle Energie im Schnitt</h2>
+        <div class="cwrap"><canvas class="full" id="cu" aria-label="Potentielle Energie entlang eines Schnitts mit Energieniveau des Probekörpers"></canvas></div>
+        <div class="note" id="cuNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Energiebilanz des Probekörpers</h2>
+        <div class="cwrap"><canvas class="full" id="ce" aria-label="Kinetische, potentielle und mechanische Energie des Probekörpers über der Zeit"></canvas></div>
+        <div class="note" id="ceNote"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel info" id="info">
+    <h3>Konservative Kräfte und Potential</h3>
+    <p>Eine Kraft verrichtet auf dem Weg von A nach B die Arbeit <i class="m">W</i> = ∫ <b class="m">F</b> · d<b class="m">s</b>. Hängt diese Arbeit <b>nur von Anfangs- und Endpunkt</b> ab und nicht vom Weg dazwischen, heißt die Kraft <b>konservativ</b>. Dann lässt sich jedem Ort eine potentielle Energie <i class="m">U</i> zuordnen:</p>
+    <div class="formula">
+      <div><i>W</i><sub>A→B</sub> = <i>U</i>(A) − <i>U</i>(B) &nbsp;&nbsp; <small>für jeden Weg</small></div>
+      <div>∮ <b>F</b> · d<b>s</b> = 0 &nbsp;⇔&nbsp; rot <b>F</b> = 0 &nbsp;⇔&nbsp; <b>F</b> = −∇<i>U</i></div>
+      <div><i>E</i><sub>mech</sub> = <span class="frac"><span>1</span><span>2</span></span><i>m v</i><sup>2</sup> + <i>U</i> = const &nbsp;&nbsp; <small>Energieerhaltung</small></div>
+    </div>
+    <p><b>Gravitation:</b> Eine kugelförmige Masse <i class="m">M</i> erzeugt außerhalb das Feld eines Massenpunkts:</p>
+    <div class="formula">
+      <div><i>U</i>(<i>r</i>) = −<span class="frac"><span><i>G M m</i></span><span><i>r</i></span></span> &nbsp;&nbsp; <i>v</i><sub>Flucht</sub> = <span style="white-space:nowrap">√(2<i>G M</i>/<i>r</i>)</span></div>
+      <div><i>U</i>(<i>R</i>+<i>h</i>) ≈ <i>U</i>(<i>R</i>) + <i>m g h</i>, &nbsp; <i>g</i> = <span class="frac"><span><i>G M</i></span><span><i>R</i><sup>2</sup></span></span> &nbsp;&nbsp; <small>für <i>h</i> ≪ <i>R</i></small></div>
+    </div>
+    <p><b>Potential und potentielle Energie:</b> Das Potential <i class="m">φ</i> = <i class="m">U</i>/<i class="m">m</i> (in J/kg) beschreibt das Feld selbst, unabhängig vom Probekörper; die Feldstärke ist <b class="m">g</b> = −∇<i class="m">φ</i>. Die Feldlinien stehen überall <b>senkrecht auf den Äquipotentiallinien</b>. Die Linien in der Karte haben gleiche Potentialabstände: Wo sie dicht liegen, ist das Feld stark.</p>
+    <p><b>Nullpunkt:</b> Nur Differenzen von <i class="m">U</i> sind messbar; der Nullpunkt ist frei wählbar. Bei der Gravitation legt man ihn meist ins Unendliche. Dann ist <i class="m">U</i> überall negativ, und ein Körper mit <i class="m">E</i><sub>mech</sub> &lt; 0 ist <b>gebunden</b>: Er kann nicht beliebig weit fliegen. Mit <i class="m">E</i><sub>mech</sub> ≥ 0 entkommt er; daraus folgt die Fluchtgeschwindigkeit.</p>
+    <p><b>Nicht konservativ</b> sind Reibungskräfte (sie hängen von der Geschwindigkeit ab und wandeln mechanische Energie in Wärme um) und Wirbelfelder mit rot <b class="m">F</b> ≠ 0. Nach dem Satz von Stokes ist dann die Arbeit auf einem geschlossenen Weg ∮<b class="m">F</b>·d<b class="m">s</b> = ∫ rot <b class="m">F</b> d<i class="m">A</i>. Ein Potential gibt es nicht. Vorsicht beim Linienwirbel: rot <b class="m">F</b> = 0 überall außer auf der Achse, trotzdem ist die Umlaufarbeit um die Achse nicht null.</p>
+    <h4>Aufgaben</h4>
+    <ol class="tasks" id="tasks"></ol>
+  </aside>
+</div>
+<p class="foot">Modell: ebener Schnitt durch ruhende, homogene Kugeln (Gravitationskonstante <i class="m">G</i> = 6,674·10⁻¹¹ m³/(kg s²); Erde 5,972·10²⁴ kg, 6371 km; Mond 7,342·10²² kg, 1737 km, Abstand 384 400 km). Im Innern einer Kugel gilt <i class="m">U</i> = −<i class="m">GMm</i>(3<i class="m">R</i>² − <i class="m">r</i>²)/(2<i class="m">R</i>³); deshalb ist das Feld überall endlich. Die Körper werden festgehalten, es gibt kein rotierendes Bezugssystem: Der kräftefreie Punkt zwischen Erde und Mond ist daher nicht der Lagrange-Punkt L1. Ändert man eine Masse, bleibt die Dichte gleich. Das homogene Feld <i class="m">U</i> = <i class="m">m g y</i> wird im Potentialschnitt mit einem kugelförmigen Planeten vom Erdradius verglichen. Starrer Wirbel: <b class="m">F</b> = <i class="m">mκ</i>(−<i class="m">y</i>, <i class="m">x</i>), rot <b class="m">F</b> = 2<i class="m">mκ</i>. Linienwirbel: <b class="m">F</b> = <i class="m">m</i>Γ(−<i class="m">y</i>, <i class="m">x</i>)/(<i class="m">r</i>² + <i class="m">r</i><sub>c</sub>²) mit Kernradius <i class="m">r</i><sub>c</sub> = 0,3 m. Die Wegarbeit wird mit 3000 Teilstücken numerisch summiert (Mittelpunktregel). Weg 1 ist die Strecke A→B, Weg 2 eine Parabel durch C. Reibung: <b class="m">F</b><sub>R</sub> = −<i class="m">b m</i><b class="m">v</b>; für die Wege wird angenommen, dass der Körper sie mit dem konstanten Tempo <i class="m">v</i><sub>0</sub> abfährt, dann ist <i class="m">W</i><sub>R</sub> = −<i class="m">b m v</i><sub>0</sub><i class="m">s</i>. Der Probekörper wird mit einem Runge-Kutta-Verfahren 4. Ordnung mit angepasster Schrittweite integriert; er stoppt beim Aufprall auf einen Körper oder den Boden (startet er im Innern einer Kugel, fliegt er hindurch). Die Startrichtung wird gegen „oben“ gemessen, d. h. gegen die Feldrichtung bei A.</p>
+</div>
+
+<script>
+/*CORE-START*/
+const G=6.674e-11,ME=5.972e24,RE=6.371e6,MMO=7.342e22,RMO=1.7374e6,DMO=3.844e8;
+const RHO_E=ME/(4/3*Math.PI*RE**3),RHO_M=MMO/(4/3*Math.PI*RMO**3),RC=0.3;
+const bodyR=b=>Math.cbrt(3*b.M/(4*Math.PI*b.rho));
+// Feldstärke g (Kraft pro Masse) und Potential φ (NaN, wenn es keines gibt)
+function field(S,x,y){
+  if(S.mode==='grav'){let gx=0,gy=0,p=0;
+    for(let i=0;i<S.nb;i++){const b=S.bodies[i],R=b.R,dx=x-b.x,dy=y-b.y,r2=dx*dx+dy*dy,GM=G*b.M;
+      if(r2>=R*R){const r=Math.sqrt(r2),k=GM/(r2*r);gx-=k*dx;gy-=k*dy;p-=GM/r;}
+      else{const k=GM/(R*R*R);gx-=k*dx;gy-=k*dy;p-=GM*(3*R*R-r2)/(2*R*R*R);}}
+    return [gx,gy,p];}
+  if(S.mode==='hom')return [0,-S.g0,S.g0*y];
+  if(S.vtype==='rigid')return [-S.kap*y,S.kap*x,NaN];
+  const r2=x*x+y*y+RC*RC;return [-S.gam*y/r2,S.gam*x/r2,NaN];}
+function rotZ(S,x,y){if(S.mode!=='wirbel')return 0;if(S.vtype==='rigid')return 2*S.kap;const q=x*x+y*y+RC*RC;return 2*S.gam*RC*RC/(q*q);}
+// Weg 1: Strecke, Weg 2: Parabel (quadratische Bézierkurve) durch C bei t = 1/2
+function pathPt(S,k,t){const A=S.A,B=S.B;if(k===0)return [A.x+(B.x-A.x)*t,A.y+(B.y-A.y)*t];
+  const px=2*S.C.x-(A.x+B.x)/2,py=2*S.C.y-(A.y+B.y)/2,u=1-t;return [u*u*A.x+2*u*t*px+t*t*B.x,u*u*A.y+2*u*t*py+t*t*B.y];}
+function pathWork(S,k,N=3000,NS=150){let W=0,L=0,p0=pathPt(S,k,0);const sw=[0],ss=[0],pts=[p0];
+  for(let i=1;i<=N;i++){const p1=pathPt(S,k,i/N),mx=(p0[0]+p1[0])/2,my=(p0[1]+p1[1])/2,f=field(S,mx,my),dx=p1[0]-p0[0],dy=p1[1]-p0[1];
+    W+=S.m*(f[0]*dx+f[1]*dy);L+=Math.hypot(dx,dy);if(i%(N/NS)===0){sw.push(W);ss.push(L);pts.push(p1);}p0=p1;}
+  return {W,L,sw,ss,pts};}
+// Fläche der geschlossenen Schleife Weg 1 hin, Weg 2 zurück (positiv = gegen den Uhrzeigersinn)
+function loopArea(P1,P2){const poly=P1.pts.concat(P2.pts.slice().reverse());let a=0;for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length];a+=p[0]*q[1]-q[0]*p[1];}return a/2;}
+// Probekörper: Zustand [x, y, vx, vy, Q (Wärme), W (Arbeit des Feldes)]
+function deriv(S,s){const f=field(S,s[0],s[1]),b=S.fric?S.b:0,v2=s[2]*s[2]+s[3]*s[3];
+  return [s[2],s[3],f[0]-b*s[2],f[1]-b*s[3],S.m*b*v2,S.m*(f[0]*s[2]+f[1]*s[3])];}
+function rk4(S,s,h){const k1=deriv(S,s),a=s.map((v,i)=>v+h/2*k1[i]),k2=deriv(S,a),b=s.map((v,i)=>v+h/2*k2[i]),k3=deriv(S,b),c=s.map((v,i)=>v+h*k3[i]),k4=deriv(S,c);
+  return s.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));}
+function hMax(S,s){const f=field(S,s[0],s[1]),v=Math.hypot(s[2],s[3]),g=Math.hypot(f[0],f[1]);let rho=S.view.w;
+  if(S.mode==='grav')for(let i=0;i<S.nb;i++){const b=S.bodies[i];rho=Math.min(rho,Math.max(Math.hypot(s[0]-b.x,s[1]-b.y),b.R));}
+  if(S.mode==='wirbel'&&S.vtype==='line')rho=Math.min(rho,Math.sqrt(s[0]*s[0]+s[1]*s[1]+RC*RC));
+  let h=0.004*rho/(v+Math.sqrt(g*rho)+1e-300);if(S.fric&&S.b>0)h=Math.min(h,0.05/S.b);return h;}
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const NF=(d)=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let m=x/Math.pow(10,e);if(Math.abs(+m.toFixed(d))>=10){m/=10;e++;}return (NF(d).format(m)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−');}
+function fmt(x,sig=3){if(x===null||!isFinite(x))return '—';const ax=Math.abs(x);return (ax>=0.01&&ax<1e5)||x===0?num(x,sig):sci(x,1);}
+function unitFmt(v,units,sig=3){for(const [f,u] of units){if(Math.abs(v)>=f*0.9999)return num(v/f,sig)+' '+u;}return null;}
+const EU=[[1e18,'EJ'],[1e15,'PJ'],[1e12,'TJ'],[1e9,'GJ'],[1e6,'MJ'],[1e3,'kJ'],[1,'J'],[1e-3,'mJ']];
+const LU=[[1e9,'Mio. km'],[1e3,'km'],[1,'m'],[1e-3,'mm']];
+const fE=(v,sig=3)=>!isFinite(v)?'—':v===0?'0 J':(unitFmt(v,EU,sig)||sci(v,1)+' J');
+const fEz=(v,ref)=>Math.abs(v)<=2e-7*Math.abs(ref)?'≈ 0 J':fE(v);
+const fLen=m=>!isFinite(m)?'—':m===0?'0 m':(unitFmt(m,LU)||sci(m,1)+' m');
+const fV=v=>!isFinite(v)?'—':Math.abs(v)>=1000?num(v/1000,3)+' km/s':num(v,3)+' m/s';
+const fAcc=a=>fmt(a,3)+' m/s²';
+const fMass=kg=>kg>=1e3?num(kg/1e3,3)+' t':num(kg,3)+' kg';
+const fTime=s=>s<120?num(s,3)+' s':s<7200?num(s/60,3)+' min':s<172800?num(s/3600,3)+' h':num(s/86400,3)+' d';
+const fPct=x=>num(100*x,2)+' %';
+
+/* ----- Beispiele ----- */
+const mk=(name,x,y,M,rho)=>({name,x,y,M,rho});
+const EARTH=()=>mk('Erde',0,0,ME,RHO_E);
+const EX=[
+  {id:'erde',name:'Erde: Arbeit und Fluchtgeschwindigkeit',mode:'grav',nb:1,bodies:[EARTH()],view:{cx:0,cy:0,w:7e7},A:[0,RE],B:[2.6*RE,1.4*RE],C:[-1.3*RE,3.1*RE],m:1000,v0:9000,ang:0},
+  {id:'iss',name:'Rakete auf 400 km: m g h oder exakt?',mode:'grav',nb:1,bodies:[EARTH()],view:{cx:0,cy:RE+2.5e5,w:2.6e6},A:[0,RE],B:[0,RE+4e5],C:[4.5e5,RE+2.2e5],m:1000,v0:2900,ang:0},
+  {id:'mond',name:'Erde und Mond: kräftefreier Punkt',mode:'grav',nb:2,bodies:[EARTH(),mk('Mond',DMO,0,MMO,RHO_M)],view:{cx:1.92e8,cy:0,w:5.4e8},A:[4.2e7,-1.5e7],B:[3.6e8,3e7],C:[2e8,1.3e8],m:1000,v0:4000,ang:0},
+  {id:'drei',name:'Drei Körper: Potentiallandschaft',mode:'grav',nb:3,bodies:[mk('Körper 1',-3e7,-1.5e7,ME,RHO_E),mk('Körper 2',3.2e7,-1.2e7,0.5*ME,RHO_E),mk('Körper 3',0,3e7,0.25*ME,RHO_E)],view:{cx:0,cy:0,w:1.7e8},A:[-6.5e7,2.5e7],B:[6.5e7,2.2e7],C:[0,-4.6e7],m:1000,v0:2600,ang:90},
+  {id:'boden',name:'Homogenes Feld: schräger Wurf',mode:'hom',g0:9.81,view:{cx:22,cy:11,w:70},A:[0,0],B:[36,12],C:[10,24],m:1,v0:20,ang:45},
+  {id:'luft',name:'Wurf mit Luftreibung',mode:'hom',g0:9.81,view:{cx:22,cy:11,w:70},A:[0,0],B:[36,12],C:[10,24],m:1,v0:20,ang:45,fric:true,b:0.3},
+  {id:'wirbel',name:'Starrer Wirbel: nicht konservativ',mode:'wirbel',vtype:'rigid',kap:0.1,view:{cx:0,cy:0,w:30},A:[-7,-3],B:[7,-3],C:[0,7],m:1,v0:0,ang:0},
+  {id:'linie',name:'Linienwirbel: rot F = 0 und doch ∮ ≠ 0',mode:'wirbel',vtype:'line',gam:20,view:{cx:0,cy:0,w:30},A:[-7,-3],B:[7,-3],C:[0,7],m:1,v0:3,ang:90}
+];
+const EXM=Object.fromEntries(EX.map(e=>[e.id,e]));
+const MODE_EX={grav:'erde',hom:'boden',wirbel:'wirbel'};
+const SHOW0={eq:true,arr:true,fl:false};
+let st=null,R=null,P=null,dirty=true,staticDirty=true,running=false,kh='A';
+
+function fromEx(e,keep){const s={mode:e.mode,nb:e.nb||1,bodies:(e.bodies||[EARTH()]).map(b=>Object.assign({},b)),g0:e.g0||9.81,kap:e.kap||0.1,gam:e.gam||20,vtype:e.vtype||'rigid',
+  view:Object.assign({},e.view),A:{x:e.A[0],y:e.A[1]},B:{x:e.B[0],y:e.B[1]},C:{x:e.C[0],y:e.C[1]},m:e.m,v0:e.v0,ang:e.ang,fric:!!e.fric,b:e.b||0.1,spd:0,
+  zeroA:false,show:Object.assign({},SHOW0),sel:e.id};
+  if(keep){s.show=Object.assign({},keep.show);}
+  s.bodies.forEach(b=>b.R=bodyR(b));return s;}
+
+/* ----- Regler ----- */
+const bn=i=>st&&st.bodies[i]?st.bodies[i].name:'Körper '+(i+1);
+function setMass(i,lg){const b=st.bodies[i];b.M=ME*Math.pow(10,lg);b.R=bodyR(b);if(/^(Erde|Mond)$/.test(b.name))b.name='Körper '+(i+1);}
+const PDEF={
+  M0:{box:'#ctl-M',lab:()=>`Masse ${bn(0)}`,min:-3,max:6,step:0.01,get:()=>Math.log10(st.bodies[0].M/ME),set:v=>setMass(0,v),fmt:v=>num(Math.pow(10,v),3)+' M⊕',hint:'in Erdmassen M⊕ (Mond 0,0123; Sonne 333 000)'},
+  M1:{box:'#ctl-M',lab:()=>`Masse ${bn(1)}`,min:-3,max:6,step:0.01,get:()=>Math.log10(st.bodies[1].M/ME),set:v=>setMass(1,v),fmt:v=>num(Math.pow(10,v),3)+' M⊕',only:()=>st.nb>=2},
+  M2:{box:'#ctl-M',lab:()=>`Masse ${bn(2)}`,min:-3,max:6,step:0.01,get:()=>Math.log10(st.bodies[2].M/ME),set:v=>setMass(2,v),fmt:v=>num(Math.pow(10,v),3)+' M⊕',only:()=>st.nb>=3},
+  g0:{box:'#ctl-g',lab:'Fallbeschleunigung <i>g</i>',min:0.5,max:30,step:0.01,get:()=>st.g0,set:v=>st.g0=v,fmt:v=>num(v,3)+' m/s²',hint:'Erde 9,81 · Mars 3,71 · Mond 1,62 m/s²'},
+  kap:{box:'#ctl-k',lab:'Wirbelstärke <i>κ</i>',min:-2.5,max:0,step:0.01,get:()=>Math.log10(st.kap),set:v=>st.kap=Math.pow(10,v),fmt:v=>num(Math.pow(10,v),3)+' s⁻²',hint:'rot F = 2mκ, überall gleich',only:()=>st.vtype==='rigid'},
+  gam:{box:'#ctl-k',lab:'Zirkulation Γ',min:0,max:2.5,step:0.01,get:()=>Math.log10(st.gam),set:v=>st.gam=Math.pow(10,v),fmt:v=>num(Math.pow(10,v),3)+' m²/s²',hint:'∮F·ds = 2πmΓ um die Achse',only:()=>st.vtype==='line'},
+  view:{box:'#ctl-view',lab:'Bildbreite',min:0,max:12,step:0.01,get:()=>Math.log10(st.view.w),set:v=>{st.view.w=Math.pow(10,v);},fmt:v=>fLen(Math.pow(10,v)),view:true},
+  m:{box:'#ctl-m',lab:'Masse <i>m</i>',min:-1,max:6,step:0.01,get:()=>Math.log10(st.m),set:v=>st.m=Math.pow(10,v),fmt:v=>fMass(Math.pow(10,v))},
+  v0:{box:'#ctl-v',lab:'Startgeschwindigkeit <i>v</i><sub>0</sub>',min:-1,max:4.7,step:0.005,get:()=>st.v0>0?Math.max(-1,Math.log10(st.v0)):-1,set:v=>st.v0=v<=-0.999?0:Math.pow(10,v),fmt:v=>v<=-0.999?'0':fV(Math.pow(10,v)),hint:'ganz links: aus der Ruhe'},
+  ang:{box:'#ctl-v',lab:'Richtung',min:-180,max:180,step:1,get:()=>st.ang,set:v=>st.ang=v,fmt:v=>num(v,3)+'°',hint:'0° = „oben“ (gegen die Feldkraft), 90° = waagrecht nach rechts'},
+  spd:{box:'#ctl-spd',lab:'Zeitraffer',min:-1,max:1.5,step:0.01,get:()=>st.spd,set:v=>st.spd=v,fmt:v=>num(Math.pow(10,v),2)+'×',view:true,hint:'Tempo der Animation'},
+  b:{box:'#ctl-b',lab:'Reibungsbeiwert <i>b</i>',min:-6,max:0.5,step:0.01,get:()=>Math.log10(st.b),set:v=>st.b=Math.pow(10,v),fmt:v=>sci(Math.pow(10,v),1)+' s⁻¹',only:()=>st.fric}
+};
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';w.id='w-'+k;
+    w.innerHTML=`<div class="row"><label for="p-${k}" id="l-${k}"></label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}" min="${d.min}" max="${d.max}" step="${d.step}">${d.hint?`<div class="hint">${d.hint}</div>`:''}`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{d.set(parseFloat(inp.value));if(!d.view)st.sel=null;sync(!!d.view);});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  const sel=$('#example');sel.innerHTML='<option value="">— eigene Werte —</option>'+EX.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  sel.addEventListener('change',()=>{if(sel.value)selectEx(sel.value);else{st.sel=null;sync(true);}});
+  document.querySelectorAll('#segMode button').forEach(b=>b.addEventListener('click',()=>{if(st.mode!==b.dataset.v)selectEx(MODE_EX[b.dataset.v]);}));
+  document.querySelectorAll('#segNb button').forEach(b=>b.addEventListener('click',()=>setNb(+b.dataset.v)));
+  document.querySelectorAll('#segVt button').forEach(b=>b.addEventListener('click',()=>{if(st.vtype!==b.dataset.v){st.vtype=b.dataset.v;st.sel=null;sync();}}));
+  $('#o-fric').addEventListener('change',e=>{st.fric=e.target.checked;st.sel=null;sync();});
+  $('#o-zero').addEventListener('change',e=>{st.zeroA=e.target.checked;sync();});
+  for(const k of ['eq','arr','fl'])$('#o-'+k).addEventListener('change',e=>{st.show[k]=e.target.checked;staticDirty=true;sync(true);});
+  $('#vKreis').addEventListener('click',()=>{const r=R.circ;if(r){st.v0=r.v;st.ang=90;st.sel=null;sync();}});
+  $('#vFlucht').addEventListener('click',()=>{st.v0=R.vesc;st.sel=null;sync();});
+  $('#vNull').addEventListener('click',()=>{st.v0=0;st.sel=null;sync();});
+  $('#run').addEventListener('click',toggleRun);
+  $('#reset').addEventListener('click',()=>{resetProbe();dirty=true;});
+  $('#defaults').addEventListener('click',()=>{st=null;selectEx('erde');});
+}
+function setNb(n){if(n===st.nb)return;const w=st.view.w;
+  for(let i=st.bodies.length;i<n;i++){const b=mk('Körper '+(i+1),st.view.cx+(i===1?0.3:-0.3)*w,st.view.cy+(i===1?0:0.18*w),0.3*st.bodies[0].M,st.bodies[0].rho);b.R=bodyR(b);st.bodies.push(b);}
+  st.nb=n;st.sel=null;sync();}
+function selectEx(id){st=fromEx(EXM[id],st);if(st.v0===undefined)st.v0=0;sync();}
+function sync(keepProbe){
+  st.view.w=Math.max(1,Math.min(1e12,st.view.w));
+  for(const k in PDEF){const d=PDEF[k],w=$('#w-'+k);const vis=!d.only||d.only();w.hidden=!vis;
+    $('#l-'+k).innerHTML=typeof d.lab==='function'?d.lab():d.lab;if(!vis)continue;const v=d.get();$('#p-'+k).value=v;$('#o-'+k).textContent=d.fmt(Math.max(d.min,Math.min(d.max,v)));}
+  document.querySelectorAll('[data-mode]').forEach(el=>el.hidden=!el.dataset.mode.split(' ').includes(st.mode));
+  const pr=(sel,v)=>document.querySelectorAll(sel+' button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===String(v))));
+  pr('#segMode',st.mode);pr('#segNb',st.nb);pr('#segVt',st.vtype);
+  $('#example').value=st.sel||'';$('#o-fric').checked=st.fric;$('#o-zero').checked=st.zeroA;
+  for(const k of ['eq','arr','fl'])$('#o-'+k).checked=st.show[k];
+  $('#o-eq').nextElementSibling.firstChild.textContent=st.mode==='wirbel'?'Wirbelstärke rot F (Farbe)':'Potential und Äquipotentiallinien';
+  compute();if(!keepProbe||!P)resetProbe();dirty=true;}
+
+/* ----- Rechnen ----- */
+function phiAt(x,y){return field(st,x,y)[2];}
+function compute(){const S=st,pot=S.mode!=='wirbel';const fA=field(S,S.A.x,S.A.y),fB=field(S,S.B.x,S.B.y);
+  const off=S.zeroA&&pot?-fA[2]:0;
+  const P1=pathWork(S,0),P2=pathWork(S,1),area=loopArea(P1,P2);
+  const r={pot,off,UA:S.m*(fA[2]+off),UB:S.m*(fB[2]+off),gA:Math.hypot(fA[0],fA[1]),P1,P2,area,circ:null,vesc:NaN,neutral:null};
+  r.dU=r.UB-r.UA;r.loop=P1.W-P2.W;r.ref=Math.max(Math.abs(P1.W),Math.abs(P2.W),Math.abs(r.UA),Math.abs(r.UB),S.m*r.gA*S.view.w,1e-300);
+  r.WR1=S.fric?-S.b*S.m*S.v0*P1.L:0;r.WR2=S.fric?-S.b*S.m*S.v0*P2.L:0;
+  if(S.mode==='grav'){r.vesc=Math.sqrt(Math.max(0,-2*fA[2]));
+    let best=-1,bi=0;for(let i=0;i<S.nb;i++){const b=S.bodies[i],d=Math.max(Math.hypot(S.A.x-b.x,S.A.y-b.y),1),a=G*b.M/(d*d);if(a>best){best=a;bi=i;}}
+    const b=S.bodies[bi],d=Math.hypot(S.A.x-b.x,S.A.y-b.y);if(d>=b.R)r.circ={v:Math.sqrt(G*b.M/d),body:b};
+    const b0=S.bodies[0],rA=Math.hypot(S.A.x-b0.x,S.A.y-b0.y),rB=Math.hypot(S.B.x-b0.x,S.B.y-b0.y);
+    r.rA=rA;r.rB=rB;r.mgh=S.m*(G*b0.M/(rA*rA))*(rB-rA);
+    if(S.nb===2){const b1=S.bodies[1],d=Math.hypot(b1.x-b0.x,b1.y-b0.y),ux=(b1.x-b0.x)/d,uy=(b1.y-b0.y)/d;
+      const fs=s=>{const f=field(S,b0.x+ux*s*d,b0.y+uy*s*d);return f[0]*ux+f[1]*uy;};let lo=b0.R/d,hi=1-b1.R/d;
+      if(lo<hi&&fs(lo)<0&&fs(hi)>0){for(let j=0;j<60;j++){const m=(lo+hi)/2;if(fs(m)<0)lo=m;else hi=m;}const s=(lo+hi)/2;r.neutral={x:b0.x+ux*s*d,y:b0.y+uy*s*d,s,d};}}}
+  if(S.mode==='hom')r.mgh=S.m*S.g0*(S.B.y-S.A.y);
+  R=r;}
+function upDir(x,y){if(st.mode==='wirbel')return [0,1];const f=field(st,x,y),g=Math.hypot(f[0],f[1]);return g>0?[-f[0]/g,-f[1]/g]:[0,1];}
+function vRef(){const f=field(st,st.A.x,st.A.y),g=Math.hypot(f[0],f[1]);return Math.max(Math.sqrt(g*st.view.w/4),1e-6*st.view.w);}
+function startState(){const u=upDir(st.A.x,st.A.y),th=st.ang*Math.PI/180,c=Math.cos(th),s=Math.sin(th);
+  return [st.A.x,st.A.y,st.v0*(u[0]*c+u[1]*s),st.v0*(-u[0]*s+u[1]*c),0,0];}
+function resetProbe(){running=false;const s=startState();
+  const inside=st.mode==='grav'?st.bodies.slice(0,st.nb).map(b=>Math.hypot(st.A.x-b.x,st.A.y-b.y)<b.R*(1-1e-9)):[];
+  P={s,t:0,done:false,msg:'',trail:[[s[0],s[1]]],ts:[],off:R.off,inside,ground:st.mode==='hom'&&st.A.y>=0,
+    rate:st.view.w/(6*Math.max(st.v0,vRef())),E0:null,dEmax:0,ymax:s[1],vmax:st.v0};
+  sample();P.E0=P.ts[0].K+(R.pot?P.ts[0].U:0);updateRunBtn();}
+function energies(s){const K=0.5*st.m*(s[2]*s[2]+s[3]*s[3]);const U=R.pot?st.m*(phiAt(s[0],s[1])+P.off):NaN;return {K,U,Q:s[4],W:s[5]};}
+function sample(){const e=energies(P.s);e.t=P.t;P.ts.push(e);if(P.ts.length>2400)P.ts=P.ts.filter((q,i)=>i%2===0||i===P.ts.length-1);
+  if(R.pot&&P.E0!==null){const d=Math.abs(e.K+e.U+e.Q-P.E0);P.dEmax=Math.max(P.dEmax,d);}}
+// <0: Ereignis (Aufprall)
+function hitFn(s){let v=Infinity,msg='';
+  if(st.mode==='grav')for(let i=0;i<st.nb;i++){if(P.inside[i])continue;const b=st.bodies[i],d=Math.hypot(s[0]-b.x,s[1]-b.y)-b.R;if(d<v){v=d;msg=`Aufprall auf ${b.name==='Erde'?'der Erde':b.name==='Mond'?'dem Mond':b.name}`;}}
+  if(P.ground&&s[1]<v){v=s[1];msg='Aufprall am Boden';}
+  return [v,msg];}
+function advance(dtReal){if(!running||P.done)return;let T=P.rate*Math.pow(10,st.spd)*dtReal,n=0;const minPx=1.2/Math.max(1e-30,MV.k||1);
+  while(T>0&&n<5000){const h=Math.min(T,hMax(st,P.s));const ns=rk4(st,P.s,h);n++;
+    const [hv,msg]=hitFn(ns);
+    if(hv<0){const [h0]=hitFn(P.s),f=h0/(h0-hv);P.s=P.s.map((v,i)=>v+f*(ns[i]-v));P.t+=f*h;P.done=true;P.msg=msg;running=false;break;}
+    P.s=ns;P.t+=h;T-=h;
+    P.ymax=Math.max(P.ymax,P.s[1]);P.vmax=Math.max(P.vmax,Math.hypot(P.s[2],P.s[3]));
+    const lp=P.trail[P.trail.length-1];if(Math.hypot(P.s[0]-lp[0],P.s[1]-lp[1])>minPx)P.trail.push([P.s[0],P.s[1]]);
+    if(Math.hypot(P.s[0]-st.view.cx,P.s[1]-st.view.cy)>40*st.view.w){P.done=true;P.msg='Der Probekörper hat den Bildausschnitt weit verlassen';running=false;break;}}
+  if(P.trail.length>8000)P.trail=P.trail.filter((q,i)=>i%2===0);
+  sample();if(!running)updateRunBtn();}
+function toggleRun(){if(P.done)resetProbe();running=!running;updateRunBtn();}
+function updateRunBtn(){$('#run').textContent=running?'❚❚ Pause':(P&&P.t>0&&!P.done?'▶ weiter':'▶ Probekörper starten');}
+
+/* ----- Aufgaben ----- */
+const TASKS=[
+  {t:'<b>Wegunabhängigkeit.</b> Ziehe die Mitte C von Weg 2 hin und her, auch quer durch die Erde. Ändert sich die Arbeit <i class="m">W</i><sub>2</sub>? Wie groß ist die Arbeit auf dem geschlossenen Weg (Weg 1 hin, Weg 2 zurück)?',ex:'erde'},
+  {t:'<b>Äquipotentiallinien.</b> Ziehe B so, dass es auf derselben Äquipotentiallinie wie A liegt (gestrichelte Linien). Welche Arbeit verrichtet das Feld jetzt? Warum stehen die Feldpfeile senkrecht auf den Linien?',ex:'erde'},
+  {t:'<b>Nullpunkt.</b> Schalte „<i class="m">U</i> = 0 bei A“ ein und wieder aus. Welche Kennzahlen ändern sich, welche bleiben gleich? Was bedeutet das negative Vorzeichen von <i class="m">U</i>, wenn der Nullpunkt im Unendlichen liegt?',ex:'erde',zero:true},
+  {t:'<b>m g h oder exakt?</b> Vergleiche für 400 km Höhe den Zuwachs der potentiellen Energie mit <i class="m">m g h</i>. Leite her, dass das Verhältnis 1 + <i class="m">h</i>/<i class="m">R</i> beträgt. Ab welcher Höhe ist <i class="m">m g h</i> um 10 % zu groß? Welche Startgeschwindigkeit braucht man für 400 km wirklich?',ex:'iss'},
+  {t:'<b>Fluchtgeschwindigkeit.</b> Starte den Probekörper senkrecht mit 9, 11 und 11,2 km/s (Knopf „<i class="m">v</i> = <i class="m">v</i><sub>Flucht</sub>“). Beobachte <i class="m">E</i><sub>mech</sub> im Potentialschnitt: Wo kehrt der Körper um? Warum hängt <i class="m">v</i><sub>Flucht</sub> nicht von der Richtung ab?',ex:'erde'},
+  {t:'<b>Kreisbahn.</b> Stelle A auf 2 Erdradien und wähle „<i class="m">v</i> = <i class="m">v</i><sub>Kreis</sub>“. Zeige mit der Energiebilanz, dass auf der Kreisbahn <i class="m">E</i><sub>kin</sub> = −<i class="m">U</i>/2 gilt (Virialsatz). Wie groß ist dann <i class="m">E</i><sub>mech</sub>?',ex:'erde',set:{A:{x:0,y:2*RE},v0:0}},
+  {t:'<b>Erde und Mond.</b> Wo heben sich die Anziehungskräfte auf? Zeige, dass der Punkt bei <i class="m">d</i>/(1 + √(<i class="m">M</i><sub>Mond</sub>/<i class="m">M</i><sub>Erde</sub>)) liegt. Warum ist er im Potentialschnitt ein Maximum? Was muss eine Mondsonde dort mindestens noch an Energie haben?',ex:'mond'},
+  {t:'<b>Wirbelfeld.</b> Hier ist die Arbeit vom Weg abhängig. Vergrößere die eingeschlossene Fläche, indem du C ziehst: Wie hängt die Umlaufarbeit von der Fläche ab (Satz von Stokes)? Starte den Probekörper aus der Ruhe: Woher kommt seine Energie?',ex:'wirbel'},
+  {t:'<b>Linienwirbel.</b> Außerhalb der Achse ist rot <b class="m">F</b> = 0. Ziehe C unter die Strecke AB, sodass die Schleife die Achse nicht mehr umschließt. Wann ist die Umlaufarbeit null, wann 2π<i class="m">m</i>Γ? Ist das Feld konservativ?',ex:'linie'},
+  {t:'<b>Reibung.</b> Vergleiche den Wurf mit und ohne Luftreibung. Wohin verschwindet die mechanische Energie? Zeige, dass <i class="m">E</i><sub>mech</sub> + <i class="m">Q</i> konstant bleibt. Warum hängt die Reibungsarbeit vom Weg ab?',ex:'luft'}
+];
+(function(){const ol=$('#tasks');TASKS.forEach(t=>{const li=document.createElement('li');
+  li.innerHTML=`<p>${t.t}</p><button class="btn" type="button">Einstellen</button>`;
+  li.querySelector('button').addEventListener('click',()=>{st=fromEx(EXM[t.ex],st);if(t.zero)st.zeroA=true;if(t.set){for(const k in t.set)st[k]=typeof t.set[k]==='object'?Object.assign({},t.set[k]):t.set[k];st.sel=null;}
+    sync();document.querySelector('.stage').scrollIntoView({behavior:'smooth',block:'start'});});
+  ol.appendChild(li);});})();
+
+/* ----- Zeichenhilfen ----- */
+let C={},dpr=1;
+function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={stage:g('--stage'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),accent:g('--accent'),pm:[g('--pm0'),g('--pm1'),g('--pm2')],rot:g('--c-rot'),
+    p1:g('--c-p1'),p2:g('--c-p2'),a:g('--c-a'),b:g('--c-b'),kin:g('--c-kin'),pot:g('--c-pot'),mech:g('--c-mech'),heat:g('--c-heat'),probe:g('--c-probe'),
+    body:g('--c-body'),bodyl:g('--c-bodyl'),neutral:g('--c-neutral'),fl:g('--c-fl'),mgh:g('--c-mgh'),mono:g('--f-mono')||'monospace',ui:g('--f-ui')||'sans-serif'};}
+function ctxOf(cv){const r=cv.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function rgb(col){if(col.startsWith('#')&&col.length===7){const n=parseInt(col.slice(1),16);return [n>>16,(n>>8)&255,n&255];}return [128,128,128];}
+function hexA(col,a){const [r,g,b]=rgb(col);return `rgba(${r},${g},${b},${a})`;}
+function halo(c,txt,x,y){c.save();c.strokeStyle=hexA(C.stage,0.92);c.lineWidth=4;c.lineJoin='round';c.strokeText(txt,x,y);c.restore();c.fillText(txt,x,y);}
+function rich(c,s,x,y,o){o=o||{};const sz=o.size||11.5,wt=o.weight||500,parts=[],re=/([_^])\{([^}]*)\}/g;let last=0,m;
+  while((m=re.exec(s))){if(m.index>last)parts.push([s.slice(last,m.index),0]);parts.push([m[2],m[1]==='_'?1:-1]);last=re.lastIndex;}
+  if(last<s.length)parts.push([s.slice(last),0]);
+  const fnt=k=>`${wt} ${k?sz*0.74:sz}px ${C.ui}`;let W=0;for(const q of parts){c.font=fnt(q[1]);W+=c.measureText(q[0]).width;}
+  const al=o.align||'left';let px=al==='center'?x-W/2:al==='right'?x-W:x;const ta=c.textAlign;c.textAlign='left';
+  for(const q of parts){c.font=fnt(q[1]);const dy=q[1]===1?sz*0.3:q[1]===-1?-sz*0.42:0;if(o.halo)halo(c,q[0],px,y+dy);else c.fillText(q[0],px,y+dy);px+=c.measureText(q[0]).width;}
+  c.textAlign=ta;return W;}
+function niceStep(x){const e=Math.pow(10,Math.floor(Math.log10(x))),f=x/e;return (f<1.5?1:f<3.5?2:f<7.5?5:10)*e;}
+function pickUnit(maxAbs,list){for(const u of list)if(maxAbs>=u[0]*0.9999)return u;return list[list.length-1];}
+function arrowHead(c,x,y,ang,sz){c.beginPath();c.moveTo(x,y);c.lineTo(x-sz*Math.cos(ang-0.42),y-sz*Math.sin(ang-0.42));c.lineTo(x-sz*Math.cos(ang+0.42),y-sz*Math.sin(ang+0.42));c.closePath();c.fill();}
+// Diagrammrahmen mit Achsen
+function frame(c,W,H,o){const L=o.L||56,Rr=o.R||10,T=o.T||12,B=o.B||36,w=Math.max(10,W-L-Rr),h=Math.max(10,H-T-B);
+  const X=v=>L+(v-o.x0)/(o.x1-o.x0)*w,Y=v=>T+h-(v-o.y0)/(o.y1-o.y0)*h;
+  c.lineWidth=1;c.font=`11px ${C.mono}`;c.fillStyle=C.muted;
+  const sx=niceStep((o.x1-o.x0)/Math.max(2,Math.min(o.nx||5,Math.floor(w/80)))),sy=niceStep((o.y1-o.y0)/Math.max(2,Math.min(o.ny||5,Math.floor(h/36))));const z=(v,s)=>Math.abs(v)<s*1e-6?0:v;
+  c.textAlign='center';c.textBaseline='top';
+  for(let v=Math.ceil(o.x0/sx-1e-9)*sx;v<=o.x1+1e-9*sx;v+=sx){const x=X(v);c.strokeStyle=C.grid;c.beginPath();c.moveTo(x+0.5,T);c.lineTo(x+0.5,T+h);c.stroke();c.fillText(o.xf(z(v,sx)),x,T+h+4);}
+  c.textAlign='right';c.textBaseline='middle';
+  for(let v=Math.ceil(o.y0/sy-1e-9)*sy;v<=o.y1+1e-9*sy;v+=sy){const y=Y(v);c.strokeStyle=Math.abs(v)<sy*1e-6?hexA(C.muted,0.55):C.grid;c.beginPath();c.moveTo(L,y+0.5);c.lineTo(L+w,y+0.5);c.stroke();c.fillText(o.yf(z(v,sy)),L-5,y);}
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.fillStyle=C.muted;c.textBaseline='alphabetic';rich(c,o.xl,L+w/2,H-4,{size:11.5,align:'center'});
+  c.save();c.translate(12,T+h/2);c.rotate(-Math.PI/2);c.textBaseline='middle';rich(c,o.yl,0,0,{size:11.5,align:'center'});c.restore();
+  return {X,Y,L,T,w,h};}
+function polyline(c,xs,ys,col,lw,dash){c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;
+  for(let i=0;i<xs.length;i++){const y=ys[i];if(!isFinite(y)){pen=false;continue;}pen?c.lineTo(xs[i],y):c.moveTo(xs[i],y);pen=true;}c.stroke();c.setLineDash([]);}
+
+/* ----- Feldkarte ----- */
+const MV={k:1,W:10,H:10};
+const w2s=(x,y)=>[MV.W/2+(x-st.view.cx)*MV.k,MV.H/2-(y-st.view.cy)*MV.k];
+const s2w=(px,py)=>[st.view.cx+(px-MV.W/2)/MV.k,st.view.cy-(py-MV.H/2)/MV.k];
+let GRID={key:''},STAT={key:'',cv:null};
+function gridKey(){const b=st.mode==='grav'?st.bodies.slice(0,st.nb).map(q=>[q.x,q.y,q.M].join(',')).join(';'):'';
+  return [st.mode,st.vtype,b,st.g0,st.kap,st.gam,st.view.cx,st.view.cy,st.view.w,MV.W,MV.H].join('|');}
+function computeGrid(){const gw=Math.max(40,Math.min(340,Math.round(MV.W/3.2))),gh=Math.max(24,Math.round(gw*MV.H/MV.W));
+  const val=new Float64Array(gw*gh),out=[],[x0,y1]=s2w(0,0),[x1,y0]=s2w(MV.W,MV.H),pot=st.mode!=='wirbel';
+  for(let j=0;j<gh;j++){const y=y1-(y1-y0)*j/(gh-1);for(let i=0;i<gw;i++){const x=x0+(x1-x0)*i/(gw-1);
+    const v=pot?field(st,x,y)[2]:rotZ(st,x,y);val[j*gw+i]=v;
+    if(pot){let ins=false;if(st.mode==='grav')for(let q=0;q<st.nb;q++){const b=st.bodies[q];if(Math.hypot(x-b.x,y-b.y)<b.R){ins=true;break;}}if(!ins)out.push(v);}}}
+  let lo,hi,levels=[];
+  if(pot){const s=Float64Array.from(out.length>10?out:val).sort();lo=s[Math.floor(0.02*(s.length-1))];hi=s[Math.floor(0.995*(s.length-1))];
+    if(!(hi>lo)){hi=lo+Math.abs(lo||1)*1e-3;}
+    const step=niceStep((hi-lo)/14);let mn=Infinity,mx=-Infinity;for(const v of val){if(v<mn)mn=v;if(v>mx)mx=v;}
+    for(let v=Math.floor(mx/step)*step;v>=mn&&levels.length<70;v-=step)levels.push(v);GRID.step=step;}
+  else{lo=0;let mx=0;for(const v of val)mx=Math.max(mx,v);hi=mx||1;}
+  GRID={key:gridKey(),gw,gh,val,lo,hi,levels,pot,step:GRID.step};}
+function lerpCol(t){const P=C.pm.map(rgb);const u=Math.max(0,Math.min(1,t))*2,i=Math.min(1,Math.floor(u)),f=u-i;return [0,1,2].map(q=>P[i][q]*(1-f)+P[i+1][q]*f);}
+function contour(c,level){const {gw,gh,val}=GRID,sx=MV.W/(gw-1),sy=MV.H/(gh-1);c.beginPath();
+  for(let j=0;j<gh-1;j++)for(let i=0;i<gw-1;i++){const a=val[j*gw+i]-level,b=val[j*gw+i+1]-level,d=val[(j+1)*gw+i]-level,e=val[(j+1)*gw+i+1]-level;
+    if((a>0&&b>0&&d>0&&e>0)||(a<=0&&b<=0&&d<=0&&e<=0))continue;const pts=[];
+    if((a>0)!==(b>0))pts.push([(i+a/(a-b))*sx,j*sy]);
+    if((b>0)!==(e>0))pts.push([(i+1)*sx,(j+b/(b-e))*sy]);
+    if((d>0)!==(e>0))pts.push([(i+d/(d-e))*sx,(j+1)*sy]);
+    if((a>0)!==(d>0))pts.push([i*sx,(j+a/(a-d))*sy]);
+    for(let q=0;q+1<pts.length;q+=2){c.moveTo(pts[q][0],pts[q][1]);c.lineTo(pts[q+1][0],pts[q+1][1]);}}
+  c.stroke();}
+function insideBody(x,y){if(st.mode!=='grav')return false;for(let q=0;q<st.nb;q++){const b=st.bodies[q];if(Math.hypot(x-b.x,y-b.y)<b.R)return true;}return false;}
+function traceLine(x,y,sign,stepW,maxN){const pts=[[x,y]];let px=x,py=y,ld=null;
+  for(let n=0;n<maxN;n++){let f=field(st,px,py),g=Math.hypot(f[0],f[1]);if(!(g>0))break;let dx=sign*f[0]/g,dy=sign*f[1]/g;
+    const mx=px+dx*stepW/2,my=py+dy*stepW/2;f=field(st,mx,my);g=Math.hypot(f[0],f[1]);if(!(g>0))break;dx=sign*f[0]/g;dy=sign*f[1]/g;
+    if(ld&&dx*ld[0]+dy*ld[1]<0)break;ld=[dx,dy];px+=dx*stepW;py+=dy*stepW;pts.push([px,py]);
+    const [sx,sy]=w2s(px,py);if(sx<-40||sx>MV.W+40||sy<-40||sy>MV.H+40)break;if(insideBody(px,py))break;}
+  return pts;}
+function buildStatic(){const key=GRID.key+'|'+JSON.stringify(st.show)+'|'+C.pm.join()+C.ink+'|'+dpr;if(STAT.key===key&&STAT.cv)return STAT.cv;
+  const cv=STAT.cv||document.createElement('canvas');cv.width=Math.round(MV.W*dpr);cv.height=Math.round(MV.H*dpr);const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
+  c.fillStyle=C.stage;c.fillRect(0,0,MV.W,MV.H);
+  const {gw,gh,val,lo,hi,pot}=GRID;
+  if(st.show.eq){const im=document.createElement('canvas');im.width=gw;im.height=gh;const ix=im.getContext('2d'),img=ix.createImageData(gw,gh),d=img.data;
+    const base=rgb(C.stage),rc=rgb(C.rot);
+    for(let k=0;k<gw*gh;k++){let col;if(pot)col=lerpCol((val[k]-lo)/(hi-lo));else{const t=st.vtype==='rigid'?0.35:Math.sqrt(Math.min(1,val[k]/hi));col=[0,1,2].map(q=>base[q]*(1-t)+rc[q]*t);}
+      d[4*k]=col[0];d[4*k+1]=col[1];d[4*k+2]=col[2];d[4*k+3]=255;}
+    ix.putImageData(img,0,0);c.imageSmoothingEnabled=true;c.drawImage(im,0,0,MV.W,MV.H);
+    if(pot){c.strokeStyle=hexA(C.ink,0.3);c.lineWidth=1;for(const L of GRID.levels)contour(c,L);}}
+  if(st.mode==='hom'){const [,gy]=w2s(0,0);if(gy<MV.H){c.fillStyle=hexA(C.body,0.45);c.fillRect(0,Math.max(0,gy),MV.W,MV.H-gy);c.strokeStyle=C.bodyl;c.lineWidth=2;c.beginPath();c.moveTo(0,gy);c.lineTo(MV.W,gy);c.stroke();
+    c.strokeStyle=hexA(C.bodyl,0.5);c.lineWidth=1;c.beginPath();for(let x=-20;x<MV.W;x+=12){c.moveTo(x,gy+12);c.lineTo(x+12,gy);}c.stroke();
+    c.fillStyle=C.bodyl;c.font=`600 11.5px ${C.ui}`;c.textAlign='right';c.textBaseline='top';c.fillText('Boden (y = 0)',MV.W-8,gy+4);}}
+  // Feldlinien
+  if(st.show.fl){c.strokeStyle=hexA(C.fl,0.75);c.fillStyle=hexA(C.fl,0.85);c.lineWidth=1.2;
+    if(st.mode==='grav'){let Mx=0;for(let i=0;i<st.nb;i++)Mx=Math.max(Mx,st.bodies[i].M);
+      for(let i=0;i<st.nb;i++){const b=st.bodies[i],n=Math.max(3,Math.round(24*b.M/Mx)),r0=Math.max(b.R*1.0001,3/MV.k);
+        for(let k=0;k<n;k++){const a=(k+0.5)/n*2*Math.PI,pts=traceLine(b.x+r0*Math.cos(a),b.y+r0*Math.sin(a),-1,6/MV.k,900);if(pts.length<3)continue;
+          c.beginPath();pts.forEach((p,q)=>{const [x,y]=w2s(p[0],p[1]);q?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();
+          const m=Math.min(pts.length-2,Math.max(1,Math.round(pts.length*0.55))),[x1,y1]=w2s(...pts[m+1]),[x2,y2]=w2s(...pts[m]);arrowHead(c,x2,y2,Math.atan2(y2-y1,x2-x1),7);}}}
+    else if(st.mode==='hom'){for(let x=30;x<MV.W;x+=60){c.beginPath();c.moveTo(x,0);c.lineTo(x,MV.H);c.stroke();for(let y=50;y<MV.H;y+=110)arrowHead(c,x,y,Math.PI/2,7);}}
+    else{const [ox,oy]=w2s(0,0),sg=1;for(let k=1;k<=8;k++){const r=k*Math.max(MV.W,MV.H)/14;c.beginPath();c.arc(ox,oy,r,0,2*Math.PI);c.stroke();
+      for(const a of [0.3,2.4,4.5]){const x=ox+r*Math.cos(a),y=oy-r*Math.sin(a);arrowHead(c,x,y,-a-Math.PI/2*sg,7);}}}}
+  // Feldpfeile
+  if(st.show.arr){const sp=46,pts=[];for(let y=sp/2;y<MV.H;y+=sp)for(let x=sp/2;x<MV.W;x+=sp){const [wx,wy]=s2w(x,y);if(insideBody(wx,wy))continue;const f=field(st,wx,wy),g=Math.hypot(f[0],f[1]);if(g>0)pts.push([x,y,f[0]/g,-f[1]/g,Math.log10(g)]);}
+    let lmin=Infinity,lmax=-Infinity;for(const p of pts){lmin=Math.min(lmin,p[4]);lmax=Math.max(lmax,p[4]);}
+    lmin=Math.max(lmin,lmax-3);c.strokeStyle=hexA(C.ink,0.55);c.fillStyle=hexA(C.ink,0.55);c.lineWidth=1.3;
+    for(const p of pts){const t=lmax-lmin<0.02?0.8:0.25+0.75*Math.max(0,(p[4]-lmin)/(lmax-lmin)),L=t*sp*0.78,x0=p[0]-p[2]*L/2,y0=p[1]-p[3]*L/2,x1=p[0]+p[2]*L/2,y1=p[1]+p[3]*L/2;
+      c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();arrowHead(c,x1,y1,Math.atan2(p[3],p[2]),5);}}
+  // Körper
+  if(st.mode==='grav'){c.textAlign='center';c.textBaseline='bottom';
+    for(let i=0;i<st.nb;i++){const b=st.bodies[i],[x,y]=w2s(b.x,b.y),r=Math.max(4,b.R*MV.k);
+      c.fillStyle=hexA(C.body,0.92);c.strokeStyle=C.bodyl;c.lineWidth=1.5;c.beginPath();c.arc(x,y,r,0,2*Math.PI);c.fill();c.stroke();
+      c.fillStyle=C.ink;c.font=`600 12px ${C.ui}`;const ly=r>60?y:y-r-4;if(x>-50&&x<MV.W+50)halo(c,b.name,Math.max(30,Math.min(MV.W-30,x)),Math.max(14,Math.min(MV.H-4,ly)));}}
+  STAT.key=key;STAT.cv=cv;return cv;}
+function scaleBar(c){const want=MV.W*0.18/MV.k,len=niceStep(want),px=len*MV.k,x=14,y=MV.H-14;
+  c.strokeStyle=C.ink;c.lineWidth=2;c.beginPath();c.moveTo(x,y-4);c.lineTo(x,y);c.lineTo(x+px,y);c.lineTo(x+px,y-4);c.stroke();
+  c.fillStyle=C.ink;c.font=`600 11.5px ${C.ui}`;c.textAlign='center';c.textBaseline='bottom';halo(c,fLen(len),x+px/2,y-4);}
+function handle(c,x,y,lab,col,shape,act){c.save();c.fillStyle=col;c.strokeStyle=C.stage;c.lineWidth=2;c.beginPath();
+  if(shape==='sq')c.rect(x-5.5,y-5.5,11,11);else c.arc(x,y,7,0,2*Math.PI);c.fill();c.stroke();
+  if(act){c.strokeStyle=col;c.lineWidth=1.5;c.setLineDash([3,3]);c.beginPath();c.arc(x,y,12,0,2*Math.PI);c.stroke();c.setLineDash([]);}
+  c.fillStyle=col;c.font=`700 13px ${C.ui}`;c.textAlign='left';c.textBaseline='bottom';halo(c,lab,x+9,y-6);c.restore();}
+function drawMap(){const cv=$('#map'),{c,W,H}=ctxOf(cv);MV.W=W;MV.H=H;MV.k=W/st.view.w;
+  if(GRID.key!==gridKey())computeGrid();c.drawImage(buildStatic(),0,0,W,H);
+  // Äquipotentiallinien durch A und B
+  if(R.pot&&st.show.eq){c.lineWidth=1.6;c.setLineDash([5,4]);c.strokeStyle=C.a;contour(c,phiAt(st.A.x,st.A.y));c.strokeStyle=C.b;contour(c,phiAt(st.B.x,st.B.y));c.setLineDash([]);}
+  if(R.neutral){const [x,y]=w2s(R.neutral.x,R.neutral.y);c.strokeStyle=C.neutral;c.lineWidth=2;c.beginPath();c.moveTo(x-6,y-6);c.lineTo(x+6,y+6);c.moveTo(x-6,y+6);c.lineTo(x+6,y-6);c.stroke();
+    c.fillStyle=C.neutral;c.font=`600 11.5px ${C.ui}`;c.textAlign='center';c.textBaseline='top';halo(c,'kräftefrei',x,y+9);}
+  // Wege
+  const drawPath=(Pk,col)=>{c.strokeStyle=col;c.lineWidth=2.6;c.beginPath();Pk.pts.forEach((p,i)=>{const [x,y]=w2s(p[0],p[1]);i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();
+    const m=Math.round(Pk.pts.length*0.5),[xa,ya]=w2s(...Pk.pts[m-1]),[xb,yb]=w2s(...Pk.pts[m]);c.fillStyle=col;arrowHead(c,(xa+xb)/2,(ya+yb)/2,Math.atan2(yb-ya,xb-xa),10);};
+  const mp=(Pk,frac)=>w2s(...Pk.pts[Math.round(Pk.pts.length*frac)]);
+  drawPath(R.P1,C.p1);drawPath(R.P2,C.p2);
+  c.font=`700 12px ${C.ui}`;c.textBaseline='middle';c.textAlign='center';
+  {let [x,y]=mp(R.P1,0.3);c.fillStyle=C.p1;halo(c,'1',x+10,y+10);[x,y]=mp(R.P2,0.3);c.fillStyle=C.p2;halo(c,'2',x+10,y-10);}
+  // Probekörper
+  if(P){if(P.trail.length>1){c.strokeStyle=hexA(C.probe,0.85);c.lineWidth=2;c.beginPath();P.trail.forEach((p,i)=>{const [x,y]=w2s(p[0],p[1]);i?c.lineTo(x,y):c.moveTo(x,y);});const [x,y]=w2s(P.s[0],P.s[1]);c.lineTo(x,y);c.stroke();}
+    const [x,y]=w2s(P.s[0],P.s[1]),v=Math.hypot(P.s[2],P.s[3]);
+    if(v>0){const L=Math.min(150,45*v/vRef()),ux=P.s[2]/v,uy=-P.s[3]/v;c.strokeStyle=C.probe;c.fillStyle=C.probe;c.lineWidth=2;c.setLineDash(P.t===0?[4,3]:[]);
+      c.beginPath();c.moveTo(x,y);c.lineTo(x+ux*L,y+uy*L);c.stroke();c.setLineDash([]);arrowHead(c,x+ux*L,y+uy*L,Math.atan2(uy,ux),8);
+      if(P.t===0){c.font=`600 11.5px ${C.ui}`;c.textAlign='left';c.textBaseline='middle';rich(c,'v_{0}',x+ux*L+6,y+uy*L,{size:12,weight:600,halo:true});}}
+    if(P.t>0){c.fillStyle=C.probe;c.strokeStyle=C.stage;c.lineWidth=2;c.beginPath();c.arc(x,y,5.5,0,2*Math.PI);c.fill();c.stroke();}}
+  const [cx,cy]=w2s(st.C.x,st.C.y);handle(c,cx,cy,'C',C.p2,'sq',kh==='C');
+  const [ax,ay]=w2s(st.A.x,st.A.y);handle(c,ax,ay,'A',C.a,'c',kh==='A');
+  const [bx,by]=w2s(st.B.x,st.B.y);handle(c,bx,by,'B',C.b,'c',kh==='B');
+  scaleBar(c);}
+
+/* ----- Diagramme ----- */
+function drawWork(){const {c,W,H}=ctxOf($('#cw'));const S=st,P1=R.P1,P2=R.P2,fr=S.fric;
+  const arrs=[P1.sw,P2.sw];if(fr)arrs.push(P1.sw.map((v,i)=>v-S.b*S.m*S.v0*P1.ss[i]),P2.sw.map((v,i)=>v-S.b*S.m*S.v0*P2.ss[i]));
+  let y0=0,y1=0;for(const a of arrs)for(const v of a){y0=Math.min(y0,v);y1=Math.max(y1,v);}
+  if(R.pot){y0=Math.min(y0,-R.dU);y1=Math.max(y1,-R.dU);}
+  if(y1-y0<=0){y1=1;y0=-1;}const pad=(y1-y0)*0.08;y0-=pad;y1+=pad;const [f,u]=pickUnit(Math.max(Math.abs(y0),Math.abs(y1)),EU);
+  const F=frame(c,W,H,{x0:0,x1:1,y0,y1,xl:'zurückgelegter Anteil des Weges s/L',yl:`Arbeit W (${u})`,xf:v=>num(v,2),yf:v=>num(v/f,3),nx:4});
+  const xs=P1.sw.map((v,i)=>F.X(i/(P1.sw.length-1)));
+  c.save();c.beginPath();c.rect(F.L,F.T,F.w,F.h);c.clip();
+  if(R.pot){const y=F.Y(-R.dU);polyline(c,[F.L,F.L+F.w],[y,y],C.ink,1.2,[6,4]);c.fillStyle=C.ink;c.textAlign='left';c.textBaseline='bottom';rich(c,'U(A) − U(B)',F.L+6,y-3,{size:11,halo:true});}
+  if(fr){polyline(c,xs,arrs[2].map(F.Y),C.p1,1.6,[3,3]);polyline(c,xs,arrs[3].map(F.Y),C.p2,1.6,[3,3]);}
+  polyline(c,xs,P2.sw.map(F.Y),C.p2,2.6);polyline(c,xs,P1.sw.map(F.Y),C.p1,2.2,R.pot?[8,5]:[]);
+  c.restore();
+  let t=`Weg 1 (Strecke, ${fLen(P1.L)}): <b>W<sub>1</sub> = ${fE(P1.W)}</b>. Weg 2 (Bogen, ${fLen(P2.L)}): <b>W<sub>2</sub> = ${fE(P2.W)}</b>. `;
+  t+=R.pot?'Beide Kurven enden auf derselben Höhe <i>U</i>(A) − <i>U</i>(B): Nur Anfang und Ende zählen.':'Die Endwerte unterscheiden sich: Die Arbeit hängt vom Weg ab.';
+  if(fr)t+=` Gepunktet: zusätzlich Reibung beim Abfahren mit v<sub>0</sub> (W<sub>R1</sub> = ${fE(R.WR1)}, W<sub>R2</sub> = ${fE(R.WR2)}).`;
+  $('#cwNote').innerHTML=t;}
+function curEmech(){if(!P||!R.pot)return NaN;const e=P.ts[P.ts.length-1];return e.K+e.U;}
+function drawCut(){const {c,W,H}=ctxOf($('#cu'));const S=st,m=S.m;
+  if(S.mode==='wirbel'){$('#cuTitle').textContent='Umlaufarbeit um die Achse';
+    const r1=0.75*S.view.w,N=200,xs=[],ys=[];for(let i=0;i<=N;i++){const r=r1*i/N;xs.push(r);ys.push(S.vtype==='rigid'?2*Math.PI*S.kap*m*r*r:2*Math.PI*S.gam*m*r*r/(r*r+RC*RC));}
+    let y1=Math.max(...ys,Math.abs(R.loop))*1.1||1;const [f,u]=pickUnit(y1,EU),[lf,lu]=pickUnit(r1,LU);
+    const F=frame(c,W,H,{x0:0,x1:r1,y0:0,y1,xl:`Radius r des Kreises um die Achse (${lu})`,yl:`∮F·ds (${u})`,xf:v=>num(v/lf,3),yf:v=>num(v/f,3)});
+    polyline(c,xs.map(F.X),ys.map(F.Y),C.p2,2.4);
+    const req=Math.sqrt(Math.abs(R.area)/Math.PI);if(req<r1){c.fillStyle=C.accent;c.beginPath();c.arc(F.X(req),F.Y(Math.abs(R.loop)),5,0,2*Math.PI);c.fill();
+      c.textAlign='left';c.textBaseline='bottom';rich(c,'Schleife 1→2',F.X(req)+7,F.Y(Math.abs(R.loop))-3,{size:11,weight:600,halo:true});}
+    const pred=S.vtype==='rigid'?2*S.kap*m*R.area:NaN;
+    $('#cuNote').innerHTML=S.vtype==='rigid'?`Stokes: ∮<b>F</b>·d<b>s</b> = 2<i>mκ</i>·Fläche. Schleife: Fläche ${num(Math.abs(R.area),3)} m², 2<i>mκ</i>·Fläche = <b>${fE(Math.abs(pred))}</b>, numerisch ${fE(Math.abs(R.loop))}. Der Punkt ist bei dem Kreis gleicher Fläche eingetragen.`
+      :`Für jeden Kreis, der die Achse umschließt, ist ∮<b>F</b>·d<b>s</b> = 2π<i>m</i>Γ = ${fE(2*Math.PI*S.gam*m)}, unabhängig vom Radius. Die Schleife 1→2 ${Math.abs(R.loop)>0.5*2*Math.PI*S.gam*m?'<b>umschließt</b> die Achse':'umschließt die Achse <b>nicht</b>'}: ∮ = ${fEz(R.loop,2*Math.PI*S.gam*m)}.`;
+    return;}
+  const E=curEmech(),pts=[];let xl,xs=[],ys=[],ya=[],aX,aY,Rs=NaN;
+  if(S.mode==='grav'){$('#cuTitle').textContent='Potentielle Energie längs r';
+    const b=S.bodies[0];let ux=S.A.x-b.x,uy=S.A.y-b.y,rA=Math.hypot(ux,uy);if(rA<1e-9*b.R){ux=1;uy=0;}else{ux/=rA;uy/=rA;}
+    const rB=Math.hypot(S.B.x-b.x,S.B.y-b.y),r0=Math.max(0,Math.min(rA,b.R)-0.5*S.view.w),r1=Math.max(rA,rB,b.R,R.neutral?R.neutral.d:0)+0.6*S.view.w,N=400,gs=G*b.M/(b.R*b.R),U0=m*(phiAt(b.x+ux*b.R,b.y+uy*b.R)+R.off);Rs=b.R;
+    for(let i=0;i<=N;i++){const r=r0+(r1-r0)*i/N;xs.push(r);ys.push(m*(phiAt(b.x+ux*r,b.y+uy*r)+R.off));ya.push(r>=b.R?U0+m*gs*(r-b.R):NaN);}
+    aX=rA;aY=R.UA;xl=`Abstand r von der Mitte von ${b.name} (in Richtung A)`;}
+  else{$('#cuTitle').textContent='Potentielle Energie längs der Höhe';
+    const yb=Math.min(0,S.A.y)-0.05*S.view.w,yt=Math.max(S.view.cy+0.5*S.view.w,S.A.y+0.1*S.view.w),N=200;
+    for(let i=0;i<=N;i++){const y=yb+(yt-yb)*i/N;xs.push(y);ys.push(m*(S.g0*y+R.off));const ye=Math.max(y,-0.9*RE);ya.push(m*(S.g0*RE*ye/(RE+ye)+R.off));}
+    aX=S.A.y;aY=R.UA;xl='Höhe y über dem Boden';}
+  let y0=Math.min(...ys.filter(isFinite)),y1=Math.max(...ys.filter(isFinite));if(isFinite(E)){y0=Math.min(y0,E);y1=Math.max(y1,E);}
+  if(S.mode==='grav'){y1=y1+(y1-y0)*0.12;}else{const p=(y1-y0)*0.08;y0-=p;y1+=p;}
+  if(!(y1>y0)){y1=y0+1;}
+  const [f,u]=pickUnit(Math.max(Math.abs(y0),Math.abs(y1)),EU),[lf,lu]=pickUnit(Math.max(Math.abs(xs[0]),Math.abs(xs[xs.length-1])),LU);
+  const F=frame(c,W,H,{x0:xs[0],x1:xs[xs.length-1],y0,y1,xl:`${xl} (${lu})`,yl:`U (${u})`,xf:v=>num(v/lf,3),yf:v=>num(v/f,3)});
+  c.save();c.beginPath();c.rect(F.L,F.T,F.w,F.h);c.clip();
+  if(isFinite(E)){// verbotene Bereiche (U > E)
+    c.fillStyle=hexA(C.muted,0.13);for(let i=0;i<xs.length-1;i++)if(ys[i]>E)c.fillRect(F.X(xs[i]),F.T,F.X(xs[i+1])-F.X(xs[i])+0.6,F.h);}
+  if(S.mode==='grav'){const x=Math.max(F.L,F.X(Rs));c.fillStyle=hexA(C.body,0.22);c.fillRect(F.L,F.T,x-F.L,F.h);c.fillStyle=C.muted;c.textAlign='left';c.textBaseline='top';c.font=`11px ${C.ui}`;if(x-F.L>40)halo(c,'innen',F.L+4,F.T+4);}
+  else{const x=F.X(0);c.fillStyle=hexA(C.body,0.22);c.fillRect(F.L,F.T,x-F.L,F.h);}
+  polyline(c,xs.map(F.X),ya.map(F.Y),C.mgh,1.6,[6,4]);
+  polyline(c,xs.map(F.X),ys.map(F.Y),C.pot,2.6);
+  if(isFinite(E)){const y=F.Y(E);polyline(c,[F.L,F.L+F.w],[y,y],C.mech,1.6,[2,3]);c.fillStyle=C.mech;c.textAlign='center';c.textBaseline='bottom';rich(c,'E_{mech}',F.L+F.w*0.55,y-3,{size:11.5,weight:600,halo:true,align:'center'});}
+  c.fillStyle=C.a;c.beginPath();c.arc(F.X(aX),F.Y(aY),5,0,2*Math.PI);c.fill();c.textAlign='left';c.textBaseline='bottom';c.fillStyle=C.a;rich(c,'A',F.X(aX)+6,F.Y(aY)-2,{size:12,weight:700,halo:true});
+  if(P&&P.t>0){const e=P.ts[P.ts.length-1];let px;if(S.mode==='grav'){const b=S.bodies[0];px=Math.hypot(P.s[0]-b.x,P.s[1]-b.y);}else px=P.s[1];
+    c.fillStyle=C.probe;c.beginPath();c.arc(F.X(px),F.Y(e.U),4.5,0,2*Math.PI);c.fill();}
+  c.restore();
+  let t;if(S.mode==='grav'){const err=R.mgh/(-R.dU)-1;
+    t=`Blau: exakt (alle Körper), orange gestrichelt: <i>m g h</i> ab der Oberfläche. Grau: verbotener Bereich (<i>U</i> &gt; <i>E</i><sub>mech</sub>). `;
+    if(isFinite(E))t+=S.zeroA?'Nullpunkt bei A: Ob der Körper gebunden ist, sieht man nun nicht mehr am Vorzeichen von E<sub>mech</sub>.':E>=0?'<b>E<sub>mech</sub> ≥ 0:</b> Der Körper ist nicht gebunden und entkommt.':'<b>E<sub>mech</sub> &lt; 0:</b> Der Körper ist gebunden.';}
+  else t=`Blau: <i>U</i> = <i>m g y</i>. Orange gestrichelt: exakt für einen kugelförmigen Planeten mit Erdradius; auf dieser Skala praktisch gleich. Grau: dorthin reicht die Energie nicht.`;
+  $('#cuNote').innerHTML=t;}
+function drawEnergy(){const {c,W,H}=ctxOf($('#ce'));const ts=P.ts,pot=R.pot,fr=st.fric;
+  const BW=Math.min(110,W*0.3),pw=W-BW;
+  const ser=[[e=>e.K,C.kin,'E_{kin}',[]]];
+  if(pot){ser.push([e=>e.U,C.pot,'U',[]],[e=>e.K+e.U,C.mech,'E_{mech}',[]]);if(fr)ser.push([e=>e.Q,C.heat,'Q',[]],[e=>e.K+e.U+e.Q,C.muted,'E_{mech}+Q',[5,4]]);}
+  else{ser.push([e=>e.W,C.p2,'W_{Feld}',[]]);if(fr)ser.push([e=>e.Q,C.heat,'Q',[]]);}
+  let y0=0,y1=0;for(const e of ts)for(const s of ser){const v=s[0](e);if(isFinite(v)){y0=Math.min(y0,v);y1=Math.max(y1,v);}}
+  if(y1-y0<=0){y1=1;y0=-1;}const pad=(y1-y0)*0.08;y0-=pad;y1+=pad;
+  const tmax=ts[ts.length-1].t>0?ts[ts.length-1].t:6*P.rate,[f,u]=pickUnit(Math.max(Math.abs(y0),Math.abs(y1)),EU);
+  const tu=tmax<120?[1,'s']:tmax<7200?[60,'min']:tmax<172800?[3600,'h']:[86400,'d'];
+  c.save();const F=frame(c,pw,H,{x0:0,x1:tmax,y0,y1,xl:`Zeit t (${tu[1]})`,yl:`Energie (${u})`,xf:v=>num(v/tu[0],3),yf:v=>num(v/f,3),nx:4});c.restore();
+  if(ts.length>1){const xs=ts.map(e=>F.X(e.t));c.save();c.beginPath();c.rect(F.L,F.T,F.w,F.h);c.clip();for(const s of ser)polyline(c,xs,ts.map(e=>F.Y(s[0](e))),s[1],s===ser[2]?2.6:2,s[3]);c.restore();}
+  else{c.fillStyle=C.muted;c.font=`12px ${C.ui}`;c.textAlign='center';c.textBaseline='middle';c.fillText('Start drücken …',F.L+F.w/2,F.T+F.h/2);}
+  // Balken
+  const e=ts[ts.length-1],bars=ser.filter(s=>s[3].length===0),n=bars.length,gx=pw+8,bw=(BW-14)/n,zy=F.Y(0);
+  c.strokeStyle=hexA(C.muted,0.6);c.beginPath();c.moveTo(gx-2,zy+0.5);c.lineTo(W-2,zy+0.5);c.stroke();
+  bars.forEach((s,i)=>{const v=s[0](e),y=F.Y(v),x=gx+i*bw;c.fillStyle=s[1];c.fillRect(x+2,Math.min(y,zy),bw-4,Math.max(1,Math.abs(y-zy)));
+    c.fillStyle=C.muted;c.textBaseline='top';rich(c,s[2],x+bw/2,F.T+F.h+4,{size:10.5,align:'center'});});
+  let t='';if(pot){const E=e.K+e.U;t=`<i>E</i><sub>kin</sub> = ${fE(e.K)}, <i>U</i> = ${fE(e.U)}, <b><i>E</i><sub>mech</sub> = ${fE(E)}</b>`;if(fr)t+=`, Wärme <i>Q</i> = ${fE(e.Q)}`;t+='. ';
+    if(P.t>0)t+=fr?`<i>E</i><sub>mech</sub> + <i>Q</i> bleibt erhalten (Abweichung ${fE(P.dEmax,2)}).`:`<i>E</i><sub>mech</sub> bleibt erhalten (numerische Abweichung ${num(100*P.dEmax/Math.max(Math.abs(P.E0),e.K,Math.abs(e.U)),2)} %).`;}
+  else t=`<i>E</i><sub>kin</sub> = ${fE(e.K)}, vom Feld verrichtete Arbeit <i>W</i><sub>Feld</sub> = ${fE(e.W)}${fr?`, Wärme <i>Q</i> = ${fE(e.Q)}`:''}. Ohne Potential gibt es keine Erhaltungsgröße <i>E</i><sub>mech</sub>: Das Feld kann dem Körper auf einem Umlauf immer wieder Energie zuführen.`;
+  $('#ceNote').innerHTML=t;}
+
+/* ----- Kennzahlen, Status, Legende ----- */
+function updateKZ(){const S=st;let s='';const ref=R.ref;
+  if(R.pot){s+=`<div class="gh">Potentielle Energie${S.zeroA?' (U = 0 bei A)':''}</div><dt><i>U</i>(A)</dt><dd>${fEz(R.UA,ref)}</dd><dt><i>U</i>(B)</dt><dd>${fEz(R.UB,ref)}</dd><dt>Δ<i>U</i> = <i>U</i>(B) − <i>U</i>(A)</dt><dd class="hi">${fEz(R.dU,ref)}</dd>`;}
+  else s+=`<div class="gh">Potentielle Energie</div><dt>kein Potential</dt><dd>${S.vtype==='line'?'∮ hängt vom Weg ab':'rot <b>F</b> ≠ 0'}</dd>`;
+  s+=`<div class="gh">Arbeit des Feldes</div><dt><i>W</i><sub>1</sub> (Strecke)</dt><dd>${fEz(R.P1.W,ref)}</dd><dt><i>W</i><sub>2</sub> (Bogen)</dt><dd>${fEz(R.P2.W,ref)}</dd><dt>Umlauf ∮ = <i>W</i><sub>1</sub> − <i>W</i><sub>2</sub></dt><dd class="hi">${fEz(R.loop,ref)}</dd>`;
+  if(S.fric)s+=`<dt>Reibung <i>W</i><sub>R1</sub> / <i>W</i><sub>R2</sub></dt><dd>${fE(R.WR1,2)} / ${fE(R.WR2,2)}</dd>`;
+  s+=`<dt>Weglängen</dt><dd>${fLen(R.P1.L)} / ${fLen(R.P2.L)}</dd>`;
+  if(S.mode==='grav'){const err=R.mgh/(-R.dU)-1;s+=`<div class="gh">Bei A</div><dt>Feldstärke |<i>g</i>|</dt><dd>${fAcc(R.gA)}</dd><dt>Fluchtgeschwindigkeit</dt><dd>${fV(R.vesc)}</dd><dt>Kreisbahngeschw.${R.circ?' ('+R.circ.body.name+')':''}</dt><dd>${R.circ?fV(R.circ.v):'—'}</dd>
+    <div class="gh">Näherung m g h (${S.bodies[0].name})</div><dt>Höhendiff. <i>r</i><sub>B</sub> − <i>r</i><sub>A</sub></dt><dd>${fLen(R.rB-R.rA)}</dd><dt><i>m g</i><sub>A</sub>Δ<i>h</i></dt><dd>${fE(R.mgh)}</dd><dt>Abweichung von Δ<i>U</i></dt><dd>${S.nb===1&&Math.abs(R.dU)>0?fPct(err):'—'}</dd>`;
+    if(R.neutral)s+=`<dt>kräftefreier Punkt</dt><dd>${num(R.neutral.s,3)} <i>d</i></dd>`;}
+  if(S.mode==='hom')s+=`<div class="gh">Bei A</div><dt>Feldstärke |<i>g</i>|</dt><dd>${fAcc(S.g0)}</dd><dt><i>m g</i> (<i>y</i><sub>B</sub> − <i>y</i><sub>A</sub>)</dt><dd>${fE(R.mgh)}</dd>`;
+  if(S.mode==='wirbel')s+=`<div class="gh">Wirbel</div><dt>rot <b>F</b> bei A</dt><dd>${fmt(S.m*rotZ(S,S.A.x,S.A.y),3)} N/m</dd><dt>Fläche der Schleife</dt><dd>${num(R.area,3)} m²</dd>`;
+  const e=P.ts[P.ts.length-1];
+  s+=`<div class="gh">Probekörper</div><dt>Zeit</dt><dd>${fTime(P.t)}</dd><dt>Geschwindigkeit</dt><dd>${fV(Math.hypot(P.s[2],P.s[3]))}</dd><dt><i>E</i><sub>kin</sub></dt><dd>${fE(e.K)}</dd>`;
+  if(R.pot)s+=`<dt><i>E</i><sub>mech</sub></dt><dd class="hi">${fE(e.K+e.U)}</dd>`;if(S.fric)s+=`<dt>Wärme <i>Q</i></dt><dd>${fE(e.Q)}</dd>`;
+  if(S.mode==='hom'&&P.t>0)s+=`<dt>Gipfelhöhe / Weite</dt><dd>${num(P.ymax,3)} m / ${num(P.s[0]-S.A.x,3)} m</dd>`;
+  $('#kz').innerHTML=s;}
+function statusText(){const S=st,ex=S.sel?`<b>${EXM[S.sel].name}:</b> `:'';let t;const ref=R.ref;
+  if(R.pot){t=`<b>Konservativ:</b> W<sub>1</sub> = W<sub>2</sub> = U(A) − U(B) = ${fEz(-R.dU,ref)}, die Umlaufarbeit ist ${fEz(R.loop,ref)}.`;
+    if(S.fric)t+=` Mit Reibung hängt die Gesamtarbeit dagegen vom Weg ab: Der längere Weg kostet mehr.`;}
+  else if(S.vtype==='line'&&Math.abs(R.loop)<0.5*2*Math.PI*S.gam*S.m)t=`<b>Linienwirbel, Achse nicht umschlossen:</b> Hier ist ∮ = ${fEz(R.loop,ref)}, obwohl das Feld kein Potential hat.`;
+  else t=`<b>Nicht konservativ:</b> W<sub>1</sub> = ${fE(R.P1.W)}, aber W<sub>2</sub> = ${fE(R.P2.W)}. Auf dem geschlossenen Weg verrichtet das Feld ${fE(R.loop)}.`;
+  if(P.done)t+=` <b>${P.msg}</b> nach ${fTime(P.t)} mit ${fV(Math.hypot(P.s[2],P.s[3]))}.`;
+  $('#status').innerHTML=ex+t;
+  $('#time').textContent=`t = ${fTime(P.t)}`;}
+function sw(col,dash,lw=2.4){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="${col}" stroke-width="${lw}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;}
+function gbox(a,b,c2){return `<svg width="54" height="10" aria-hidden="true"><defs><linearGradient id="gp"><stop offset="0" stop-color="${a}"/><stop offset=".5" stop-color="${b}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="54" height="10" rx="2" fill="url(#gp)"/></svg>`;}
+function buildLegend(){const it=[];
+  if(st.show.eq){if(R.pot)it.push([gbox('var(--pm0)','var(--pm1)','var(--pm2)'),'Potential tief → hoch'],[sw('var(--ink)','',1),'Äquipotentiallinien (gleiche Abstände)'],[sw('var(--c-a)','5 4',1.6)+sw('var(--c-b)','5 4',1.6),'durch A bzw. B']);
+    else it.push([`<svg width="14" height="10" aria-hidden="true"><rect width="14" height="10" rx="2" fill="var(--c-rot)"/></svg>`,'rot F ≠ 0']);}
+  if(st.show.arr)it.push([sw('var(--ink)','',1.3),'Feldpfeile (Länge logarithmisch)']);
+  it.push([sw('var(--c-p1)'),'Weg 1'],[sw('var(--c-p2)'),'Weg 2'],[sw('var(--c-probe)','',2),'Probekörper']);
+  if(R.neutral)it.push([`<svg width="12" height="12" aria-hidden="true"><path d="M1 1L11 11M1 11L11 1" stroke="var(--c-neutral)" stroke-width="2"/></svg>`,'kräftefreier Punkt']);
+  $('#legend').innerHTML=it.map(([s,t])=>`<span>${s}${t}</span>`).join('');}
+
+/* ----- Ziehen und Tastatur ----- */
+let drag=null;
+function hitTest(px,py){const near=(x,y,r)=>{const [sx,sy]=w2s(x,y);return Math.hypot(px-sx,py-sy)<=r;};
+  if(near(st.A.x,st.A.y,13))return 'A';if(near(st.B.x,st.B.y,13))return 'B';if(near(st.C.x,st.C.y,13))return 'C';
+  if(st.mode==='grav')for(let i=st.nb-1;i>=0;i--){const b=st.bodies[i];if(near(b.x,b.y,Math.max(10,b.R*MV.k)))return 'body'+i;}
+  return 'pan';}
+function moveTarget(t,x,y){if(t==='A'||t==='B'||t==='C'){if(t==='C'){st[t].x=x;st[t].y=y;}else{const dx=x-st[t].x,dy=y-st[t].y;st[t].x=x;st[t].y=y;st.C.x+=dx/2;st.C.y+=dy/2;}}
+  else if(t.startsWith('body')){const b=st.bodies[+t.slice(4)];b.x=x;b.y=y;}
+  st.sel=null;compute();if(t!=='B'&&t!=='C'||!running)resetProbe();dirty=true;$('#example').value='';}
+(function(){const cv=$('#map');const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+  cv.addEventListener('pointerdown',e=>{const [px,py]=pos(e),t=hitTest(px,py),[wx,wy]=s2w(px,py);let ox=0,oy=0;
+    if(t==='A'||t==='B'||t==='C'){ox=st[t].x-wx;oy=st[t].y-wy;kh=t;}else if(t.startsWith('body')){const b=st.bodies[+t.slice(4)];ox=b.x-wx;oy=b.y-wy;}
+    drag={t,ox,oy,px,py,cx:st.view.cx,cy:st.view.cy};cv.setPointerCapture(e.pointerId);cv.classList.add('drag');dirty=true;});
+  cv.addEventListener('pointermove',e=>{const [px,py]=pos(e);if(!drag){cv.classList.toggle('hit',hitTest(px,py)!=='pan');return;}
+    if(drag.t==='pan'){st.view.cx=drag.cx-(px-drag.px)/MV.k;st.view.cy=drag.cy+(py-drag.py)/MV.k;dirty=true;return;}
+    const [wx,wy]=s2w(px,py);moveTarget(drag.t,wx+drag.ox,wy+drag.oy);});
+  const end=()=>{drag=null;cv.classList.remove('drag');};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  cv.addEventListener('keydown',e=>{const k=e.key;if(/^[abcABC]$/.test(k)){kh=k.toUpperCase();dirty=true;e.preventDefault();return;}
+    if(k===' '){toggleRun();e.preventDefault();return;}if(k==='r'||k==='R'){resetProbe();dirty=true;return;}
+    if(k==='+'||k==='-'){st.view.w*=k==='+'?1/1.25:1.25;sync(true);e.preventDefault();return;}
+    const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[k];if(!d)return;e.preventDefault();
+    const s=st.view.w/(e.shiftKey?20:200);moveTarget(kh,st[kh].x+d[0]*s,st[kh].y+d[1]*s);});})();
+
+/* ----- Schleife ----- */
+let lastTs=0;
+function redraw(){if(!R||!P)return;drawMap();drawWork();drawCut();drawEnergy();updateKZ();statusText();buildLegend();}
+function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(running){advance(dt);dirty=true;}
+  if(dirty){dirty=false;redraw();}
+  requestAnimationFrame(frameLoop);}
+function redrawAll(){readColors();dpr=Math.min(2,window.devicePixelRatio||1);STAT.key='';dirty=true;if(R&&P)redraw();}
+for(const id of ['#map','#cw','#cu','#ce'])new ResizeObserver(redrawAll).observe($(id).parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+dpr=Math.min(2,window.devicePixelRatio||1);
+readColors();
+buildControls();
+{const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
+  const id=h.find(k=>EXM[k]);selectEx(id||'erde');if(h.includes('run'))running=true;}
+requestAnimationFrame(frameLoop);
+</script>
+
+</body>
+</html>
