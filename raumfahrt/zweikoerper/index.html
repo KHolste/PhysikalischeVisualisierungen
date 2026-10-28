@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zweikörperlabor</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  /* Layout wie die Plasma-Labore: links Parameter, Mitte Bahnansicht + Diagramme, rechts Physik und Aufgaben */
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --c-b1:#c96a12; --c-b2:#1f5fc2; --c-cm:#0b6767; --c-mu:#2c8540; --c-ep:#7b3aa6; --c-et:#14202b; --c-warn:#b4291f;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --c-b1:#ffae52; --c-b2:#62a1ff; --c-cm:#47b6ae; --c-mu:#5cc46a; --c-ep:#c48cf0; --c-et:#e1e8ed; --c-warn:#ff715f; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --c-b1:#ffae52; --c-b2:#62a1ff; --c-cm:#47b6ae; --c-mu:#5cc46a; --c-ep:#c48cf0; --c-et:#e1e8ed; --c-warn:#ff715f; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1720px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+header.top .units{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr) 350px;grid-template-areas:"params stage info";align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{grid-area:params;padding:12px 14px 14px}
+.stage{grid-area:stage;min-width:0;display:flex;flex-direction:column;gap:10px}
+.info{grid-area:info;padding:16px 18px;min-width:0}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.seg button{all:unset;text-align:center;padding:6px 2px;cursor:pointer;font-size:12.5px;font-weight:500;line-height:1.2}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i,dl.kz dt i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chkrow{display:flex;gap:7px;align-items:flex-start;font-size:13px;margin-bottom:8px;cursor:pointer}
+.chkrow input{accent-color:var(--accent);margin-top:3px}
+.chkrow small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.ctl-tip{font-size:11.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.ctl-tip kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+select.sel{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%;margin-bottom:10px}
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz dd.hi{font-weight:600;color:var(--accent)}
+dl.kz .gh{grid-column:1/-1;font-family:var(--f-head);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+dl.kz .gh:first-child{margin-top:0;padding-top:0;border-top:0}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.vhead{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.vhead .seg{margin:0;min-width:280px;flex:0 1 340px}
+.vhead .tctl{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.status{font-size:13px;color:var(--muted);min-height:2.9em}
+.status b{color:var(--ink);font-weight:600}
+.status .warn{color:var(--c-warn);font-weight:600}
+.mapwrap{position:relative;height:clamp(380px,52vh,580px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+#view:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.trio{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.cwrap{position:relative;height:250px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.note b{color:var(--ink);font-weight:600}
+.info h3{font-family:var(--f-head);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;text-wrap:balance}
+.info p{margin:0 0 10px;max-width:65ch}
+.info b{font-weight:600}
+.formula{font-family:var(--f-math);font-size:17px;line-height:1.55;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 2px;margin:4px 0 12px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+.formula i{font-style:italic}
+.formula small{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+.vec{font-weight:700;font-style:normal!important}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.92em;line-height:1.15;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.frac>span:last-child{padding:0 3px}
+.info h4{font-family:var(--f-head);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 6px}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.tasks li:first-child{border-top:0}
+.tasks li p{margin:0}
+.tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
+.m{font-family:var(--f-math)}
+.foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
+@media (max-width:1500px){.trio{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.trio>:first-child{grid-column:1/-1}}
+@media (max-width:1280px){
+  .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
+  .trio{grid-template-columns:minmax(0,1fr)}
+  .trio>:first-child{grid-column:auto}
+  header.top .units{margin-left:0}
+  .vhead .seg{min-width:0;flex:1 1 100%}
+  .mapwrap{height:clamp(320px,62vh,480px)}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <h1>Zweikörperlabor</h1>
+  <p class="sub">Zwei Massen umkreisen ihren gemeinsamen Schwerpunkt: Schwerpunkt- und Relativbewegung, reduzierte Masse</p>
+  <span class="units">Newtonsche Gravitation · Punktmassen · SI-Einheiten</span>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Beispiel</h2>
+    <select class="sel" id="example" aria-label="Beispiel wählen"></select>
+    <h2 class="lab">Massen</h2>
+    <div id="ctl-m1"></div>
+    <div id="ctl-q"></div>
+    <h2 class="lab">Relativbahn</h2>
+    <div id="ctl-a"></div>
+    <div id="ctl-e"></div>
+    <h2 class="lab">Laborsystem und Beobachter</h2>
+    <div id="ctl-V"></div>
+    <div id="ctl-inc"></div>
+    <div id="ctl-om"></div>
+    <h2 class="lab">Darstellung</h2>
+    <div class="seg" style="--n:3" id="segArr" role="group" aria-label="Pfeile">
+      <button type="button" data-a="p">Impulse</button><button type="button" data-a="v">Geschwind.</button><button type="button" data-a="0">keine</button>
+    </div>
+    <label class="chkrow"><input type="checkbox" id="o-scale"><span>Körper maßstäblich<small>Radien im selben Maßstab wie die Bahn. Sonst feste Symbolgröße.</small></span></label>
+    <label class="chkrow"><input type="checkbox" id="o-trail" checked><span>Bahnspuren<small>Schwerpunkt- und Relativsystem: ganze Bahn; Laborsystem: die letzten 1,5 Umläufe.</small></span></label>
+    <div id="ctl-dur"></div>
+    <p class="ctl-tip">Bahnansicht anklicken, dann <kbd>Leertaste</kbd> = Pause, <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> = Bezugssystem, <kbd>←</kbd> <kbd>→</kbd> = Zeit schrittweise.</p>
+    <button class="btn" type="button" id="defaults">Standardwerte</button>
+    <hr class="sep">
+    <h2 class="lab">Kennzahlen</h2>
+    <dl class="kz" id="kz"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="plotbox">
+      <div class="vhead">
+        <div class="seg" style="--n:3" id="segMode" role="group" aria-label="Bezugssystem">
+          <button type="button" data-m="lab" title="Laborsystem">Labor</button><button type="button" data-m="cm" title="Schwerpunktsystem">Schwerpunkt</button><button type="button" data-m="rel" title="Relativkoordinate r = r₂ − r₁">Relativ</button>
+        </div>
+        <div class="tctl"><button class="btn" type="button" id="play" aria-label="Animation anhalten">❚❚ Pause</button><button class="btn" type="button" id="restart" aria-label="Zeit auf null setzen">↺</button><span id="tnow" aria-live="off"></span></div>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="mapwrap"><canvas class="full" id="view" tabindex="0" aria-label="Bahnansicht der beiden Körper. Leertaste hält an, Tasten 1 bis 3 wechseln das Bezugssystem."></canvas></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="trio">
+      <div class="panel boxp">
+        <h2 class="lab">Energie im Schwerpunktsystem</h2>
+        <div class="cwrap"><canvas class="full" id="en" aria-label="Kinetische Energien beider Körper, potentielle Energie und Gesamtenergie über zwei Umläufe"></canvas></div>
+        <div class="note" id="enNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Radialgeschwindigkeit</h2>
+        <div class="cwrap"><canvas class="full" id="rv" aria-label="Geschwindigkeit der Körper längs der Sichtlinie über zwei Umläufe"></canvas></div>
+        <div class="note" id="rvNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Schwerpunkt und Körper 1</h2>
+        <div class="cwrap"><canvas class="full" id="bc" aria-label="Körper 1 maßstäblich mit seiner Bahn um den gemeinsamen Schwerpunkt"></canvas></div>
+        <div class="note" id="bcNote"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel info" id="info">
+    <h3>Zwei Körper, eine Bahn</h3>
+    <p>Zwei Massen ziehen sich nur gegenseitig an. Die Kräfte sind entgegengesetzt gleich (actio = reactio), also bleibt der Gesamtimpuls erhalten: Der <b>Schwerpunkt</b> ruht oder bewegt sich geradlinig gleichförmig.</p>
+    <div class="formula">
+      <div><i class="vec">R</i> = <span class="frac"><span><i>m</i><sub>1</sub><i class="vec">r</i><sub>1</sub> + <i>m</i><sub>2</sub><i class="vec">r</i><sub>2</sub></span><span><i>M</i></span></span>, &nbsp; <i>M</i> = <i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>, &nbsp; <i>M</i><i class="vec">R̈</i> = 0</div>
+      <div><i class="vec">r</i> = <i class="vec">r</i><sub>2</sub> − <i class="vec">r</i><sub>1</sub>, &nbsp; <i>μ</i><i class="vec">r̈</i> = −<span class="frac"><span><i>G m</i><sub>1</sub><i>m</i><sub>2</sub></span><span><i>r</i><sup>2</sup></span></span><i class="vec">r̂</i></div>
+      <div><i>μ</i> = <span class="frac"><span><i>m</i><sub>1</sub><i>m</i><sub>2</sub></span><span><i>m</i><sub>1</sub> + <i>m</i><sub>2</sub></span></span> &nbsp;&nbsp; <small>reduzierte Masse</small></div>
+    </div>
+    <p>Die <b>Relativbewegung</b> ist ein Einkörperproblem: Ein fiktives Teilchen der Masse <i class="m">μ</i> läuft im Feld einer festen Zentralmasse auf einer Kepler-Ellipse. Aus ihr folgen beide echten Bahnen:</p>
+    <div class="formula">
+      <div><i class="vec">r</i><sub>1</sub> = <i class="vec">R</i> − <span class="frac"><span><i>m</i><sub>2</sub></span><span><i>M</i></span></span><i class="vec">r</i>, &nbsp;&nbsp; <i class="vec">r</i><sub>2</sub> = <i class="vec">R</i> + <span class="frac"><span><i>m</i><sub>1</sub></span><span><i>M</i></span></span><i class="vec">r</i></div>
+      <div><i>a</i><sub>1</sub> : <i>a</i><sub>2</sub> = <i>m</i><sub>2</sub> : <i>m</i><sub>1</sub>, &nbsp; <i>a</i><sub>1</sub> + <i>a</i><sub>2</sub> = <i>a</i></div>
+    </div>
+    <p>Beide Körper laufen auf <b>ähnlichen Ellipsen</b> mit derselben Exzentrizität und Periode, der Schwerpunkt ist ihr gemeinsamer Brennpunkt. Die Verbindungslinie geht stets durch ihn. Im Schwerpunktsystem sind die Impulse entgegengesetzt gleich, <i class="m">m</i><sub>1</sub><i class="m">v</i><sub>1</sub> = <i class="m">m</i><sub>2</sub><i class="m">v</i><sub>2</sub>.</p>
+    <div class="formula">
+      <div><i>E</i> = <span class="frac"><span>1</span><span>2</span></span><i>MV</i><sup>2</sup> + <span class="frac"><span>1</span><span>2</span></span><i>μv</i><sup>2</sup> − <span class="frac"><span><i>G m</i><sub>1</sub><i>m</i><sub>2</sub></span><span><i>r</i></span></span></div>
+      <div><small>Schwerpunktbewegung + Relativbewegung; für die Ellipse gilt</small></div>
+      <div><span class="frac"><span>1</span><span>2</span></span><i>μv</i><sup>2</sup> − <span class="frac"><span><i>G m</i><sub>1</sub><i>m</i><sub>2</sub></span><span><i>r</i></span></span> = −<span class="frac"><span><i>G m</i><sub>1</sub><i>m</i><sub>2</sub></span><span>2<i>a</i></span></span></div>
+      <div><i>T</i><sup>2</sup> = <span class="frac"><span>4π<sup>2</sup><i>a</i><sup>3</sup></span><span><i>G</i>(<i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>)</span></span> &nbsp;&nbsp; <small>drittes Keplersches Gesetz</small></div>
+    </div>
+    <p><b>Grenzfall <i class="m">m</i><sub>2</sub> ≪ <i class="m">m</i><sub>1</sub>:</b> Dann ist <i class="m">μ</i> ≈ <i class="m">m</i><sub>2</sub>, der Schwerpunkt liegt im schweren Körper, und dieser ruht praktisch. Das ist das <b>Kepler-Problem</b> mit fester Sonne, wie es für Satelliten und Raumsonden fast immer genügt. Im dritten Keplerschen Gesetz steht aber genau genommen die Gesamtmasse.</p>
+    <p><b>Radialgeschwindigkeit:</b> Auch der Hauptkörper läuft auf einer kleinen Ellipse. Ein Beobachter sieht ihn periodisch auf sich zu und von sich weg laufen (Doppler-Verschiebung):</p>
+    <div class="formula">
+      <div><i>K</i><sub>1</sub> = <span class="frac"><span><i>m</i><sub>2</sub></span><span><i>M</i></span></span><span class="frac"><span>2π<i>a</i> sin <i>i</i></span><span><i>T</i>√(1 − <i>e</i><sup>2</sup>)</span></span> &nbsp;&nbsp; <small>Halbamplitude</small></div>
+    </div>
+    <p>So wurde 1995 mit 51 Pegasi b der erste Planet um einen sonnenähnlichen Stern gefunden. Da nur sin <i class="m">i</i> eingeht, liefert die Methode allein die Mindestmasse <i class="m">m</i><sub>2</sub> sin <i class="m">i</i>.</p>
+    <h4>Aufgaben</h4>
+    <ol class="tasks" id="tasks"></ol>
+  </aside>
+</div>
+<p class="foot">Modell: zwei Punktmassen mit Newtonscher Gravitation, keine weiteren Körper, keine Gezeiten, keine Relativitätstheorie. Die Relativbahn wird exakt über die Kepler-Gleichung <i class="m">M</i> = <i class="m">E</i> − <i class="m">e</i> sin <i class="m">E</i> berechnet (Newton-Verfahren), daraus folgen die Bahnen beider Körper; die Animationszeit beginnt im Perizentrum. Die Schwerpunktgeschwindigkeit <i class="m">V</i> zeigt in der Bildebene nach rechts und wird in Einheiten der Kreisbahngeschwindigkeit <i class="m">v</i><sub>K</sub> = √(<i class="m">GM</i>/<i class="m">a</i>) der Relativbewegung angegeben. Im Laborsystem folgt die Ansicht dem Schwerpunkt, das mitlaufende Gitter ist im Laborsystem fest. Der Beobachter blickt von unten in der Bildebene auf das System, um den Winkel <i class="m">i</i> gegen die Bahnnormale geneigt (<i class="m">i</i> = 90°: Blick genau in der Bahnebene); die Radialgeschwindigkeit ist ohne die konstante Systemgeschwindigkeit dargestellt, positiv heißt vom Beobachter weg (Rotverschiebung). Die Körperradien stammen aus dem Beispiel; ändert man eine Masse, wird der Radius bei gleicher mittlerer Dichte angepasst. Bahndaten (große Halbachse, Exzentrizität, Massen) gerundet nach üblichen Tabellenwerten; 51 Peg b mit <i class="m">m</i><sub>2</sub> = 0,46 Jupitermassen und <i class="m">i</i> = 90°.</p>
+</div>
+
+<script>
+/*CORE-START*/
+const G=6.6743e-11,MSUN=1.98847e30,MEARTH=5.9722e24,MJUP=1.89813e27,AU=1.495978707e11,RSUN=6.957e8,REARTH=6.371e6,RJUP=6.9911e7,DAY=86400,YEAR=365.25*DAY;
+// Systemgrößen aus den Parametern
+function system(m1,m2,a,e){const M=m1+m2,mu=m1*m2/M,n=Math.sqrt(G*M/(a*a*a)),T=2*Math.PI/n;
+  return {m1,m2,M,mu,a,e,n,T,f1:m2/M,f2:m1/M,a1:a*m2/M,a2:a*m1/M,vc:Math.sqrt(G*M/a),
+    E:-G*m1*m2/(2*a),L:mu*Math.sqrt(G*M*a*(1-e*e)),vp:Math.sqrt(G*M/a*(1+e)/(1-e)),va:Math.sqrt(G*M/a*(1-e)/(1+e))};}
+// Kepler-Gleichung M = E − e sin E
+function eccAnom(Mm,e){let E=e<0.8?Mm:Math.PI;for(let k=0;k<50;k++){const d=(E-e*Math.sin(E)-Mm)/(1-e*Math.cos(E));E-=d;if(Math.abs(d)<1e-14)break;}return E;}
+// Relativbahn r = r2 − r1 zur Phase p (in Umläufen, p = 0 im Perizentrum), Periapsis in Richtung om
+function relState(S,p,om){let fr=p-Math.floor(p);const E=eccAnom(2*Math.PI*fr,S.e),cE=Math.cos(E),sE=Math.sin(E),q=Math.sqrt(1-S.e*S.e),d=1-S.e*cE;
+  const x=S.a*(cE-S.e),y=S.a*q*sE,vx=-S.a*S.n*sE/d,vy=S.a*S.n*q*cE/d,c=Math.cos(om),s=Math.sin(om);
+  return {x:c*x-s*y,y:s*x+c*y,vx:c*vx-s*vy,vy:s*vx+c*vy,r:S.a*d};}
+// beide Körper im Schwerpunktsystem
+function bodies(S,p,om){const R=relState(S,p,om);
+  return {rel:R,x1:-S.f1*R.x,y1:-S.f1*R.y,x2:S.f2*R.x,y2:S.f2*R.y,vx1:-S.f1*R.vx,vy1:-S.f1*R.vy,vx2:S.f2*R.vx,vy2:S.f2*R.vy};}
+// Energien im Schwerpunktsystem
+function energies(S,p,om){const B=bodies(S,p,om),v2=B.rel.vx*B.rel.vx+B.rel.vy*B.rel.vy;
+  const ek1=0.5*S.m1*(B.vx1*B.vx1+B.vy1*B.vy1),ek2=0.5*S.m2*(B.vx2*B.vx2+B.vy2*B.vy2),ep=-G*S.m1*S.m2/B.rel.r;
+  return {ek1,ek2,ekr:0.5*S.mu*v2,ep,et:ek1+ek2+ep};}
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const NF=(d)=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let m=x/Math.pow(10,e);if(Math.abs(+m.toFixed(d))>=10){m/=10;e++;}return (NF(d).format(m)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−');}
+function fmt(x,sig=3){if(x===null||!isFinite(x))return '—';const ax=Math.abs(x);return (ax>=0.01&&ax<1e5)||x===0?num(x,sig):sci(x,sig>2?2:1);}
+const fLen=m=>{const a=Math.abs(m);if(!isFinite(m))return '—';if(a>=0.02*AU)return fmt(m/AU)+' AE';if(a>=1e3)return fmt(m/1e3)+' km';if(a>=0.01)return fmt(m)+' m';return sci(m,1)+' m';};
+const fMass=kg=>{if(kg>=0.08*MSUN)return fmt(kg/MSUN)+' M☉';if(kg>=0.05*MJUP)return fmt(kg/MJUP)+' M♃';if(kg>=0.01*MEARTH)return fmt(kg/MEARTH)+' M⊕';return sci(kg,2)+' kg';};
+const fTime=s=>{if(s<120)return fmt(s)+' s';if(s<2*3600)return fmt(s/60)+' min';if(s<2*DAY)return fmt(s/3600)+' h';if(s<2*YEAR)return fmt(s/DAY)+' d';return fmt(s/YEAR)+' a';};
+const fVel=v=>{const a=Math.abs(v);if(a>=1e3)return fmt(v/1e3)+' km/s';if(a>=0.01)return fmt(v)+' m/s';if(a===0)return '0 m/s';return sci(v,1)+' m/s';};
+const pct=x=>(x>0.9999&&x<1?'> 99,99':num(100*x,4))+' %';
+
+/* ----- Beispiele ----- */
+const EX=[
+  {id:'em',name:'Erde – Mond',n1:'Erde',n2:'Mond',m1:MEARTH,m2:7.342e22,a:3.844e8,e:0.0549,R1:REARTH,R2:1.7374e6},
+  {id:'se',name:'Sonne – Erde',n1:'Sonne',n2:'Erde',m1:MSUN,m2:MEARTH,a:AU,e:0.0167,R1:RSUN,R2:REARTH},
+  {id:'sj',name:'Sonne – Jupiter',n1:'Sonne',n2:'Jupiter',m1:MSUN,m2:MJUP,a:5.2038*AU,e:0.0489,R1:RSUN,R2:RJUP},
+  {id:'pc',name:'Pluto – Charon',n1:'Pluto',n2:'Charon',m1:1.303e22,m2:1.586e21,a:1.9596e7,e:0.0002,R1:1.1883e6,R2:6.06e5},
+  {id:'iss',name:'Erde – ISS',n1:'Erde',n2:'ISS',m1:MEARTH,m2:4.2e5,a:REARTH+4.2e5,e:0.0005,R1:REARTH,R2:55},
+  {id:'bin',name:'Doppelstern aus zwei Sonnen',n1:'Stern A',n2:'Stern B',m1:MSUN,m2:MSUN,a:AU,e:0.5,R1:RSUN,R2:RSUN},
+  {id:'sir',name:'Sirius A – Sirius B (weißer Zwerg)',n1:'Sirius A',n2:'Sirius B',m1:2.063*MSUN,m2:1.018*MSUN,a:19.8*AU,e:0.5914,R1:1.711*RSUN,R2:0.0084*RSUN},
+  {id:'peg',name:'51 Pegasi – 51 Peg b (heißer Jupiter)',n1:'51 Peg',n2:'51 Peg b',m1:1.09*MSUN,m2:0.46*MJUP,a:7.88e9,e:0.0,R1:1.24*RSUN,R2:1.2*RJUP}
+];
+const EXM=Object.fromEntries(EX.map(e=>[e.id,e]));
+const lg=Math.log10,pw=x=>Math.pow(10,x);
+const DEF={ex:'em',V:0,inc:90,om:0,dur:8,mode:'cm',arr:'p',scale:false,trail:true};
+let st={},S=null,dirty=true,phase=0,playing=true,body={n1:'Körper 1',n2:'Körper 2',rho1:1,rho2:1};
+
+/* ----- Regler ----- */
+const PDEF={
+  lgM1:{box:'#ctl-m1',lab:'Masse <i>m</i><sub>1</sub> (Hauptkörper)',min:21,max:31.5,step:0.01,fmt:v=>fMass(pw(v)),hint:'Erde 6,0·10²⁴ kg · Sonne 2,0·10³⁰ kg'},
+  lgQ:{box:'#ctl-q',lab:'Massenverhältnis <i>m</i><sub>2</sub>/<i>m</i><sub>1</sub>',min:-20,max:0,step:0.01,fmt:v=>v>-2?num(pw(v),3):sci(pw(v),1),hint:'logarithmisch: Raumstation … gleich schwere Partner'},
+  lgA:{box:'#ctl-a',lab:'große Halbachse <i>a</i> der Relativbahn',min:6.5,max:13.5,step:0.01,fmt:v=>fLen(pw(v)),hint:'Erde–Mond 384 400 km · 1 AE = 1,496·10⁸ km'},
+  e:{box:'#ctl-e',lab:'Exzentrizität <i>e</i>',min:0,max:0.9,step:0.01,fmt:v=>NF(2).format(v),hint:'0 = Kreis; alle drei Bahnen haben dasselbe e'},
+  V:{box:'#ctl-V',lab:'Schwerpunktgeschw. <i>V</i>',min:0,max:1.5,step:0.01,fmt:v=>NF(2).format(v)+' v<sub>K</sub>',hint:''},
+  inc:{box:'#ctl-inc',lab:'Neigung <i>i</i> der Bahn',min:0,max:90,step:1,fmt:v=>v+'°',hint:'90° = Blick genau in der Bahnebene, 0° = Draufsicht'},
+  om:{box:'#ctl-om',lab:'Lage des Perizentrums <i>ω</i>',min:0,max:360,step:1,fmt:v=>v+'°',hint:'dreht die Bahn gegen die Sichtlinie'},
+  dur:{box:'#ctl-dur',lab:'Animationsdauer eines Umlaufs',min:2,max:40,step:0.5,fmt:v=>num(v,3)+' s',hint:''}
+};
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
+    w.innerHTML=`<div class="row"><label for="p-${k}">${d.lab}</label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}" min="${d.min}" max="${d.max}" step="${d.step}"><div class="hint" id="h-${k}">${d.hint}</div>`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{st[k]=parseFloat(inp.value);if(['lgM1','lgQ','lgA','e'].includes(k))st.sel=null;sync();});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  const sel=$('#example');sel.innerHTML='<option value="">— eigene Werte —</option>'+EX.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  sel.addEventListener('change',()=>{if(sel.value)selectEx(sel.value);else{st.sel=null;sync();}});
+  document.querySelectorAll('#segMode button').forEach(b=>b.addEventListener('click',()=>{st.mode=b.dataset.m;sync();}));
+  document.querySelectorAll('#segArr button').forEach(b=>b.addEventListener('click',()=>{st.arr=b.dataset.a;sync();}));
+  $('#o-scale').addEventListener('change',e=>{st.scale=e.target.checked;sync();});
+  $('#o-trail').addEventListener('change',e=>{st.trail=e.target.checked;sync();});
+  $('#play').addEventListener('click',()=>setPlay(!playing));
+  $('#restart').addEventListener('click',()=>{phase=0;dirty=true;});
+  $('#defaults').addEventListener('click',()=>{st=Object.assign({},st,{V:DEF.V,inc:DEF.inc,om:DEF.om,dur:DEF.dur,mode:DEF.mode,arr:DEF.arr,scale:DEF.scale,trail:DEF.trail});selectEx(DEF.ex);phase=0;setPlay(true);});
+  const cv=$('#view');
+  cv.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();setPlay(!playing);}
+    else if(e.key==='1'||e.key==='2'||e.key==='3'){st.mode=['lab','cm','rel'][+e.key-1];sync();}
+    else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();setPlay(false);phase+=(e.key==='ArrowRight'?1:-1)/72;dirty=true;}});
+  cv.addEventListener('click',()=>cv.focus());
+}
+function setPlay(on){playing=on;$('#play').innerHTML=on?'❚❚ Pause':'▶ Weiter';$('#play').setAttribute('aria-label',on?'Animation anhalten':'Animation fortsetzen');dirty=true;}
+function selectEx(id){const e=EXM[id];st.lgM1=lg(e.m1);st.lgQ=lg(e.m2/e.m1);st.lgA=lg(e.a);st.e=e.e;st.sel=id;
+  body={n1:e.n1,n2:e.n2,rho1:e.m1/(4/3*Math.PI*e.R1**3),rho2:e.m2/(4/3*Math.PI*e.R2**3)};phase=0;sync();}
+function sync(){for(const k in PDEF){const d=PDEF[k];st[k]=Math.max(d.min,Math.min(d.max,st[k]));$('#p-'+k).value=st[k];$('#o-'+k).innerHTML=d.fmt(st[k]);}
+  $('#example').value=st.sel||'';$('#o-scale').checked=st.scale;$('#o-trail').checked=st.trail;
+  document.querySelectorAll('#segMode button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===st.mode)));
+  document.querySelectorAll('#segArr button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.a===st.arr)));
+  if(!st.sel)body=Object.assign({},body,{n1:'Körper 1',n2:'Körper 2'});
+  else{const e=EXM[st.sel];body.n1=e.n1;body.n2=e.n2;}
+  S=system(pw(st.lgM1),pw(st.lgM1+st.lgQ),pw(st.lgA),st.e);
+  S.R1=Math.cbrt(S.m1/(4/3*Math.PI*body.rho1));S.R2=Math.cbrt(S.m2/(4/3*Math.PI*body.rho2));S.V=st.V*S.vc;S.om=st.om*Math.PI/180;S.sini=Math.sin(st.inc*Math.PI/180);
+  if(st.sel){const e=EXM[st.sel];S.R1=e.R1;S.R2=e.R2;}
+  $('#h-V').innerHTML=`= ${fVel(S.V)}, v<sub>K</sub> = √(GM/a) = ${fVel(S.vc)}`;
+  $('#h-dur').innerHTML=`Zeitraffer: 1 s Animation ≙ ${fTime(S.T/st.dur)}`;
+  dirty=true;}
+
+/* ----- Aufgaben ----- */
+const TASKS=[
+  {t:'<b>Wo liegt der Schwerpunkt?</b> Berechne für Erde und Mond <i class="m">a</i><sub>1</sub> = <i class="m">a</i>·<i class="m">m</i><sub>2</sub>/<i class="m">M</i> und vergleiche mit dem Erdradius. Prüfe im Feld rechts unten. Die Erde „eiert“ jeden Monat um diesen Punkt.',ex:'em',set:{mode:'cm',scale:true}},
+  {t:'<b>Die Sonne wackelt.</b> Bei Sonne und Jupiter liegt der Schwerpunkt knapp außerhalb der Sonne. Wie groß ist <i class="m">a</i><sub>1</sub> in Sonnenradien? Wie schnell bewegt sich die Sonne dabei, und wie schnell wegen der Erde?',ex:'sj',set:{mode:'cm'}},
+  {t:'<b>Gleiche Impulse, verschiedene Energien.</b> Schalte auf Geschwindigkeitspfeile und vergleiche mit den Impulspfeilen. Zeige mit <i class="m">m</i><sub>1</sub><i class="m">v</i><sub>1</sub> = <i class="m">m</i><sub>2</sub><i class="m">v</i><sub>2</sub>, dass <i class="m">E</i><sub>kin,1</sub>/<i class="m">E</i><sub>kin,2</sub> = <i class="m">m</i><sub>2</sub>/<i class="m">m</i><sub>1</sub>. Welcher Körper trägt bei Pluto und Charon wie viel der Bewegungsenergie?',ex:'pc',set:{mode:'cm',arr:'v'}},
+  {t:'<b>Wann ist das Kepler-Problem gut genug?</b> Verkleinere bei Sonne–Jupiter das Massenverhältnis und beobachte <i class="m">μ</i>/<i class="m">m</i><sub>2</sub>. Um wie viel Prozent verkürzt Jupiters Masse seine Umlaufzeit gegenüber einem Testkörper auf derselben Bahn? Und bei der ISS?',ex:'sj',set:{mode:'rel'}},
+  {t:'<b>Schleifen im Laborsystem.</b> Gib dem Doppelstern eine Schwerpunktgeschwindigkeit. Bei welchem <i class="m">V</i> verschwinden die Schleifen der Spuren? Begründe: Ein Körper läuft rückwärts, solange seine Bahngeschwindigkeit um S größer als <i class="m">V</i> ist.',ex:'bin',set:{mode:'lab',V:0.25}},
+  {t:'<b>Sternmassen wiegen.</b> Für Sirius misst man <i class="m">T</i> = 50,1 a und <i class="m">a</i> = 19,8 AE. Berechne daraus mit dem dritten Keplerschen Gesetz die Gesamtmasse in Sonnenmassen. Wie folgt das Massenverhältnis aus <i class="m">a</i><sub>1</sub>/<i class="m">a</i><sub>2</sub>?',ex:'sir',set:{mode:'cm'}},
+  {t:'<b>Exoplanet per Doppler.</b> 51 Peg zeigt <i class="m">K</i><sub>1</sub> ≈ 55 m/s bei <i class="m">T</i> = 4,23 d. Leite <i class="m">m</i><sub>2</sub> sin <i class="m">i</i> her (<i class="m">m</i><sub>2</sub> ≪ <i class="m">m</i><sub>1</sub>). Verringere die Neigung: Was misst ein Beobachter bei <i class="m">i</i> = 0°? Stelle dann <i class="m">e</i> = 0,6 ein und ändere <i class="m">ω</i>: Wie verformt sich die Kurve?',ex:'peg',set:{mode:'cm'}},
+  {t:'<b>Energie umverteilen.</b> Beim exzentrischen Doppelstern wechseln kinetische und potentielle Energie ständig, die Summe bleibt. Lies im Energiediagramm <i class="m">E</i><sub>pot</sub> im Perizentrum und Apozentrum ab und prüfe <i class="m">E</i> = −<i class="m">G m</i><sub>1</sub><i class="m">m</i><sub>2</sub>/(2<i class="m">a</i>). Was kommt im Laborsystem hinzu?',ex:'bin',set:{mode:'cm',e:0.7}},
+  {t:'<b>Raumstation.</b> Um wie viel bewegt sich die Erde, weil die ISS sie umkreist? Vergleiche <i class="m">a</i><sub>1</sub> mit der Größe eines Atoms (10⁻¹⁰ m). Warum darf man in der Raumfahrt die Erde als ruhend ansehen?',ex:'iss',set:{mode:'rel'}}
+];
+(function(){const ol=$('#tasks');TASKS.forEach(t=>{const li=document.createElement('li');
+  li.innerHTML=`<p>${t.t}</p><button class="btn" type="button">Einstellen</button>`;
+  li.querySelector('button').addEventListener('click',()=>{st=Object.assign({},st,{V:0,inc:90,om:0,arr:'p',scale:false,trail:true});selectEx(t.ex);
+    const s=Object.assign({},t.set);if('e' in s){st.e=s.e;st.sel=null;delete s.e;}Object.assign(st,s);setPlay(true);sync();$('#view').scrollIntoView({behavior:'smooth',block:'nearest'});});
+  ol.appendChild(li);});})();
+
+/* ----- Zeichenhilfen ----- */
+let C={},dpr=1;
+function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={stage:g('--stage'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),accent:g('--accent'),b1:g('--c-b1'),b2:g('--c-b2'),cm:g('--c-cm'),mu:g('--c-mu'),ep:g('--c-ep'),et:g('--c-et'),warn:g('--c-warn'),mono:g('--f-mono')||'monospace',ui:g('--f-ui')||'sans-serif'};}
+function ctxOf(cv){const r=cv.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function rgb(col){if(col.startsWith('#')&&col.length===7){const n=parseInt(col.slice(1),16);return [n>>16,(n>>8)&255,n&255];}return [128,128,128];}
+function hexA(col,a){const [r,g,b]=rgb(col);return `rgba(${r},${g},${b},${a})`;}
+function halo(c,txt,x,y){c.save();c.strokeStyle=hexA(C.stage,0.92);c.lineWidth=4;c.lineJoin='round';c.strokeText(txt,x,y);c.restore();c.fillText(txt,x,y);}
+function rich(c,s,x,y,o){o=o||{};const sz=o.size||11.5,wt=o.weight||500,parts=[],re=/([_^])\{([^}]*)\}/g;let last=0,m;
+  while((m=re.exec(s))){if(m.index>last)parts.push([s.slice(last,m.index),0]);parts.push([m[2],m[1]==='_'?1:-1]);last=re.lastIndex;}
+  if(last<s.length)parts.push([s.slice(last),0]);
+  const fnt=k=>`${wt} ${k?sz*0.74:sz}px ${C.ui}`;let W=0;for(const q of parts){c.font=fnt(q[1]);W+=c.measureText(q[0]).width;}
+  const al=o.align||'left';let px=al==='center'?x-W/2:al==='right'?x-W:x;const ta=c.textAlign;c.textAlign='left';
+  for(const q of parts){c.font=fnt(q[1]);const dy=q[1]===1?sz*0.3:q[1]===-1?-sz*0.42:0;if(o.halo)halo(c,q[0],px,y+dy);else c.fillText(q[0],px,y+dy);px+=c.measureText(q[0]).width;}
+  c.textAlign=ta;return W;}
+function arrow(c,x,y,dx,dy,col,lw){const L=Math.hypot(dx,dy);if(L<2)return;c.strokeStyle=col;c.fillStyle=col;c.lineWidth=lw||2.2;
+  const ux=dx/L,uy=dy/L,h=Math.min(10,0.45*L+3);c.beginPath();c.moveTo(x,y);c.lineTo(x+dx-ux*h*0.7,y+dy-uy*h*0.7);c.stroke();
+  c.beginPath();c.moveTo(x+dx,y+dy);c.lineTo(x+dx-ux*h-uy*h*0.45,y+dy-uy*h+ux*h*0.45);c.lineTo(x+dx-ux*h+uy*h*0.45,y+dy-uy*h-ux*h*0.45);c.closePath();c.fill();}
+function cross(c,x,y,r,col){c.strokeStyle=col;c.lineWidth=2;c.beginPath();c.arc(x,y,r,0,2*Math.PI);c.stroke();c.beginPath();c.moveTo(x-r-3,y);c.lineTo(x+r+3,y);c.moveTo(x,y-r-3);c.lineTo(x,y+r+3);c.stroke();}
+function niceStep(span,n){const raw=span/n,p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p;return (f<1.5?1:f<3.5?2:f<7.5?5:10)*p;}
+function disc(c,x,y,r,col){c.fillStyle=col;c.beginPath();c.arc(x,y,r,0,2*Math.PI);c.fill();c.strokeStyle=hexA(C.stage,0.9);c.lineWidth=1.2;c.stroke();}
+
+/* ----- Bahnansicht ----- */
+const NT=240;
+function drawView(){const {c,W,H}=ctxOf($('#view'));const mode=st.mode,om=S.om,B=bodies(S,phase,om);
+  const pad=30,obs=mode==='rel'?0:30;
+  // Ausdehnung: Ellipsen der gezeigten Körper (Schwerpunkt bzw. Körper 1 im Ursprung)
+  let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;const ext=(x,y)=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);};
+  const orb1=[],orb2=[],orbR=[];for(let k=0;k<=NT;k++){const R=relState(S,k/NT,om);orbR.push([R.x,R.y]);orb1.push([-S.f1*R.x,-S.f1*R.y]);orb2.push([S.f2*R.x,S.f2*R.y]);}
+  if(mode==='rel'){orbR.forEach(p=>ext(p[0],p[1]));ext(0,0);}else{orb1.forEach(p=>ext(p[0],p[1]));orb2.forEach(p=>ext(p[0],p[1]));}
+  const fit=()=>Math.min((W-2*pad)/Math.max(x1-x0,1e-30),(H-2*pad-obs)/Math.max(y1-y0,1e-30))*0.92;
+  let sc=fit();
+  // Laborsystem: so weit herauszoomen, dass etwa ein Umlauf der Spur sichtbar ist (höchstens Faktor 2,5)
+  if(mode==='lab'&&st.trail&&S.V>0){const sc0=sc,sh=S.V*S.T;for(let k=0;k<=60;k++){const tau=k/60,Bk=bodies(S,phase-tau,om);ext(Bk.x1-sh*tau,Bk.y1);ext(Bk.x2-sh*tau,Bk.y2);}sc=Math.max(fit(),0.4*sc0);
+    if(sc>fit()){x0=Math.max(x0,x1-(W-2*pad)/sc/0.92);}}
+  const bw=Math.max(x1-x0,1e-30),bh=Math.max(y1-y0,1e-30);
+  const cx=W/2-(x0+x1)/2*sc,cy=(H-obs)/2+(y0+y1)/2*sc;const X=x=>cx+x*sc,Y=y=>cy-y*sc;
+  // Gitter (Laborsystem: im Labor fest, läuft also gegen die Ansicht)
+  const g=niceStep(Math.max(bw,bh),6),gs=g*sc;let off=0;
+  if(mode==='lab'&&S.V>0){off=((S.V*S.T*phase)%g+g)%g*sc;}
+  c.strokeStyle=C.grid;c.lineWidth=1;c.beginPath();
+  for(let x=((cx-off)%gs+gs)%gs;x<W;x+=gs){c.moveTo(Math.round(x)+0.5,0);c.lineTo(Math.round(x)+0.5,H);}
+  for(let y=(cy%gs+gs)%gs;y<H;y+=gs){c.moveTo(0,Math.round(y)+0.5);c.lineTo(W,Math.round(y)+0.5);}c.stroke();
+  // Maßstab
+  {const L=niceStep(W/sc*0.6,3);const lp=L*sc;c.strokeStyle=C.muted;c.lineWidth=1.5;c.beginPath();c.moveTo(14,H-14);c.lineTo(14+lp,H-14);c.moveTo(14,H-18);c.lineTo(14,H-10);c.moveTo(14+lp,H-18);c.lineTo(14+lp,H-10);c.stroke();
+    c.fillStyle=C.muted;c.font=`11px ${C.mono}`;c.textAlign='left';c.textBaseline='bottom';c.fillText(fLen(L),14,H-20);}
+  // Körpergrößen
+  const r1px=st.scale?Math.max(1.5,S.R1*sc):9,r2px=st.scale?Math.max(1.5,S.R2*sc):Math.max(3.5,Math.min(9,9*Math.cbrt(S.m2/S.m1)*1.6));
+  const path=(pts,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();pts.forEach((p,k)=>{const x=X(p[0]),y=Y(p[1]);k?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();c.setLineDash([]);};
+  let p1,p2,pS,v1,v2;
+  if(mode==='rel'){
+    if(st.trail)path(orbR,hexA(C.mu,0.75),1.8);
+    // Bahn von Körper 2 um S zum Vergleich (gestrichelt, Schwerpunkt im Ursprung angeheftet wäre irreführend: hier um Körper 1)
+    p1=[0,0];p2=[B.rel.x,B.rel.y];pS=[S.f1*B.rel.x,S.f1*B.rel.y];
+    c.strokeStyle=hexA(C.ink,0.45);c.lineWidth=1.2;c.setLineDash([4,4]);c.beginPath();c.moveTo(X(0),Y(0));c.lineTo(X(p2[0]),Y(p2[1]));c.stroke();c.setLineDash([]);
+    disc(c,X(0),Y(0),r1px,C.b1);
+    cross(c,X(pS[0]),Y(pS[1]),4,C.cm);
+    disc(c,X(p2[0]),Y(p2[1]),Math.max(4,r2px),C.mu);
+    if(st.arr!=='0'){const vmax=S.vp,sca=0.2*Math.min(W,H)/vmax;arrow(c,X(p2[0]),Y(p2[1]),B.rel.vx*sca,-B.rel.vy*sca,C.mu,2.4);}
+    c.fillStyle=C.b1;c.font=`600 12px ${C.ui}`;c.textBaseline='bottom';c.textAlign='left';rich(c,`${body.n1} (fest gehalten)`,X(0)+r1px+5,Y(0)-4,{size:12,weight:600,halo:true});
+    c.fillStyle=C.mu;rich(c,'μ = m_{1}m_{2}/M',X(p2[0])+Math.max(4,r2px)+5,Y(p2[1])-4,{size:12,weight:600,halo:true});
+    c.fillStyle=C.cm;c.textBaseline='top';rich(c,'S',X(pS[0])+7,Y(pS[1])+4,{size:12,weight:600,halo:true});
+  }else{
+    const lab=mode==='lab';
+    if(st.trail){
+      if(!lab){path(orb1,hexA(C.b1,0.8),1.8);path(orb2,hexA(C.b2,0.8),1.8);}
+      else{const N=300,tr1=[],tr2=[],sh=S.V*S.T;for(let k=0;k<=N;k++){const tau=1.5*k/N,Bk=bodies(S,phase-tau,om);tr1.push([Bk.x1-sh*tau,Bk.y1]);tr2.push([Bk.x2-sh*tau,Bk.y2]);}
+        c.save();const fade=(tr,col)=>{for(let k=0;k<N;k+=6){c.strokeStyle=hexA(col,0.85*(1-k/N));c.lineWidth=1.8;c.beginPath();c.moveTo(X(tr[k][0]),Y(tr[k][1]));for(let j=k+1;j<=Math.min(N,k+6);j++)c.lineTo(X(tr[j][0]),Y(tr[j][1]));c.stroke();}};
+        fade(tr1,C.b1);fade(tr2,C.b2);
+        if(S.V>0){c.strokeStyle=hexA(C.cm,0.7);c.setLineDash([5,4]);c.lineWidth=1.4;c.beginPath();c.moveTo(X(-sh*1.5),Y(0));c.lineTo(X(0),Y(0));c.stroke();c.setLineDash([]);}c.restore();}
+    }
+    p1=[B.x1,B.y1];p2=[B.x2,B.y2];pS=[0,0];
+    c.strokeStyle=hexA(C.ink,0.45);c.lineWidth=1.2;c.setLineDash([4,4]);c.beginPath();c.moveTo(X(p1[0]),Y(p1[1]));c.lineTo(X(p2[0]),Y(p2[1]));c.stroke();c.setLineDash([]);
+    disc(c,X(p1[0]),Y(p1[1]),r1px,C.b1);disc(c,X(p2[0]),Y(p2[1]),r2px,C.b2);cross(c,X(0),Y(0),4,C.cm);
+    if(st.arr!=='0'){const V=lab?S.V:0;v1=[B.vx1+V,B.vy1];v2=[B.vx2+V,B.vy2];
+      const vm1=Math.max(V+S.f1*S.vp,1e-300),vm2=V+S.f2*S.vp;let s1,s2;const len=0.2*Math.min(W,H);
+      if(st.arr==='p'){const pm=Math.max(S.m1*vm1,S.m2*vm2);s1=S.m1*len/pm;s2=S.m2*len/pm;}else{s1=s2=len/Math.max(vm1,vm2);}
+      arrow(c,X(p1[0]),Y(p1[1]),v1[0]*s1,-v1[1]*s1,C.b1,2.4);arrow(c,X(p2[0]),Y(p2[1]),v2[0]*s2,-v2[1]*s2,C.b2,2.4);
+      if(lab&&S.V>0){const sV=st.arr==='p'?S.M*len/Math.max(S.m1*vm1,S.m2*vm2)*0.5:s1;arrow(c,X(0),Y(0),Math.min(S.V*sV,0.3*W),0,hexA(C.cm,0.9),2);}}
+    c.font=`600 12px ${C.ui}`;c.textBaseline='bottom';c.textAlign='left';
+    c.fillStyle=C.b1;rich(c,body.n1,X(p1[0])+r1px+5,Y(p1[1])-4,{size:12,weight:600,halo:true});
+    c.fillStyle=C.b2;rich(c,body.n2,X(p2[0])+r2px+5,Y(p2[1])-4,{size:12,weight:600,halo:true});
+    c.fillStyle=C.cm;c.textBaseline='top';rich(c,'S',X(0)+7,Y(0)+5,{size:12,weight:600,halo:true});
+    // Beobachter
+    const ox=W/2,oy=H-6;c.fillStyle=C.muted;c.strokeStyle=C.muted;c.lineWidth=1.4;c.beginPath();c.ellipse(ox,oy-8,9,5,0,0,2*Math.PI);c.stroke();c.beginPath();c.arc(ox,oy-8,2.3,0,2*Math.PI);c.fill();
+    c.font=`11px ${C.ui}`;c.textAlign='left';c.textBaseline='middle';c.fillText(`Beobachter (i = ${st.inc}°)`,ox+14,oy-8);
+  }
+  // Kennzeichnung des Bezugssystems
+  c.fillStyle=C.muted;c.font=`600 11px ${C.ui}`;c.textAlign='right';c.textBaseline='top';
+  c.fillText(mode==='lab'?(S.V>0?'Laborsystem · Ansicht folgt dem Schwerpunkt':'Laborsystem (Schwerpunkt ruht)'):mode==='cm'?'Schwerpunktsystem · S ruht im Ursprung':'Relativkoordinate r = r₂ − r₁',W-10,8);
+  // Warnung bei Berührung
+  if(S.a*(1-S.e)<S.R1+S.R2){c.fillStyle=C.warn;c.textAlign='left';c.fillText('Achtung: Die Körper würden sich im Perizentrum berühren.',10,8);}
+}
+
+/* ----- Energiediagramm ----- */
+function axisFrame(c,L,T,w,h,xl){c.strokeStyle=C.line;c.lineWidth=1;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;c.textAlign='center';c.textBaseline='top';
+  for(let k=0;k<=4;k++){const x=L+k/4*w;if(k>0&&k<4){c.strokeStyle=C.grid;c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();}c.fillText(NF(1).format(k/2).replace(',0',''),x,T+h+4);}
+  rich(c,xl,L+w/2,T+h+18,{size:11,align:'center'});}
+function drawEnergy(){const {c,W,H}=ctxOf($('#en'));const L=52,Rr=10,T=10,B=34,w=W-L-Rr,h=H-T-B,N=360,E0=Math.abs(S.E),om=S.om;
+  const rows=[];let lo=0,hi=0;for(let k=0;k<=N;k++){const q=energies(S,2*k/N,om),r=[q.ek1/E0,q.ek2/E0,q.ep/E0,q.et/E0];rows.push(r);for(const v of r){lo=Math.min(lo,v);hi=Math.max(hi,v);}}
+  const span=hi-lo,st0=niceStep(span,5);lo=Math.floor(lo/st0-0.3)*st0;hi=Math.ceil(hi/st0+0.3)*st0;
+  const X=t=>L+t/2*w,Y=v=>T+h-(v-lo)/(hi-lo)*h;
+  c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;c.textAlign='right';c.textBaseline='middle';
+  for(let v=lo;v<=hi+1e-9;v+=st0){c.strokeStyle=Math.abs(v)<1e-9?hexA(C.ink,0.35):C.grid;c.lineWidth=1;c.beginPath();c.moveTo(L,Y(v));c.lineTo(L+w,Y(v));c.stroke();c.fillText(num(v,3),L-4,Y(v));}
+  axisFrame(c,L,T,w,h,'Zeit t/T');
+  c.save();c.translate(11,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.fillStyle=C.muted;rich(c,'E / |E|',0,0,{size:11,align:'center'});c.restore();
+  const cols=[C.b1,C.b2,C.ep,C.et],lws=[2.2,2.2,2.2,2];
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  for(const j of [1,0,2,3]){c.strokeStyle=cols[j];c.lineWidth=lws[j];c.setLineDash(j===3?[6,4]:j===0?[7,4]:[]);c.beginPath();rows.forEach((r,k)=>{const x=X(2*k/N),y=Y(r[j]);k?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();}
+  c.setLineDash([]);c.restore();
+  const tc=((phase%2)+2)%2,xc=X(tc);c.strokeStyle=C.accent;c.lineWidth=1.5;c.setLineDash([3,3]);c.beginPath();c.moveTo(xc,T);c.lineTo(xc,T+h);c.stroke();c.setLineDash([]);
+  const q=energies(S,phase,om);[q.ek1,q.ek2,q.ep].forEach((v,j)=>{c.fillStyle=cols[j];c.beginPath();c.arc(xc,Y(v/E0),3.5,0,2*Math.PI);c.fill();});
+  // Beschriftung
+  const lab=[['E_{kin,1}',0],['E_{kin,2}',1],['E_{pot}',2],['E_{ges}',3]];
+  c.textBaseline='bottom';lab.forEach(([t,j])=>{const k=Math.round(N*(0.12+0.21*j)),v=rows[k][j];c.fillStyle=cols[j];rich(c,t,X(2*k/N),Y(v)-4,{size:11,weight:600,halo:true,align:'center'});});
+  const ekS=0.5*S.M*S.V*S.V;
+  $('#enNote').innerHTML=`Einheit |<i class="m">E</i>| = <i class="m">Gm</i><sub>1</sub><i class="m">m</i><sub>2</sub>/(2<i class="m">a</i>) = ${sci(E0,2)} J. ${body.n2} trägt <b>${pct(S.f2)}</b> der kinetischen Energie. `+
+    (S.V>0?`Im Laborsystem kommt die konstante Schwerpunktenergie ½<i class="m">MV</i>² = ${fmt(ekS/E0)}·|<i class="m">E</i>| hinzu.`:'Mit <i class="m">V</i> > 0 käme im Laborsystem die konstante Energie ½<i class="m">MV</i>² hinzu.');}
+
+/* ----- Radialgeschwindigkeit ----- */
+function drawRV(){const {c,W,H}=ctxOf($('#rv'));const L=54,Rr=10,T=10,B=34,w=W-L-Rr,h=H-T-B,N=360,om=S.om,si=S.sini;
+  const K1=S.f1*2*Math.PI*S.a*si/(S.T*Math.sqrt(1-S.e*S.e)),K2=K1*S.m1/S.m2,both=S.m1/S.m2<=40;
+  const rows=[];let vmax=0;for(let k=0;k<=N;k++){const Bk=bodies(S,2*k/N,om),r=[Bk.vy1*si,Bk.vy2*si];rows.push(r);vmax=Math.max(vmax,Math.abs(r[0]),both?Math.abs(r[1]):0);}
+  if(vmax<=0)vmax=S.f1*S.vp||1;
+  let u=1,un='m/s';if(vmax>=2000){u=1e3;un='km/s';}else if(vmax<0.5&&vmax>=5e-4){u=1e-2;un='cm/s';}
+  const ext=vmax/u,stp=niceStep(2*ext,4),top=Math.ceil(ext*1.08/stp)*stp||1;
+  const X=t=>L+t/2*w,Y=v=>T+h/2-v/u/top*h/2;
+  c.font=`10.5px ${C.mono}`;c.fillStyle=C.muted;c.textAlign='right';c.textBaseline='middle';
+  const tiny=ext<1e-3;
+  for(let v=-top;v<=top+1e-12;v+=stp){c.strokeStyle=Math.abs(v)<stp*1e-6?hexA(C.ink,0.35):C.grid;c.lineWidth=1;const y=T+h/2-v/top*h/2;c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();c.fillText(tiny?sci(v,0):num(v,3),L-4,y);}
+  axisFrame(c,L,T,w,h,'Zeit t/T');
+  c.save();c.translate(11,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.fillStyle=C.muted;rich(c,`v_{r} (${un})`,0,0,{size:11,align:'center'});c.restore();
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  const draw=(j,col)=>{c.strokeStyle=col;c.lineWidth=2.3;c.beginPath();rows.forEach((r,k)=>{const x=X(2*k/N),y=Y(r[j]);k?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();};
+  if(si>1e-6){draw(0,C.b1);if(both)draw(1,C.b2);}
+  c.restore();
+  const tc=((phase%2)+2)%2,xc=X(tc),Bc=bodies(S,phase,om);c.strokeStyle=C.accent;c.lineWidth=1.5;c.setLineDash([3,3]);c.beginPath();c.moveTo(xc,T);c.lineTo(xc,T+h);c.stroke();c.setLineDash([]);
+  if(si>1e-6){c.fillStyle=C.b1;c.beginPath();c.arc(xc,Y(Bc.vy1*si),3.5,0,2*Math.PI);c.fill();if(both){c.fillStyle=C.b2;c.beginPath();c.arc(xc,Y(Bc.vy2*si),3.5,0,2*Math.PI);c.fill();}}
+  else{c.fillStyle=C.muted;c.font=`12px ${C.ui}`;c.textAlign='center';c.textBaseline='middle';c.fillText('Draufsicht (i = 0°): keine Bewegung längs der Sichtlinie',L+w/2,T+h/2-14);}
+  $('#rvNote').innerHTML=`Halbamplitude ${body.n1}: <b>K<sub>1</sub> = ${fVel(K1)}</b>`+(both?`, ${body.n2}: K<sub>2</sub> = ${fVel(K2)}.`:`. ${body.n2} (K<sub>2</sub> = ${fVel(K2)}) ist hier nicht gezeigt.`)+' Positiv: vom Beobachter weg (Rotverschiebung).';}
+
+/* ----- Schwerpunkt und Körper 1 ----- */
+function drawBC(){const {c,W,H}=ctxOf($('#bc'));const om=S.om,B=bodies(S,phase,om),N=200;
+  const rmax=S.f1*S.a*(1+S.e),ext=Math.max(rmax+S.R1,1e-30),sc=(Math.min(W,H)/2-18)/ext,cx=W/2,cy=H/2;
+  const X=x=>cx+x*sc,Y=y=>cy-y*sc;
+  c.strokeStyle=C.grid;c.lineWidth=1;c.beginPath();c.moveTo(0,cy+0.5);c.lineTo(W,cy+0.5);c.moveTo(cx+0.5,0);c.lineTo(cx+0.5,H);c.stroke();
+  // Körper 1 maßstäblich
+  c.fillStyle=hexA(C.b1,0.28);c.strokeStyle=C.b1;c.lineWidth=1.6;c.beginPath();c.arc(X(B.x1),Y(B.y1),Math.max(1.5,S.R1*sc),0,2*Math.PI);c.fill();c.stroke();
+  // Bahn des Mittelpunkts von Körper 1
+  const orbPx=rmax*sc;
+  if(orbPx>=0.8){c.strokeStyle=C.b1;c.lineWidth=1.8;c.beginPath();for(let k=0;k<=N;k++){const R=relState(S,k/N,om),x=X(-S.f1*R.x),y=Y(-S.f1*R.y);k?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();}
+  c.fillStyle=C.b1;c.beginPath();c.arc(X(B.x1),Y(B.y1),2.6,0,2*Math.PI);c.fill();
+  // Richtung zu Körper 2
+  const ang=Math.atan2(B.y2,B.x2);arrow(c,X(B.x1),Y(B.y1),Math.cos(ang)*Math.min(40,W/5),-Math.sin(ang)*Math.min(40,W/5),hexA(C.b2,0.85),1.6);
+  cross(c,cx,cy,4,C.cm);
+  c.fillStyle=C.cm;c.font=`600 12px ${C.ui}`;c.textAlign='left';c.textBaseline='top';halo(c,'S',cx+7,cy+5);
+  c.fillStyle=C.muted;c.font=`11px ${C.ui}`;c.textBaseline='bottom';c.textAlign='left';c.fillText(`Kreis: ${body.n1} (Radius ${fLen(S.R1)})`,6,H-4);
+  const ratio=S.a1/S.R1;
+  $('#bcNote').innerHTML=`Mittlerer Abstand des Schwerpunkts vom Mittelpunkt: <i class="m">a</i><sub>1</sub> = ${fLen(S.a1)} = <b>${fmt(ratio)} R<sub>1</sub></b>. `+
+    (ratio<1?`Der Schwerpunkt liegt <b>im Inneren</b> von ${body.n1}.`:`Der Schwerpunkt liegt <b>außerhalb</b> von ${body.n1}.`)+(orbPx<0.8?' Die Bahn ist in diesem Maßstab unsichtbar klein.':'');}
+
+/* ----- Kennzahlen, Status, Legende ----- */
+function updateKZ(){const K1=S.f1*2*Math.PI*S.a*S.sini/(S.T*Math.sqrt(1-S.e*S.e));
+  const rows=[['gh','Massen'],['<i>M</i> = <i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>',fMass(S.M)],['<i>m</i><sub>2</sub>',fMass(S.m2)],['reduzierte Masse <i>μ</i>',fMass(S.mu)],['<i>μ</i>/<i>m</i><sub>2</sub> = <i>m</i><sub>1</sub>/<i>M</i>',S.f2>0.999999?'1 − '+sci(S.f1,1):num(S.f2,4),true],
+    ['gh','Bahnen'],['<i>a</i> (Relativbahn)',fLen(S.a)],['<i>a</i><sub>1</sub> (Körper 1 um S)',fLen(S.a1),true],['<i>a</i><sub>2</sub> (Körper 2 um S)',fLen(S.a2)],['<i>a</i><sub>1</sub>/<i>R</i><sub>1</sub>',fmt(S.a1/S.R1)],
+    ['Periode <i>T</i>',fTime(S.T),true],['<i>T</i> für <i>m</i><sub>2</sub> → 0',fTime(2*Math.PI*Math.sqrt(S.a**3/(G*S.m1)))],
+    ['gh','Erhaltungsgrößen (Schwerpunktsystem)'],['Energie <i>E</i>',sci(S.E,2)+' J'],['Drehimpuls <i>L</i>',sci(S.L,2)+' kg m²/s'],
+    ['gh','Geschwindigkeiten'],['<i>v</i> im Perizentrum (relativ)',fVel(S.vp)],['<i>v</i><sub>1</sub> im Perizentrum',fVel(S.f1*S.vp)],['<i>K</i><sub>1</sub> (Radialgeschw.)',fVel(K1),true]];
+  $('#kz').innerHTML=rows.map(r=>r[0]==='gh'?`<div class="gh">${r[1]}</div>`:`<dt>${r[0]}</dt><dd${r[2]?' class="hi"':''}>${r[1]}</dd>`).join('');}
+function statusText(){const name=st.sel?`<b>${EXM[st.sel].name}:</b> `:'';const q=S.m2/S.m1;let t;
+  if(q>0.3)t=`Die Massen sind vergleichbar (<i class="m">m</i><sub>2</sub>/<i class="m">m</i><sub>1</sub> = ${num(q,2)}). Beide Körper laufen deutlich sichtbar um den Schwerpunkt; <i class="m">μ</i> = ${num(S.mu/S.m2,3)} <i class="m">m</i><sub>2</sub>.`;
+  else if(q>1e-3)t=`Der Schwerpunkt liegt ${S.a1<S.R1?'<b>im Inneren</b>':'<b>außerhalb</b>'} des Hauptkörpers, ${fLen(S.a1)} von dessen Mitte. <i class="m">μ</i> ist um ${pct(1-S.f2)} kleiner als <i class="m">m</i><sub>2</sub>.`;
+  else t=`Fast ein Kepler-Problem: <i class="m">μ</i> weicht nur um ${S.f1<1e-6?sci(100*S.f1,1)+' %':pct(S.f1)} von <i class="m">m</i><sub>2</sub> ab, der Hauptkörper bewegt sich um nur ${fLen(S.a1)}.`;
+  if(st.mode==='lab'&&S.V>0){const loop2=S.f2*S.vp>S.V,loop1=S.f1*S.vp>S.V;t+=` Im Laborsystem: ${loop1&&loop2?'beide Spuren bilden Schleifen':loop2?`die Spur von ${body.n2} bildet Schleifen, weil ihre Bahngeschwindigkeit um S zeitweise größer ist als V`:'keine Schleifen, weil V größer ist als die Bahngeschwindigkeiten um S'}.`;}
+  if(S.a*(1-S.e)<S.R1+S.R2)t+=' <span class="warn">Die Körper würden sich im Perizentrum berühren – diese Bahn ist nicht realisierbar.</span>';
+  $('#status').innerHTML=name+t;}
+function sw(col,dash,lw=2.4){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="${col}" stroke-width="${lw}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;}
+function dot(col){return `<svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="${col}"/></svg>`;}
+function crossSvg(){return `<svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="3.5" fill="none" stroke="var(--c-cm)" stroke-width="1.6"/><path d="M0 7h14M7 0v14" stroke="var(--c-cm)" stroke-width="1.4"/></svg>`;}
+function buildLegend(){let it;
+  if(st.mode==='rel')it=[[dot('var(--c-b1)'),body.n1+' im Ursprung'],[dot('var(--c-mu)'),'fiktives Teilchen der Masse μ bei r = r₂ − r₁'],[crossSvg(),'Schwerpunkt S (bewegt sich in diesem System)'],[sw('var(--c-mu)'),'Relativbahn (Kepler-Ellipse, Brennpunkt im Ursprung)']];
+  else it=[[dot('var(--c-b1)'),body.n1+' (m₁)'],[dot('var(--c-b2)'),body.n2+' (m₂)'],[crossSvg(),'Schwerpunkt S'],[sw('var(--ink)','4 4',1.2),'Verbindungslinie (geht durch S)']];
+  if(st.arr!=='0')it.push([sw('var(--muted)'),st.arr==='p'?'Pfeile: Impulse (gleicher Maßstab)':'Pfeile: Geschwindigkeiten (gleicher Maßstab)']);
+  if(st.mode==='lab'&&S.V>0)it.push([sw('var(--c-cm)','5 4',1.4),'Weg des Schwerpunkts']);
+  $('#legend').innerHTML=it.map(([s,t])=>`<span>${s}${t}</span>`).join('');}
+
+/* ----- Schleife ----- */
+let lastTs=0,slow=0;
+function update(){readColors();updateKZ();statusText();buildLegend();}
+function drawAll(){$('#tnow').textContent=`t = ${NF(2).format(phase)} T`;drawView();drawEnergy();drawRV();drawBC();}
+function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(dirty){dirty=false;update();drawAll();}
+  else if(playing&&dt>0){phase+=dt/st.dur;drawAll();}
+  requestAnimationFrame(frameLoop);}
+function redrawAll(){readColors();dpr=Math.min(2,window.devicePixelRatio||1);if(S)drawAll();}
+for(const id of ['#view','#en','#rv','#bc'])new ResizeObserver(redrawAll).observe($(id).parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+dpr=Math.min(2,window.devicePixelRatio||1);
+st=Object.assign({},DEF);
+buildControls();
+{const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
+  const id=h.find(k=>EXM[k]);selectEx(id||DEF.ex);
+  for(const k of h){const m=k.match(/^(mode|arr)=(\w+)$/);if(m)st[m[1]]=m[2];const n=k.match(/^(V|e|inc|om|lgQ|t)=([-\d.]+)$/);if(n){if(n[1]==='t')phase=+n[2];else st[n[1]]=+n[2];}}
+  if(h.includes('scale'))st.scale=true;if(h.includes('pause'))setPlay(false);sync();}
+requestAnimationFrame(frameLoop);
+</script>
+
+</body>
+</html>
