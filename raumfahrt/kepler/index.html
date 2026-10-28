@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keplerlabor</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  /* Layout wie die übrigen Labore: links Parameter, Mitte Bahn + Diagramme, rechts Physik und Aufgaben */
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --c-orbit:#1f5fc2; --c-v:#c2571a; --c-acc:#7b3aa6; --c-kin:#c2571a; --c-pot:#1f5fc2; --c-cent:#7b3aa6; --c-cmp:#2c8540;
+  --c-sec0:#1f5fc2; --c-sec1:#c2571a; --c-crash:#c23a2b; --c-pt:#b4480f;
+  --c-earth:#2f6fb5; --c-moon:#8d969e; --c-mars:#c1502e; --c-sun:#e8962a;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --c-orbit:#62a1ff; --c-v:#ffa36e; --c-acc:#c48cf0; --c-kin:#ffa36e; --c-pot:#62a1ff; --c-cent:#c48cf0; --c-cmp:#5cc46a;
+    --c-sec0:#62a1ff; --c-sec1:#ffa36e; --c-crash:#ff715f; --c-pt:#ffa36e;
+    --c-earth:#4f8fd8; --c-moon:#b4bcc3; --c-mars:#e0704a; --c-sun:#ffc048; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --c-orbit:#62a1ff; --c-v:#ffa36e; --c-acc:#c48cf0; --c-kin:#ffa36e; --c-pot:#62a1ff; --c-cent:#c48cf0; --c-cmp:#5cc46a;
+  --c-sec0:#62a1ff; --c-sec1:#ffa36e; --c-crash:#ff715f; --c-pt:#ffa36e;
+  --c-earth:#4f8fd8; --c-moon:#b4bcc3; --c-mars:#e0704a; --c-sun:#ffc048; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1720px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+header.top .units{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr) 350px;grid-template-areas:"params stage info";align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{grid-area:params;padding:12px 14px 14px}
+.stage{grid-area:stage;min-width:0;display:flex;flex-direction:column;gap:10px}
+.info{grid-area:info;padding:16px 18px;min-width:0}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.seg button{all:unset;text-align:center;padding:6px 2px;cursor:pointer;font-size:12.5px;font-weight:500;line-height:1.2}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i,dl.kz dt i,.hint i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chkrow{display:flex;gap:7px;align-items:flex-start;font-size:13px;margin-bottom:8px;cursor:pointer}
+.chkrow input{accent-color:var(--accent);margin-top:3px}
+.chkrow small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.ctl-tip{font-size:11.5px;color:var(--muted);margin:2px 0 10px;line-height:1.4}
+.ctl-tip kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+select.sel{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%;margin-bottom:10px}
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz dd.hi{font-weight:600;color:var(--accent)}
+dl.kz .gh{grid-column:1/-1;font-family:var(--f-head);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+dl.kz .gh:first-child{margin-top:0;padding-top:0;border-top:0}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.status{font-size:13px;color:var(--muted);min-height:2.9em}
+.status b{color:var(--ink);font-weight:600}
+.mapwrap{position:relative;height:clamp(380px,56vh,620px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+#orb{touch-action:none}
+#orb:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.bar .btns{display:flex;gap:6px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.trio{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.cwrap{position:relative;height:250px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.note b{color:var(--ink);font-weight:600}
+.info h3{font-family:var(--f-head);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;text-wrap:balance}
+.info p{margin:0 0 10px;max-width:65ch}
+.info b{font-weight:600}
+.formula{font-family:var(--f-math);font-size:17px;line-height:1.55;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 2px;margin:4px 0 12px;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
+.formula i{font-style:italic}
+.formula small{font-family:var(--f-ui);font-size:12px;color:var(--muted);white-space:nowrap}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.92em;line-height:1.15;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.frac>span:last-child{padding:0 3px}
+.info h4{font-family:var(--f-head);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 6px}
+.tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tasks li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.tasks li:first-child{border-top:0}
+.tasks li p{margin:0}
+.tasks .btn{font-size:12px;padding:3px 8px;white-space:nowrap}
+.m{font-family:var(--f-math)}
+.foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
+@media (max-width:1500px){.trio{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.trio>:first-child{grid-column:1/-1}}
+@media (max-width:1280px){
+  .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "info info"}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "params" "info"}
+  .trio{grid-template-columns:minmax(0,1fr)}
+  .trio>:first-child{grid-column:auto}
+  header.top .units{margin-left:0}
+  .mapwrap{height:clamp(320px,62vh,520px)}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <h1>Keplerlabor</h1>
+  <p class="sub">Satellitenbahnen im Gravitationsfeld: Kegelschnitte, Energie, Drehimpuls und die drei Keplerschen Gesetze</p>
+  <span class="units">Zweikörperproblem · m ≪ M · Energien pro kg</span>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Beispiel</h2>
+    <select class="sel" id="example" aria-label="Beispiel wählen"></select>
+    <h2 class="lab">Zentralkörper</h2>
+    <div class="seg" style="--n:4" id="segBody" role="group" aria-label="Zentralkörper">
+      <button type="button" data-b="erde">Erde</button><button type="button" data-b="mond">Mond</button><button type="button" data-b="mars">Mars</button><button type="button" data-b="sonne">Sonne</button>
+    </div>
+    <h2 class="lab">Start</h2>
+    <div id="ctl-r"></div>
+    <div id="ctl-v"></div>
+    <div id="ctl-g"></div>
+    <p class="ctl-tip">Den Pfeil <b>v₀</b> in der Bahnansicht an der Spitze ziehen. Bahnansicht anklicken, dann <kbd>←</kbd> <kbd>→</kbd> Geschwindigkeit, <kbd>↑</kbd> <kbd>↓</kbd> Flugwinkel, <kbd>Leertaste</kbd> Pause.</p>
+    <h2 class="lab">Anzeige</h2>
+    <label class="chkrow"><input type="checkbox" id="o-geo" checked><span>Bahngeometrie<small>Peri- und Apoapsis, große Halbachse <i class="m">a</i>, zweiter Brennpunkt, bei Hyperbeln die Asymptoten</small></span></label>
+    <label class="chkrow"><input type="checkbox" id="o-area"><span>Flächensatz<small>Flächen, die der Fahrstrahl in gleichen Zeiten überstreicht</small></span></label>
+    <label class="chkrow"><input type="checkbox" id="o-cmp"><span>Vergleichsbahnen<small>Kreisbahn (<i class="m">v</i><sub>K</sub>) und Fluchtparabel (<i class="m">v</i><sub>F</sub>) durch den Startpunkt</small></span></label>
+    <label class="chkrow"><input type="checkbox" id="o-acc"><span>Beschleunigung<small>Gravitationsbeschleunigung <i class="m">g</i> = <i class="m">GM</i>/<i class="m">r</i>² am Satelliten</small></span></label>
+    <h2 class="lab">Animation</h2>
+    <div id="ctl-f"></div>
+    <label class="chkrow"><input type="checkbox" id="o-auto" checked><span>Zeitraffer automatisch<small>ein Umlauf dauert etwa 10 s</small></span></label>
+    <button class="btn" type="button" id="defaults">Standardwerte</button>
+    <hr class="sep">
+    <h2 class="lab">Kennzahlen</h2>
+    <dl class="kz" id="kz"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="plotbox">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="mapwrap"><canvas class="full" id="orb" tabindex="0" aria-label="Bahnansicht: Zentralkörper, Bahn als Kegelschnitt, Satellit mit Geschwindigkeitspfeil. Den Startpfeil ziehen oder mit den Pfeiltasten ändern."></canvas></div>
+      <div class="bar">
+        <div class="btns"><button class="btn" type="button" id="play">Pause</button><button class="btn" type="button" id="restart">Neustart</button></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+    <div class="trio">
+      <div class="panel boxp">
+        <h2 class="lab">Effektives Potential</h2>
+        <div class="cwrap"><canvas class="full" id="ueff" aria-label="Effektives Potential als Funktion des Abstands mit Energielinie und Umkehrpunkten"></canvas></div>
+        <div class="note" id="ueffNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Energie über der Zeit</h2>
+        <div class="cwrap"><canvas class="full" id="ener" aria-label="Kinetische, potentielle und Gesamtenergie pro Kilogramm über der Zeit"></canvas></div>
+        <div class="note" id="enerNote"></div>
+      </div>
+      <div class="panel boxp">
+        <h2 class="lab">Drittes Keplersches Gesetz</h2>
+        <div class="cwrap"><canvas class="full" id="k3" aria-label="Doppelt logarithmisches Diagramm Umlaufzeit gegen große Halbachse mit Beispielkörpern"></canvas></div>
+        <div class="note" id="k3Note"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel info" id="info">
+    <h3>Bahnen im Gravitationsfeld</h3>
+    <p>Ein Satellit der Masse <i class="m">m</i> ≪ <i class="m">M</i> bewegt sich im Feld des Zentralkörpers. Die Gravitation ist eine <b>konservative Zentralkraft</b>:</p>
+    <div class="formula">
+      <div><i>F</i>⃗ = −<span class="frac"><span><i>GMm</i></span><span><i>r</i><sup>2</sup></span></span> <i>r̂</i> &nbsp;&nbsp; <i>E</i><sub>pot</sub> = −<span class="frac"><span><i>GMm</i></span><span><i>r</i></span></span></div>
+    </div>
+    <p>Daraus folgen zwei Erhaltungssätze. Weil die Kraft konservativ ist, bleibt die <b>Energie</b> erhalten. Weil sie zum Zentrum zeigt, übt sie kein Drehmoment aus: Der <b>Drehimpuls</b> bleibt erhalten, die Bahn liegt in einer Ebene, und der Fahrstrahl überstreicht in gleichen Zeiten gleiche Flächen (2. Keplersches Gesetz). Pro Kilogramm und mit <i class="m">μ</i> = <i class="m">GM</i>:</p>
+    <div class="formula">
+      <div><i>ε</i> = <span class="frac"><span><i>v</i><sup>2</sup></span><span>2</span></span> − <span class="frac"><span><i>μ</i></span><span><i>r</i></span></span> = const &nbsp;&nbsp; <small>spezifische Energie</small></div>
+      <div><i>h</i> = <i>r v</i> cos <i>γ</i> = 2 <span class="frac"><span>d<i>A</i></span><span>d<i>t</i></span></span> = const &nbsp;&nbsp; <small>spezifischer Drehimpuls</small></div>
+    </div>
+    <p><b>Bahnform (1. Keplersches Gesetz).</b> Die Bahn ist ein Kegelschnitt mit dem Zentralkörper im Brennpunkt. Seine Exzentrizität hängt nur von <i class="m">ε</i> und <i class="m">h</i> ab:</p>
+    <div class="formula">
+      <div><i>r</i>(<i>φ</i>) = <span class="frac"><span><i>p</i></span><span>1 + <i>e</i> cos(<i>φ</i> − <i>ω</i>)</span></span>, &nbsp; <i>p</i> = <span class="frac"><span><i>h</i><sup>2</sup></span><span><i>μ</i></span></span>, &nbsp; <i>e</i> = <span style="white-space:nowrap">√(1 + 2<i>εh</i><sup>2</sup>/<i>μ</i><sup>2</sup>)</span></div>
+      <div><small style="white-space:normal"><i>ε</i> &lt; 0: Ellipse (Kreis für <i>e</i> = 0) · <i>ε</i> = 0: Parabel · <i>ε</i> &gt; 0: Hyperbel</small></div>
+    </div>
+    <p><b>Vis-viva-Gleichung.</b> Für Ellipsen ist <i class="m">ε</i> = −<i class="m">μ</i>/(2<i class="m">a</i>). Die Energie hängt also nur von der großen Halbachse ab, nicht von der Form:</p>
+    <div class="formula">
+      <div><i>v</i><sup>2</sup> = <i>μ</i> <span style="white-space:nowrap">(<span class="frac"><span>2</span><span><i>r</i></span></span> − <span class="frac"><span>1</span><span><i>a</i></span></span>)</span></div>
+      <div><i>v</i><sub>K</sub> = <span style="white-space:nowrap">√(<i>μ</i>/<i>r</i>)</span> &nbsp; <small>Kreisbahn</small> &nbsp;&nbsp; <i>v</i><sub>F</sub> = <span style="white-space:nowrap">√(2<i>μ</i>/<i>r</i>) = √2 <i>v</i><sub>K</sub></span> &nbsp; <small>Flucht</small></div>
+      <div><i>T</i> = 2π <span style="white-space:nowrap">√(<i>a</i><sup>3</sup>/<i>μ</i>)</span> &nbsp;&nbsp; <small>3. Keplersches Gesetz</small></div>
+    </div>
+    <p><b>Effektives Potential.</b> Zerlegt man <i class="m">v</i><sup>2</sup> = <i class="m">ṙ</i><sup>2</sup> + (<i class="m">h</i>/<i class="m">r</i>)<sup>2</sup>, wird die Radialbewegung zu einem eindimensionalen Problem:</p>
+    <div class="formula">
+      <div><i>ε</i> = <span class="frac"><span><i>ṙ</i><sup>2</sup></span><span>2</span></span> + <i>U</i><sub>eff</sub>(<i>r</i>), &nbsp; <i>U</i><sub>eff</sub> = −<span class="frac"><span><i>μ</i></span><span><i>r</i></span></span> + <span class="frac"><span><i>h</i><sup>2</sup></span><span>2<i>r</i><sup>2</sup></span></span></div>
+    </div>
+    <p>Der Drehimpuls wirkt wie eine abstoßende <b>Zentrifugalbarriere</b>. Der Satellit kann sich nur dort aufhalten, wo <i class="m">ε</i> ≥ <i class="m">U</i><sub>eff</sub>; an den Umkehrpunkten (Peri- und Apoapsis) ist <i class="m">ṙ</i> = 0.</p>
+    <p><b>Zweikörperproblem.</b> Hat der Satellit nicht vernachlässigbare Masse, laufen beide Körper um den gemeinsamen Schwerpunkt. Für den Abstandsvektor gilt dieselbe Rechnung mit <i class="m">μ</i> = <i class="m">G</i>(<i class="m">M</i> + <i class="m">m</i>).</p>
+    <h4>Aufgaben</h4>
+    <ol class="tasks" id="tasks"></ol>
+  </aside>
+</div>
+<p class="foot">Modell: Zweikörperproblem mit <i class="m">m</i> ≪ <i class="m">M</i> und kugelsymmetrischem Zentralkörper (Punktmasse). Nicht berücksichtigt: Atmosphäre, Abplattung, Rotation des Zentralkörpers, Störungen durch weitere Körper und relativistische Effekte. Die Bahn liegt in einer Ebene und wird analytisch als Kegelschnitt aus Startort, Betrag und Flugwinkel der Startgeschwindigkeit berechnet (Exzentrizitätsvektor). Der Ort zur Zeit <i class="m">t</i> folgt aus der Kepler-Gleichung: Ellipse <i class="m">M</i> = <i class="m">E</i> − <i class="m">e</i> sin <i class="m">E</i>, Hyperbel <i class="m">M</i> = <i class="m">e</i> sinh <i class="m">F</i> − <i class="m">F</i>, Parabel nach Barker, gelöst mit dem Newton-Verfahren. Trifft die Bahn die Oberfläche, endet die Animation dort; gestrichelt ist gezeigt, wie die Bahn um eine Punktmasse weiterliefe. Werte: <i class="m">GM</i> = 3,986·10<sup>14</sup> m³/s² (Erde), 4,905·10<sup>12</sup> (Mond), 4,283·10<sup>13</sup> (Mars), 1,327·10<sup>20</sup> (Sonne); mittlere Radien 6371 km, 1737 km, 3390 km, 696 000 km; 1 AE = 1,496·10<sup>8</sup> km, 1 Jahr = 365,25 d. Die Beispielbahnen sind gerundet und starten in der Periapsis. Der Mond wird hier nur mit <i class="m">GM</i> der Erde gerechnet; mit <i class="m">G</i>(<i class="m">M</i> + <i class="m">m</i>) ergäbe sich die gemessene Umlaufzeit von 27,3 d. Im Diagramm zum 3. Keplerschen Gesetz sind gemessene Werte eingetragen.</p>
+</div>
+
+<script>
+/*CORE-START*/
+const AU=1.495978707e11,DAY=86400,YR=365.25*DAY;
+const BODY={
+  erde:{name:'Erde',mu:3.986004418e14,R:6.371e6,rmin:6.471e6,rmax:5e8,peri:'Perigäum',apo:'Apogäum',col:'earth',def:'iss',gen:'der Erde',akk:'die Erde'},
+  mond:{name:'Mond',mu:4.9048695e12,R:1.7374e6,rmin:1.7474e6,rmax:6e7,peri:'Periselen',apo:'Aposelen',col:'moon',def:'apollo',gen:'des Mondes',akk:'den Mond'},
+  mars:{name:'Mars',mu:4.282837e13,R:3.3895e6,rmin:3.4395e6,rmax:1e8,peri:'Periareion',apo:'Apoareion',col:'mars',def:'phobos',gen:'des Mars',akk:'den Mars'},
+  sonne:{name:'Sonne',mu:1.32712440018e20,R:6.957e8,rmin:0.05*AU,rmax:40*AU,sun:true,peri:'Perihel',apo:'Aphel',col:'sun',def:'earthorb',gen:'der Sonne',akk:'die Sonne'}
+};
+const wrapPi=x=>{x=(x+Math.PI)%(2*Math.PI);if(x<0)x+=2*Math.PI;return x-Math.PI;};
+// Bahnelemente aus Startort (r0, 0), Geschwindigkeit v0 und Flugwinkel gam (gegen die Horizontale, Umlauf gegen den Uhrzeigersinn)
+function orbit(mu,r0,v0,gam){
+  const vr=v0*Math.sin(gam),vt=v0*Math.cos(gam),h=r0*vt,eps=v0*v0/2-mu/r0;
+  const ex=((v0*v0-mu/r0)*r0-r0*vr*vr)/mu,ey=-r0*vr*vt/mu;      // Exzentrizitätsvektor
+  const e=Math.hypot(ex,ey),w=e>1e-12?Math.atan2(ey,ex):0,p=h*h/mu;
+  const type=e<1-1e-7?'ell':e>1+1e-7?'hyp':'par';
+  const a=type==='par'?Infinity:-mu/(2*eps);                    // bei der Hyperbel negativ
+  const rp=p/(1+e),ra=type==='ell'?p/(1-e):Infinity;
+  const T=type==='ell'?2*Math.PI*Math.sqrt(a*a*a/mu):Infinity;
+  return {mu,r0,v0,gam,h,eps,e,w,p,a,rp,ra,T,type,nu0:wrapPi(-w)};}
+// Zeit seit dem Periapsisdurchgang zur wahren Anomalie nu
+function tOfNu(O,nu){const e=O.e,mu=O.mu;
+  if(O.type==='ell'){const E=2*Math.atan2(Math.sqrt(1-e)*Math.sin(nu/2),Math.sqrt(1+e)*Math.cos(nu/2));return (E-e*Math.sin(E))*Math.sqrt(O.a*O.a*O.a/mu);}
+  if(O.type==='hyp'){const F=2*Math.atanh(Math.sqrt((e-1)/(e+1))*Math.tan(nu/2)),A=-O.a;return (e*Math.sinh(F)-F)*Math.sqrt(A*A*A/mu);}
+  const D=Math.tan(nu/2);return 0.5*Math.sqrt(O.p*O.p*O.p/mu)*(D+D*D*D/3);}
+// wahre Anomalie zur Zeit t (Kepler-Gleichung, Newton-Verfahren)
+function nuOfT(O,t){const e=O.e,mu=O.mu;
+  if(O.type==='ell'){const M=wrapPi(t*Math.sqrt(mu/(O.a*O.a*O.a)));let E=M+0.85*e*Math.sign(Math.sin(M));
+    for(let i=0;i<60;i++){const dE=(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));E-=dE;if(Math.abs(dE)<1e-14)break;}
+    return 2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));}
+  if(O.type==='hyp'){const A=-O.a,M=t*Math.sqrt(mu/(A*A*A));let F=Math.asinh(M/e);
+    for(let i=0;i<100;i++){let dF=(e*Math.sinh(F)-F-M)/(e*Math.cosh(F)-1);if(!isFinite(dF))break;if(Math.abs(dF)>1)dF=Math.sign(dF);F-=dF;if(Math.abs(dF)<1e-14)break;}
+    return 2*Math.atan(Math.sqrt((e+1)/(e-1))*Math.tanh(F/2));}
+  const K=2*t*Math.sqrt(mu/(O.p*O.p*O.p)),s=Math.sqrt(2.25*K*K+1);return 2*Math.atan(Math.cbrt(1.5*K+s)+Math.cbrt(1.5*K-s));}
+// Ort und Geschwindigkeit bei der wahren Anomalie nu
+function stateAt(O,nu){const r=O.p/(1+O.e*Math.cos(nu)),th=nu+O.w,k=Math.sqrt(O.mu/O.p);
+  const vr=k*O.e*Math.sin(nu),vt=k*(1+O.e*Math.cos(nu)),c=Math.cos(th),s=Math.sin(th);
+  return {r,th,x:r*c,y:r*s,vx:vr*c-vt*s,vy:vr*s+vt*c,v:Math.hypot(vr,vt),vr,vt};}
+// Flugabschnitt: vom Start bis zum Aufschlag, bis zum Verlassen des Bildes (offene Bahnen) oder ein Umlauf
+function mission(O,R){const t0=tOfNu(O,O.nu0);let crash=false,nuEnd=null,tEnd,nc=null;
+  if(O.rp<R){nc=Math.acos(Math.max(-1,Math.min(1,(O.p/R-1)/O.e)));
+    if(O.type==='ell'){crash=true;nuEnd=-nc;tEnd=tOfNu(O,-nc)+(O.nu0>-nc?O.T:0);}
+    else if(O.nu0<-nc){crash=true;nuEnd=-nc;tEnd=tOfNu(O,-nc);}}
+  let rlim=Infinity,nuLim=Math.PI;
+  if(O.type!=='ell'){rlim=Math.max(4*O.rp,1.6*O.r0);nuLim=Math.acos(Math.max(-1,Math.min(1,(O.p/rlim-1)/O.e)));if(!crash){nuEnd=nuLim;tEnd=tOfNu(O,nuLim);}}
+  else if(!crash)tEnd=t0+O.T;
+  return {t0,tEnd,D:tEnd-t0,crash,nuEnd,nc,rlim,nuLim};}
+/*CORE-END*/
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const NF=(d)=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let m=x/Math.pow(10,e);if(Math.abs(+m.toFixed(d))>=10){m/=10;e++;}return (NF(d).format(m)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−').replace(/\./g,' ');}
+function grp(x){return Math.round(x).toLocaleString('de-DE').replace(/\./g,' ').replace('-','−');}
+const B=()=>BODY[st.body];
+function fLen(m){if(!isFinite(m))return '∞';if(B().sun)return num(m/AU,4)+' AE';const km=m/1000;return (Math.abs(km)>=1000?grp(km):num(km,3))+' km';}
+function fTime(s){if(!isFinite(s))return '∞';const a=Math.abs(s);
+  if(a<120)return num(s,3)+' s';if(a<7200)return num(s/60,3)+' min';if(a<72*3600)return num(s/3600,3)+' h';
+  if(a<(B().sun?0.75*YR:400*DAY))return num(s/DAY,3)+' d';const y=num(s/YR,3);return y+(y==='1'?' Jahr':' Jahre');}
+const fV=v=>num(v/1000,4)+' km/s';
+const fE=e=>num(e/1e6,4)+' MJ/kg';
+const fH=h=>{const k=h/1e6;return (k<1e5?grp(k):sci(k,2))+' km²/s';};
+const deg=Math.PI/180;
+
+/* ----- Beispiele (Start jeweils in der Periapsis) ----- */
+const KM=1e3;
+const EX=[
+  {id:'iss',b:'erde',name:'ISS (420 km, Kreisbahn)',r:6371e3+420e3,q:1,g:0},
+  {id:'gps',b:'erde',name:'GPS-Satellit (Kreisbahn, 12 h)',r:26560e3,q:1,g:0},
+  {id:'geo',b:'erde',name:'Geostationäre Bahn',r:42164e3,q:1,g:0},
+  {id:'gto',b:'erde',name:'Geostationäre Transferbahn (GTO)',r:6621e3,q:Math.sqrt(2*42164/(6621+42164)),g:0},
+  {id:'molniya',b:'erde',name:'Molniya-Bahn (e = 0,74)',r:6904e3,q:Math.sqrt(1.74),g:0},
+  {id:'moon',b:'erde',name:'Mond (Perigäum 363 300 km)',r:363300e3,q:Math.sqrt(1.0549),g:0},
+  {id:'escape',b:'erde',name:'Fluchtbahn (Hyperbel, 1,5 v_K)',r:6671e3,q:1.5,g:0},
+  {id:'cannon',b:'erde',name:'Newtons Kanonenkugel (2000 km hoher Turm)',r:8371e3,q:0.8,g:0},
+  {id:'apollo',b:'mond',name:'Apollo-Mondorbit (110 km)',r:1737.4e3+110e3,q:1,g:0},
+  {id:'descent',b:'mond',name:'Abstiegsbahn 110 × 15 km',r:1737.4e3+110e3,q:Math.sqrt(2*(1737.4+15)/(2*1737.4+125)),g:0,apo:true},
+  {id:'phobos',b:'mars',name:'Phobos',r:9234e3,q:Math.sqrt(1.0151),g:0},
+  {id:'areo',b:'mars',name:'Areostationäre Bahn',r:20428e3,q:1,g:0},
+  {id:'earthorb',b:'sonne',name:'Erde um die Sonne',r:0.98329*AU,q:Math.sqrt(1.0167),g:0},
+  {id:'marsorb',b:'sonne',name:'Mars um die Sonne',r:1.3814*AU,q:Math.sqrt(1.0934),g:0},
+  {id:'jupiter',b:'sonne',name:'Jupiter',r:4.9516*AU,q:Math.sqrt(1.0484),g:0},
+  {id:'hohmann',b:'sonne',name:'Hohmann-Transfer Erde → Mars',r:1*AU,q:Math.sqrt(2*1.5237/2.5237),g:0},
+  {id:'halley',b:'sonne',name:'Halleyscher Komet (e = 0,967)',r:0.586*AU,q:Math.sqrt(1.967),g:0},
+  {id:'oumuamua',b:'sonne',name:'ʻOumuamua (interstellar, Hyperbel)',r:0.2559*AU,q:Math.sqrt(2.2011),g:0}
+];
+const EXM=Object.fromEntries(EX.map(e=>[e.id,e]));
+const DEF={body:'erde',lgr:Math.log10(EXM.iss.r),q:1,g:0,lgf:3,auto:true,geo:true,area:false,cmp:false,acc:false,sel:'iss'};
+let st=Object.assign({},DEF),O=null,MS=null,G=null,dirty=true;
+let tau=0,playing=true,hold=0,VIEW=null,VLOCK=false,dragging=false;
+
+/* ----- Regler ----- */
+const PDEF={
+  lgr:{box:'#ctl-r',min:()=>Math.log10(B().rmin),max:()=>Math.log10(B().rmax),step:0.001,
+    lab:()=>B().sun?'Startabstand <i>r</i><sub>0</sub>':'Starthöhe <i>h</i><sub>0</sub>',
+    fmt:v=>{const r=Math.pow(10,v);return B().sun?num(r/AU,4)+' AE':fLen(r-B().R);},
+    hint:()=>B().sun?`= ${num(Math.pow(10,st.lgr)/1e9,4)} Mio. km · Sonnenradius 696 000 km`:`<i>r</i><sub>0</sub> = ${fLen(Math.pow(10,st.lgr))} vom Mittelpunkt · Radius ${B().gen} ${fLen(B().R)}`},
+  q:{box:'#ctl-v',min:()=>0.05,max:()=>1.8,step:0.001,lab:()=>'Geschwindigkeit <i>v</i><sub>0</sub>',
+    fmt:v=>fV(v*vK0()),hint:()=>`= ${num(st.q,4)} <i>v</i><sub>K</sub> · Kreisbahn <i>v</i><sub>K</sub> = ${fV(vK0())}, Flucht <i>v</i><sub>F</sub> = ${fV(Math.SQRT2*vK0())}`},
+  g:{box:'#ctl-g',min:()=>-85,max:()=>85,step:0.5,lab:()=>'Flugwinkel <i>γ</i>',fmt:v=>num(v,3)+'°',hint:()=>'Winkel zwischen <i>v</i><sub>0</sub> und der Horizontalen; positiv: steigend'},
+  lgf:{box:'#ctl-f',min:()=>0,max:()=>9,step:0.05,lab:()=>'Zeitraffer',fmt:v=>{const f=Math.pow(10,v);return (f<1e5?grp(f):sci(f,1))+'×';},hint:()=>'Simulierte Zeit pro echter Sekunde'}
+};
+const vK0=()=>Math.sqrt(B().mu/Math.pow(10,st.lgr));
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
+    w.innerHTML=`<div class="row"><label for="p-${k}" id="l-${k}"></label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}" step="${d.step}"><div class="hint" id="h-${k}"></div>`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{st[k]=parseFloat(inp.value);if(k==='lgf')st.auto=false;else st.sel=null;sync();});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  const sel=$('#example');let html='<option value="">— eigene Werte —</option>';
+  for(const b in BODY){html+=`<optgroup label="${BODY[b].name}">`+EX.filter(e=>e.b===b).map(e=>`<option value="${e.id}">${e.name}</option>`).join('')+'</optgroup>';}
+  sel.innerHTML=html;
+  sel.addEventListener('change',()=>{if(sel.value)selectEx(sel.value);else{st.sel=null;sync();}});
+  document.querySelectorAll('#segBody button').forEach(b=>b.addEventListener('click',()=>{if(st.body!==b.dataset.b)selectEx(BODY[b.dataset.b].def);}));
+  for(const k of ['geo','area','cmp','acc','auto'])$('#o-'+k).addEventListener('change',e=>{st[k]=e.target.checked;sync(k==='auto');});
+  $('#defaults').addEventListener('click',()=>{st=Object.assign({},DEF);sync();});
+  $('#play').addEventListener('click',()=>{playing=!playing;$('#play').textContent=playing?'Pause':'Weiter';});
+  $('#restart').addEventListener('click',()=>{tau=0;hold=0;});
+}
+function selectEx(id,keep){const e=EXM[id];st.body=e.b;st.lgr=Math.log10(e.r);st.q=e.q;st.g=e.g;st.sel=id;if(!keep)st.auto=true;sync();}
+function sync(soft){const b=B();
+  st.lgr=Math.max(Math.log10(b.rmin),Math.min(Math.log10(b.rmax),st.lgr));st.q=Math.max(0.05,Math.min(1.8,st.q));st.g=Math.max(-85,Math.min(85,st.g));st.lgf=Math.max(0,Math.min(9,st.lgf));
+  recompute();
+  if(st.auto){const tgt=(O.type==='ell'&&!MS.crash)?MS.D/10:MS.D/7;st.lgf=Math.max(0,Math.min(9,Math.log10(Math.max(1,tgt))));}
+  for(const k in PDEF){const d=PDEF[k],inp=$('#p-'+k);inp.min=d.min();inp.max=d.max();inp.value=st[k];
+    $('#o-'+k).textContent=d.fmt(st[k]);$('#l-'+k).innerHTML=d.lab();$('#h-'+k).innerHTML=d.hint();}
+  $('#example').value=st.sel||'';
+  for(const k of ['geo','area','cmp','acc','auto'])$('#o-'+k).checked=st[k];
+  document.querySelectorAll('#segBody button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.b===st.body)));
+  if(!soft){tau=0;hold=0;}
+  dirty=true;}
+
+/* ----- Rechnung: Bahn, Flugabschnitt, Kurven ----- */
+function arcPts(n1,n2,N){const pts=[],e=O.e;
+  // gleichmäßig in der exzentrischen (bzw. hyperbolischen) Anomalie abtasten, dann ist die Kurve auch bei e ≈ 1 glatt
+  if(O.type==='ell'){const Eun=nu=>{const k=Math.round(nu/(2*Math.PI)),n=nu-2*Math.PI*k;return 2*Math.atan2(Math.sqrt(1-e)*Math.sin(n/2),Math.sqrt(1+e)*Math.cos(n/2))+2*Math.PI*k;};
+    const E1=Eun(n1),E2=Eun(n2),b=O.a*Math.sqrt(1-e*e),cw=Math.cos(O.w),sw=Math.sin(O.w);
+    for(let i=0;i<=N;i++){const E=E1+(E2-E1)*i/N,x=O.a*(Math.cos(E)-e),y=b*Math.sin(E);pts.push([x*cw-y*sw,x*sw+y*cw]);}return pts;}
+  let u1,u2,P;
+  if(O.type==='hyp'){const A=-O.a,c=Math.sqrt((e-1)/(e+1)),bb=A*Math.sqrt(e*e-1);u1=2*Math.atanh(c*Math.tan(n1/2));u2=2*Math.atanh(c*Math.tan(n2/2));P=F=>[A*(e-Math.cosh(F)),bb*Math.sinh(F)];}
+  else{u1=Math.tan(n1/2);u2=Math.tan(n2/2);P=D=>[O.p/2*(1-D*D),O.p*D];}
+  const cw=Math.cos(O.w),sw=Math.sin(O.w);
+  for(let i=0;i<=N;i++){const [x,y]=P(u1+(u2-u1)*i/N);pts.push([x*cw-y*sw,x*sw+y*cw]);}return pts;}
+function recompute(){const b=B(),r0=Math.pow(10,st.lgr),vk=Math.sqrt(b.mu/r0);
+  O=orbit(b.mu,r0,st.q*vk,st.g*deg);MS=mission(O,b.R);
+  G={vk0:vk,r0};
+  // Kurvenstücke: Zukunft (durchgezogen) und Rest (gestrichelt)
+  if(O.type==='ell'){let ne=MS.crash?MS.nuEnd:O.nu0+2*Math.PI;while(ne<=O.nu0)ne+=2*Math.PI;G.fly=arcPts(O.nu0,ne,500);G.rest=MS.crash?arcPts(ne,O.nu0+2*Math.PI,400):null;}
+  else{G.fly=arcPts(O.nu0,MS.nuEnd,500);const parts=[];if(O.nu0>-MS.nuLim+1e-6)parts.push(arcPts(-MS.nuLim,O.nu0,300));if(MS.nuEnd<MS.nuLim-1e-6)parts.push(arcPts(MS.nuEnd,MS.nuLim,300));G.restParts=parts;}
+  // Flächensatz: gleiche Zeitintervalle
+  const K=(O.type==='ell'&&!MS.crash)?12:10;G.sect=[];G.dtSect=MS.D/K;
+  for(let k=0;k<K;k++){let a1=nuOfT(O,MS.t0+MS.D*k/K),a2=nuOfT(O,MS.t0+MS.D*(k+1)/K);if(k===0)a1=O.nu0;if(O.type==='ell'){while(a2<=a1)a2+=2*Math.PI;}G.sect.push(arcPts(a1,a2,48));}
+  // Energie über der Zeit
+  const N=300;G.en=[];for(let i=0;i<=N;i++){const t=MS.D*i/N,s=stateAt(O,nuOfT(O,MS.t0+t));G.en.push([t,s.v*s.v/2,-O.mu/s.r]);}
+  // Ausschnitt der Bahnansicht
+  const pts=G.fly.concat(G.rest||[],...(G.restParts||[]));let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  const inc=(x,y)=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);};
+  for(const p of pts)inc(p[0],p[1]);inc(b.R,b.R);inc(-b.R,-b.R);if(st.cmp){inc(r0,r0);inc(-r0,-r0);}
+  G.box=[x0,x1,y0,y1];}
+
+/* ----- Aufgaben ----- */
+const TASKS=[
+  {t:'<b>Die ISS.</b> Lies Umlaufzeit und Bahngeschwindigkeit ab und prüfe <i class="m">T</i> = 2π√(<i class="m">a</i><sup>3</sup>/<i class="m">GM</i>) von Hand. Wie oft am Tag umrundet die ISS die Erde? Vergleiche mit der GPS-Bahn: Warum sind höhere Satelliten langsamer?',ex:'iss'},
+  {t:'<b>Fluchtgeschwindigkeit.</b> Erhöhe ausgehend von der ISS-Bahn <i class="m">v</i><sub>0</sub> mit <kbd>→</kbd>. Bei welchem Verhältnis <i class="m">v</i><sub>0</sub>/<i class="m">v</i><sub>K</sub> öffnet sich die Bahn? Beobachte dabei das Vorzeichen von <i class="m">ε</i> und die Energielinie im effektiven Potential.',set:{ex:'iss',q:1.35,cmp:true}},
+  {t:'<b>Gleiche Energie, gleiche Umlaufzeit.</b> Hier ist <i class="m">v</i><sub>0</sub> = <i class="m">v</i><sub>K</sub>, aber der Satellit startet unter <i class="m">γ</i> = 30°. Die Bahn wird elliptisch. Was passiert mit <i class="m">a</i> und <i class="m">T</i>, wenn du <i class="m">γ</i> änderst? Begründe mit der Vis-viva-Gleichung.',set:{ex:'geo',g:30,cmp:true}},
+  {t:'<b>Flächensatz.</b> Die Molniya-Bahn ist stark exzentrisch. Wie lange braucht der Satellit für die Hälfte der Bahn um das Apogäum? Warum nutzt Russland solche Bahnen für Kommunikation in hohen Breiten? Zeige mit dem Drehimpuls, dass <i class="m">v</i><sub>P</sub>/<i class="m">v</i><sub>A</sub> = <i class="m">r</i><sub>A</sub>/<i class="m">r</i><sub>P</sub>.',set:{ex:'molniya',area:true}},
+  {t:'<b>Ins geostationäre Orbit.</b> Die Transferbahn (GTO) reicht bis zur GEO-Höhe. Wie groß ist die Geschwindigkeit im Apogäum, und welche Geschwindigkeitsänderung Δ<i class="m">v</i> braucht der Satellit dort für die Kreisbahn (Bahnneigung vernachlässigt)?',set:{ex:'gto',cmp:true}},
+  {t:'<b>Newtons Kanonenkugel.</b> Von einem 2000 km hohen Turm abgefeuert, schlägt die Kugel mit 0,8 <i class="m">v</i><sub>K</sub> auf; gestrichelt siehst du, wie die Ellipse um eine Punktmasse weiterliefe. Ab welchem <i class="m">v</i><sub>0</sub> verfehlt sie die Erde? Wo liegt dann das Perigäum?',ex:'cannon'},
+  {t:'<b>Drittes Keplersches Gesetz.</b> Alle Planeten liegen im log-log-Diagramm auf einer Geraden. Welche Steigung hat sie? Bestimme aus <i class="m">a</i> = 1 AE und <i class="m">T</i> = 1 Jahr die Masse der Sonne (<i class="m">G</i> = 6,674·10<sup>−11</sup> N m²/kg²).',ex:'earthorb'},
+  {t:'<b>Zum Mars.</b> Die Hohmann-Bahn berührt die Erd- und die Marsbahn. Wie lange dauert der Flug? Um wie viel muss die Sonde schneller sein als die Erde (29,8 km/s), und warum reicht dafür ein Bruchteil der Fluchtgeschwindigkeit aus dem Sonnensystem?',set:{ex:'hohmann',cmp:true}}
+];
+(function(){const ol=$('#tasks');TASKS.forEach(t=>{const li=document.createElement('li');
+  li.innerHTML=`<p>${t.t}</p><button class="btn" type="button">Einstellen</button>`;
+  li.querySelector('button').addEventListener('click',()=>{const s=t.set||{ex:t.ex};st.area=false;st.cmp=false;st.acc=false;st.geo=true;
+    const e=EXM[s.ex];st.body=e.b;st.lgr=Math.log10(e.r);st.q=e.q;st.g=e.g;st.sel=s.ex;st.auto=true;
+    for(const k of ['q','g','area','cmp','acc'])if(k in s){st[k]=s[k];if(k==='q'||k==='g')st.sel=null;}
+    playing=true;$('#play').textContent='Pause';sync();});
+  ol.appendChild(li);});})();
+
+/* ----- Zeichenhilfen ----- */
+let C={},dpr=1;
+function readColors(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  C={stage:g('--stage'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),accent:g('--accent'),panel:g('--panel'),
+    orbit:g('--c-orbit'),v:g('--c-v'),acc:g('--c-acc'),kin:g('--c-kin'),pot:g('--c-pot'),cent:g('--c-cent'),cmp:g('--c-cmp'),
+    sec0:g('--c-sec0'),sec1:g('--c-sec1'),crash:g('--c-crash'),pt:g('--c-pt'),
+    body:{earth:g('--c-earth'),moon:g('--c-moon'),mars:g('--c-mars'),sun:g('--c-sun')},mono:g('--f-mono')||'monospace',ui:g('--f-ui')||'sans-serif'};}
+function ctxOf(cv){const r=cv.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function rgb(col){if(col.startsWith('#')&&col.length===7){const n=parseInt(col.slice(1),16);return [n>>16,(n>>8)&255,n&255];}return [128,128,128];}
+function mix(a,b,t){const p=rgb(a),q=rgb(b);return `rgb(${p.map((v,i)=>Math.round(v*(1-t)+q[i]*t)).join(',')})`;}
+function hexA(col,a){const [r,g,b]=rgb(col);return `rgba(${r},${g},${b},${a})`;}
+function halo(c,txt,x,y){c.save();c.strokeStyle=hexA(C.stage,0.92);c.lineWidth=4;c.lineJoin='round';c.strokeText(txt,x,y);c.restore();c.fillText(txt,x,y);}
+function rich(c,s,x,y,o){o=o||{};const sz=o.size||11.5,wt=o.weight||500,parts=[],re=/([_^])\{([^}]*)\}/g;let last=0,m;
+  while((m=re.exec(s))){if(m.index>last)parts.push([s.slice(last,m.index),0]);parts.push([m[2],m[1]==='_'?1:-1]);last=re.lastIndex;}
+  if(last<s.length)parts.push([s.slice(last),0]);
+  const fnt=k=>`${wt} ${k?sz*0.74:sz}px ${C.ui}`;let W=0;for(const q of parts){c.font=fnt(q[1]);W+=c.measureText(q[0]).width;}
+  const al=o.align||'left';let px=al==='center'?x-W/2:al==='right'?x-W:x;const ta=c.textAlign;c.textAlign='left';
+  for(const q of parts){c.font=fnt(q[1]);const dy=q[1]===1?sz*0.3:q[1]===-1?-sz*0.42:0;if(o.halo)halo(c,q[0],px,y+dy);else c.fillText(q[0],px,y+dy);px+=c.measureText(q[0]).width;}
+  c.textAlign=ta;return W;}
+function arrow(c,x1,y1,x2,y2,col,lw){const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);if(L<2)return;const ux=dx/L,uy=dy/L,hl=Math.min(11,0.45*L+3),hw=hl*0.5;
+  c.strokeStyle=col;c.fillStyle=col;c.lineWidth=lw;c.lineCap='round';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2-ux*hl*0.8,y2-uy*hl*0.8);c.stroke();
+  c.beginPath();c.moveTo(x2,y2);c.lineTo(x2-ux*hl-uy*hw,y2-uy*hl+ux*hw);c.lineTo(x2-ux*hl+uy*hw,y2-uy*hl-ux*hw);c.closePath();c.fill();}
+function niceStep(range,n){const raw=range/n,e=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/e;return (f<1.5?1:f<3?2:f<7?5:10)*e;}
+function ticks(a,b,n){const s=niceStep(b-a,n),out=[];for(let v=Math.ceil(a/s)*s;v<=b+s*1e-9;v+=s)out.push(Math.abs(v)<s*1e-9?0:v);return out;}
+function tickLab(v){return num(v,3);}
+
+/* ----- Bahnansicht ----- */
+let ARROW=null;
+const arrowScale=(W,H)=>Math.max(38,Math.min(78,Math.min(W,H)*0.13));
+function fitView(W,H){const [x0,x1,y0,y1]=G.box,AS=arrowScale(W,H),padL=st.geo?70:24,padR=st.geo?70:24,padT=50,padB=40;
+  const tip=(s)=>[G.r0+AS*st.q*Math.sin(st.g*deg)/s,AS*st.q*Math.cos(st.g*deg)/s];
+  let bx=[x0,x1,y0,y1],s=1;
+  for(let it=0;it<3;it++){s=Math.min((W-padL-padR)/Math.max(1e-9,bx[1]-bx[0]),(H-padT-padB)/Math.max(1e-9,bx[3]-bx[2]));const [tx,ty]=tip(s);
+    bx=[Math.min(x0,tx),Math.max(x1,tx+14/s),Math.min(y0,ty),Math.max(y1,ty+14/s)];}
+  s=Math.min((W-padL-padR)/(bx[1]-bx[0]),(H-padT-padB)/(bx[3]-bx[2]));
+  return {s,cx:(bx[0]+bx[1])/2,cy:(bx[2]+bx[3])/2,ox:(padL+W-padR)/2,oy:(padT+H-padB)/2,AS};}
+function curState(){const t=MS.t0+(O.type==='ell'&&!MS.crash?(tau%O.T):Math.min(tau,MS.D));return stateAt(O,nuOfT(O,t));}
+function drawOrbit(){if(!O)return;const {c,W,H}=ctxOf($('#orb'));
+  if(!VLOCK||!VIEW)VIEW=fitView(W,H);const V=VIEW,X=x=>V.ox+(x-V.cx)*V.s,Y=y=>V.oy-(y-V.cy)*V.s,b=B(),bc=C.body[b.col];
+  const poly=(pts,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();pts.forEach((p,i)=>i?c.lineTo(X(p[0]),Y(p[1])):c.moveTo(X(p[0]),Y(p[1])));c.stroke();c.setLineDash([]);};
+  // Flächensatz
+  if(st.area){G.sect.forEach((pts,k)=>{c.fillStyle=hexA(k%2?C.sec1:C.sec0,0.17);c.beginPath();c.moveTo(X(0),Y(0));pts.forEach(p=>c.lineTo(X(p[0]),Y(p[1])));c.closePath();c.fill();
+    c.strokeStyle=hexA(k%2?C.sec1:C.sec0,0.5);c.lineWidth=1;c.stroke();});}
+  // Vergleichsbahnen
+  if(st.cmp){c.strokeStyle=C.cmp;c.lineWidth=1.4;c.setLineDash([6,5]);c.beginPath();c.arc(X(0),Y(0),G.r0*V.s,0,2*Math.PI);c.stroke();
+    const pp=[];for(let i=-200;i<=200;i++){const th=i/200*Math.PI*0.94,r=2*G.r0/(1+Math.cos(th));pp.push([r*Math.cos(th),r*Math.sin(th)]);}
+    c.strokeStyle=C.acc;c.beginPath();pp.forEach((p,i)=>i?c.lineTo(X(p[0]),Y(p[1])):c.moveTo(X(p[0]),Y(p[1])));c.stroke();c.setLineDash([]);
+    c.fillStyle=C.cmp;c.textBaseline='bottom';rich(c,'Kreisbahn (v_{K})',X(-G.r0*0.71),Y(G.r0*0.71)-4,{size:11,weight:600,halo:true,align:'right'});}
+  // Bahngeometrie
+  const ell=O.type==='ell',geo=st.geo;
+  if(geo&&ell&&O.e>0.005){const cw=Math.cos(O.w),sw=Math.sin(O.w);
+    c.strokeStyle=hexA(C.muted,0.8);c.lineWidth=1;c.setLineDash([4,4]);c.beginPath();c.moveTo(X(O.rp*cw),Y(O.rp*sw));c.lineTo(X(-O.ra*cw),Y(-O.ra*sw));c.stroke();c.setLineDash([]);
+    const cx=-O.a*O.e*cw,cy=-O.a*O.e*sw,fx=2*cx,fy=2*cy;
+    c.strokeStyle=C.muted;c.lineWidth=1.3;c.beginPath();c.moveTo(X(cx)-4,Y(cy));c.lineTo(X(cx)+4,Y(cy));c.moveTo(X(cx),Y(cy)-4);c.lineTo(X(cx),Y(cy)+4);c.stroke();
+    c.beginPath();c.arc(X(fx),Y(fy),3.5,0,2*Math.PI);c.stroke();
+    c.fillStyle=C.muted;c.textBaseline='top';if(Math.hypot(X(fx)-X(0),Y(fy)-Y(0))>40)rich(c,'F′',X(fx)+5,Y(fy)+4,{size:11,weight:600,halo:true});
+    const mx=(cx+O.rp*cw)/2,my=(cy+O.rp*sw)/2;c.fillStyle=C.ink;c.textBaseline='bottom';if(O.a*V.s>40)rich(c,'a',X(mx),Y(my)-5,{size:13,weight:600,halo:true,align:'center'});}
+  if(geo&&!ell){const A=Math.abs(isFinite(O.a)?O.a:0),cw=Math.cos(O.w),sw=Math.sin(O.w);
+    if(O.type==='hyp'){const xc=(O.rp+A),na=Math.acos(-1/O.e);c.strokeStyle=hexA(C.muted,0.7);c.lineWidth=1;c.setLineDash([3,5]);
+      for(const sg of [1,-1]){const dx=Math.cos(sg*na),dy=Math.sin(sg*na),L=4*MS.rlim;
+        const P=(t)=>{const x=xc+dx*t,y=dy*t;return [X(x*cw-y*sw),Y(x*sw+y*cw)];};const [a1,b1]=P(-L),[a2,b2]=P(L);c.beginPath();c.moveTo(a1,b1);c.lineTo(a2,b2);c.stroke();}
+      c.setLineDash([]);}}
+  // Bahn
+  if(G.rest)poly(G.rest,hexA(C.orbit,0.55),1.3,[5,5]);
+  (G.restParts||[]).forEach(p=>poly(p,hexA(C.orbit,0.55),1.3,[5,5]));
+  poly(G.fly,C.orbit,2.2);
+  // Zentralkörper
+  const pr=Math.max(3,b.R*V.s);
+  if(b.sun){const gr=c.createRadialGradient(X(0),Y(0),pr*0.3,X(0),Y(0),pr+16);gr.addColorStop(0,hexA(bc,0.55));gr.addColorStop(1,hexA(bc,0));c.fillStyle=gr;c.beginPath();c.arc(X(0),Y(0),pr+16,0,2*Math.PI);c.fill();}
+  const gr=c.createRadialGradient(X(0)-pr*0.35,Y(0)-pr*0.35,pr*0.1,X(0),Y(0),pr);gr.addColorStop(0,mix(bc,'#ffffff',0.28));gr.addColorStop(1,bc);
+  c.fillStyle=gr;c.beginPath();c.arc(X(0),Y(0),pr,0,2*Math.PI);c.fill();
+  if(pr>26){c.fillStyle=hexA(C.stage,0.9);c.font=`600 12px ${C.ui}`;c.textAlign='center';c.textBaseline='middle';c.fillText(b.name,X(0),Y(0));c.textAlign='left';}
+  // Peri- und Apoapsis
+  if(geo&&O.e>0.005){const cw=Math.cos(O.w),sw=Math.sin(O.w);
+    const mark=(r,sgn,lab)=>{const x=sgn*r*cw,y=sgn*r*sw,px=X(x),py=Y(y);c.fillStyle=C.pt;c.beginPath();c.moveTo(px,py-5);c.lineTo(px+5,py);c.lineTo(px,py+5);c.lineTo(px-5,py);c.closePath();c.fill();
+      const ox=sgn*cw,oy=-sgn*sw;c.textBaseline='middle';rich(c,lab,px+ox*10,py+oy*10+(Math.abs(oy)>0.7?oy*4:0),{size:11.5,weight:600,halo:true,align:ox>0.3?'left':ox<-0.3?'right':'center'});};
+    if(O.rp>b.R)mark(O.rp,1,b.peri);if(ell)mark(O.ra,-1,b.apo);}
+  // Aufschlag
+  if(MS.crash){const s=stateAt(O,MS.nuEnd),px=X(s.x),py=Y(s.y);c.strokeStyle=C.crash;c.lineWidth=2.4;c.beginPath();c.moveTo(px-6,py-6);c.lineTo(px+6,py+6);c.moveTo(px+6,py-6);c.lineTo(px-6,py+6);c.stroke();
+    c.fillStyle=C.crash;c.textBaseline='middle';const ox=Math.cos(s.th),oy=-Math.sin(s.th);rich(c,'Aufschlag',px+ox*14,py+oy*14,{size:11.5,weight:600,halo:true,align:ox>0.3?'left':ox<-0.3?'right':'center'});}
+  // Startpfeil (ziehbar)
+  const AS=V.AS,sx=X(G.r0),sy=Y(0),tx=sx+AS*st.q*Math.sin(st.g*deg),ty=sy-AS*st.q*Math.cos(st.g*deg);
+  c.strokeStyle=hexA(C.muted,0.7);c.lineWidth=1;c.setLineDash([2,3]);c.beginPath();c.moveTo(sx,sy+AS*0.5);c.lineTo(sx,sy-AS*1.2);c.stroke();c.setLineDash([]);
+  if(Math.abs(st.g)>=1){c.strokeStyle=C.accent;c.lineWidth=1.2;const rr=Math.min(28,AS*st.q*0.6);c.beginPath();const a0=-Math.PI/2,a1=-Math.PI/2+st.g*deg;c.arc(sx,sy,rr,Math.min(a0,a1),Math.max(a0,a1));c.stroke();
+    c.fillStyle=C.accent;c.textBaseline='middle';rich(c,'γ',sx+(rr+8)*Math.cos(-Math.PI/2+st.g*deg/2)+(st.g>0?2:-2),sy+(rr+8)*Math.sin(-Math.PI/2+st.g*deg/2),{size:12,weight:600,halo:true,align:'center'});}
+  arrow(c,sx,sy,tx,ty,C.accent,2.6);
+  c.fillStyle=C.panel;c.strokeStyle=C.accent;c.lineWidth=2;c.beginPath();c.arc(tx,ty,6,0,2*Math.PI);c.fill();c.stroke();
+  c.fillStyle=C.accent;c.textBaseline='bottom';rich(c,'v_{0}',tx+9,ty-4,{size:12.5,weight:600,halo:true});
+  c.strokeStyle=C.accent;c.lineWidth=1.6;c.beginPath();c.arc(sx,sy,4,0,2*Math.PI);c.stroke();
+  ARROW={tx,ty,sx,sy,AS};
+  // Satellit
+  const S=curState(),bx=X(S.x),by=Y(S.y);
+  if(st.acc){const g=O.mu/(S.r*S.r),g0=O.mu/(G.r0*G.r0),L=Math.min(3,g/g0)*AS*0.6;arrow(c,bx,by,bx-L*S.x/S.r,by+L*S.y/S.r,C.acc,2.2);}
+  const Lv=AS*S.v/G.vk0;arrow(c,bx,by,bx+Lv*S.vx/S.v,by-Lv*S.vy/S.v,C.v,2.4);
+  c.fillStyle=C.ink;c.strokeStyle=C.stage;c.lineWidth=2;c.beginPath();c.arc(bx,by,5.5,0,2*Math.PI);c.fill();c.stroke();
+  // Maßstab
+  const unit=b.sun?AU:1e3,uL=b.sun?'AE':'km',Lw=niceStep(W*0.6/V.s/unit,3)*unit,Lp=Lw*V.s;
+  c.strokeStyle=C.muted;c.lineWidth=1.5;const y0=H-14;c.beginPath();c.moveTo(14,y0-4);c.lineTo(14,y0);c.lineTo(14+Lp,y0);c.lineTo(14+Lp,y0-4);c.stroke();
+  c.fillStyle=C.muted;c.font=`11px ${C.mono}`;c.textBaseline='bottom';c.fillText((b.sun?num(Lw/unit,3):grp(Lw/unit))+' '+uL,18+Lp,y0+1);
+  // Zeit und Momentanwerte
+  const tt=O.type==='ell'&&!MS.crash?tau:Math.min(tau,MS.D);
+  c.fillStyle=C.ink;c.textBaseline='top';c.font=`600 13px ${C.mono}`;halo(c,'t = '+fTime(tt),12,10);
+  c.fillStyle=C.muted;c.font=`12px ${C.mono}`;halo(c,`r = ${fLen(S.r)}   v = ${fV(S.v)}`,12,28);
+  c.textAlign='right';halo(c,'Zeitraffer '+PDEF.lgf.fmt(st.lgf),W-12,10);c.textAlign='left';}
+
+/* ----- Effektives Potential ----- */
+function drawUeff(){if(!O)return;const {c,W,H}=ctxOf($('#ueff')),b=B(),L=58,Rm=12,T=10,Bm=36,w=W-L-Rm,h=H-T-Bm;
+  const unit=b.sun?AU:1e3,ell=O.type==='ell';
+  let rMax=ell?Math.min(1.18*O.ra,Math.max(60*O.rp,1.3*O.r0)):MS.rlim;rMax=Math.max(rMax,1.25*O.r0,1.4*O.rp);
+  const Umin=-O.mu/(2*O.p),yLo=1.45*Umin,yHi=Math.max(O.eps,0)+0.55*Math.abs(Umin);
+  const X=r=>L+r/rMax*w,Yv=u=>T+h-(u-yLo)/(yHi-yLo)*h;
+  c.strokeStyle=C.grid;c.lineWidth=1;c.font=`11px ${C.mono}`;c.fillStyle=C.muted;
+  const xt=ticks(0,rMax/unit,4),yt=ticks(yLo/1e6,yHi/1e6,4);
+  c.textAlign='center';c.textBaseline='top';for(const v of xt){const x=X(v*unit);c.beginPath();c.moveTo(x+0.5,T);c.lineTo(x+0.5,T+h);c.stroke();c.fillText(b.sun?tickLab(v):grp(v),x,T+h+4);}
+  c.textAlign='right';c.textBaseline='middle';for(const v of yt){const y=Yv(v*1e6);c.beginPath();c.moveTo(L,y+0.5);c.lineTo(L+w,y+0.5);c.stroke();c.fillText(tickLab(v),L-5,y);}
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  // Zentralkörper
+  const xb=X(b.R);if(xb>L+1){c.fillStyle=hexA(C.body[b.col],0.16);c.fillRect(L,T,xb-L,h);if(xb-L>40){c.fillStyle=C.muted;c.textAlign='left';c.textBaseline='top';c.font=`11px ${C.ui}`;c.fillText('Körper',L+4,T+4);}}
+  c.strokeStyle=C.ink;c.lineWidth=1;c.beginPath();c.moveTo(L,Yv(0)+0.5);c.lineTo(L+w,Yv(0)+0.5);c.stroke();
+  const curve=(f,col,lw,dash)=>{c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;for(let i=1;i<=400;i++){const r=rMax*i/400,u=f(r);const y=Yv(u);if(y<-1e4){pen=false;continue;}if(y>1e5){pen=false;continue;}pen?c.lineTo(X(r),y):c.moveTo(X(r),y);pen=true;}c.stroke();c.setLineDash([]);};
+  const hh=O.h*O.h/2;
+  curve(r=>-O.mu/r,C.pot,1.4,[5,4]);curve(r=>hh/(r*r),C.cent,1.4,[2,3]);curve(r=>-O.mu/r+hh/(r*r),C.accent,2.4);
+  // Energielinie: durchgezogen im erlaubten Bereich
+  const yE=Yv(O.eps),xp=X(O.rp),xa=ell?X(O.ra):L+w;
+  c.strokeStyle=hexA(C.ink,0.45);c.lineWidth=1.2;c.setLineDash([4,4]);c.beginPath();c.moveTo(L,yE);c.lineTo(L+w,yE);c.stroke();c.setLineDash([]);
+  c.strokeStyle=C.ink;c.lineWidth=2.2;c.beginPath();c.moveTo(xp,yE);c.lineTo(Math.min(xa,L+w),yE);c.stroke();
+  c.fillStyle=C.pt;for(const x of ell?[xp,xa]:[xp])if(x<=L+w){c.beginPath();c.arc(x,yE,4,0,2*Math.PI);c.fill();}
+  // aktueller Abstand: Abstand ε − U_eff = ṙ²/2
+  const S=curState(),xr=X(S.r),yu=Yv(-O.mu/S.r+hh/(S.r*S.r));
+  if(xr<=L+w){c.strokeStyle=C.v;c.lineWidth=3;c.beginPath();c.moveTo(xr,yu);c.lineTo(xr,yE);c.stroke();
+    c.fillStyle=C.accent;c.beginPath();c.arc(xr,yu,3.5,0,2*Math.PI);c.fill();c.fillStyle=C.ink;c.beginPath();c.arc(xr,yE,4.5,0,2*Math.PI);c.fill();}
+  c.restore();
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.fillStyle=C.ink;c.textBaseline='bottom';
+  if(yE>T+14&&yE<T+h-4)rich(c,'ε',L+w-6,yE-3,{size:13,weight:600,halo:true,align:'right'});
+  c.fillStyle=C.accent;const rl=Math.min(rMax*0.85,Math.max(O.p*2.2,rMax*0.55));const yl=Yv(-O.mu/rl+hh/(rl*rl));if(yl>T+12&&yl<T+h-10)rich(c,'U_{eff}',X(rl),yl+16,{size:11.5,weight:600,halo:true,align:'center'});
+  c.fillStyle=C.muted;c.font=`11.5px ${C.ui}`;c.textAlign='center';c.textBaseline='bottom';c.fillText('Abstand r ('+(b.sun?'AE':'km')+')',L+w/2,H-1);
+  c.save();c.translate(11,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.textBaseline='middle';c.fillText('Energie (MJ/kg)',0,0);c.restore();c.textAlign='left';}
+function ueffNote(){const b=B();
+  let s=`Erlaubt ist nur <i class="m">ε</i> ≥ <i class="m">U</i><sub>eff</sub>: `;
+  s+=O.type==='ell'?`<i class="m">r</i> zwischen <b>${fLen(O.rp)}</b> und <b>${fLen(O.ra)}</b>.`:`<i class="m">r</i> ≥ <b>${fLen(O.rp)}</b>, nach außen unbegrenzt.`;
+  s+=` Orange: radiale Bewegungsenergie <i class="m">ṙ</i><sup>2</sup>/2. Gestrichelt −<i class="m">μ</i>/<i class="m">r</i> (blau) und <i class="m">h</i><sup>2</sup>/2<i class="m">r</i><sup>2</sup> (violett).`;
+  if(O.rp<b.R)s+=` Die Bahn reicht unter die Oberfläche (grau).`;
+  $('#ueffNote').innerHTML=s;}
+
+/* ----- Energie über der Zeit ----- */
+function tUnit(D){if(D<120)return [1,'s'];if(D<7200)return [60,'min'];if(D<72*3600)return [3600,'h'];if(D<(B().sun?0.75*YR:400*DAY))return [DAY,'d'];return [YR,'Jahre'];}
+function drawEner(){if(!O)return;const {c,W,H}=ctxOf($('#ener')),L=58,Rm=44,T=10,Bm=36,w=W-L-Rm,h=H-T-Bm,[tu,tl]=tUnit(MS.D);
+  let lo=0,hi=0;for(const p of G.en){lo=Math.min(lo,p[2],p[1]+p[2]);hi=Math.max(hi,p[1],p[1]+p[2]);}
+  const pad=(hi-lo)*0.08;lo-=pad;hi+=pad;
+  const X=t=>L+t/MS.D*w,Yv=u=>T+h-(u-lo)/(hi-lo)*h;
+  c.strokeStyle=C.grid;c.lineWidth=1;c.font=`11px ${C.mono}`;c.fillStyle=C.muted;
+  c.textAlign='center';c.textBaseline='top';for(const v of ticks(0,MS.D/tu,4)){const x=X(v*tu);c.beginPath();c.moveTo(x+0.5,T);c.lineTo(x+0.5,T+h);c.stroke();c.fillText(tickLab(v),x,T+h+4);}
+  c.textAlign='right';c.textBaseline='middle';for(const v of ticks(lo/1e6,hi/1e6,4)){const y=Yv(v*1e6);c.beginPath();c.moveTo(L,y+0.5);c.lineTo(L+w,y+0.5);c.stroke();c.fillText(tickLab(v),L-5,y);}
+  c.strokeStyle=C.ink;c.beginPath();c.moveTo(L,Yv(0)+0.5);c.lineTo(L+w,Yv(0)+0.5);c.stroke();
+  const line=(k,col,lw)=>{c.strokeStyle=col;c.lineWidth=lw;c.beginPath();G.en.forEach((p,i)=>{const u=k===3?p[1]+p[2]:p[k],x=X(p[0]),y=Yv(u);i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();};
+  line(1,C.kin,2);line(2,C.pot,2);line(3,C.ink,2.4);
+  const last=G.en[G.en.length-1];c.textBaseline='middle';
+  const labs=[[last[1],C.kin,'E_{kin}'],[last[2],C.pot,'E_{pot}'],[last[1]+last[2],C.ink,'E_{ges}']].map(q=>[Yv(q[0]),q[1],q[2]]).sort((a,b)=>a[0]-b[0]);
+  for(let i=1;i<3;i++)if(labs[i][0]-labs[i-1][0]<13)labs[i][0]=labs[i-1][0]+13;
+  for(const [y,col,t] of labs){c.fillStyle=col;rich(c,t,L+w+4,Math.min(H-Bm,y),{size:11,weight:600});}
+  // Zeitmarke
+  const tt=O.type==='ell'&&!MS.crash?(tau%O.T):Math.min(tau,MS.D),S=curState(),x=X(tt);
+  c.strokeStyle=hexA(C.muted,0.8);c.lineWidth=1;c.setLineDash([3,3]);c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();c.setLineDash([]);
+  for(const [u,col] of [[S.v*S.v/2,C.kin],[-O.mu/S.r,C.pot],[O.eps,C.ink]]){c.fillStyle=col;c.beginPath();c.arc(x,Yv(u),4,0,2*Math.PI);c.fill();}
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.fillStyle=C.muted;c.font=`11.5px ${C.ui}`;c.textAlign='center';c.textBaseline='bottom';c.fillText(`Zeit seit dem Start (${tl})`,L+w/2,H-1);
+  c.save();c.translate(11,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.textBaseline='middle';c.fillText('Energie pro kg (MJ/kg)',0,0);c.restore();c.textAlign='left';}
+function enerNote(){let mn=Infinity,mx=-Infinity;for(const p of G.en){mn=Math.min(mn,p[1]);mx=Math.max(mx,p[1]);}
+  const span=O.type==='ell'&&!MS.crash?'ein Umlauf':MS.crash?'bis zum Aufschlag':'bis zum Bildrand';
+  $('#enerNote').innerHTML=`Gezeigt: ${span}. <i class="m">E</i><sub>kin</sub> schwankt zwischen ${fE(mn)} und ${fE(mx)}, <i class="m">E</i><sub>pot</sub> gleicht das genau aus: <b><i class="m">E</i><sub>ges</sub> = ${fE(O.eps)}</b> bleibt konstant.`;}
+
+/* ----- Drittes Keplersches Gesetz ----- */
+const K3={
+  erde:[['ISS',6.79e6,92.7*60],['GPS',2.656e7,11.967*3600],['GEO',4.2164e7,86164],['Mond',3.844e8,27.32*DAY]],
+  mond:[['LRO (50 km)',1.788e6,113*60],['Apollo',1.847e6,118*60]],
+  mars:[['MRO',3.676e6,112*60],['Phobos',9.376e6,7.654*3600],['Deimos',2.3463e7,30.31*3600]],
+  sonne:[['Merkur',0.387,0.2408],['Venus',0.723,0.6152],['Erde',1,1],['Mars',1.524,1.881],['Ceres',2.77,4.60],['Jupiter',5.203,11.86],['Saturn',9.537,29.46],['Halley',17.83,75.3],['Uranus',19.19,84.01],['Neptun',30.07,164.8]].map(p=>[p[0],p[1]*AU,p[2]*YR])
+};
+function drawK3(){if(!O)return;const {c,W,H}=ctxOf($('#k3')),b=B(),L=50,Rm=12,T=10,Bm=36,w=W-L-Rm,h=H-T-Bm;
+  const ua=b.sun?AU:1e3,ut=b.sun?YR:3600,pts=K3[st.body];
+  let xa=Math.log10(b.rmin*0.8/ua),xb=Math.log10(b.rmax*1.2/ua);
+  for(const p of pts){xa=Math.min(xa,Math.log10(p[1]/ua)-0.15);xb=Math.max(xb,Math.log10(p[1]/ua)+0.15);}
+  const ell=O.type==='ell';if(ell){xa=Math.min(xa,Math.log10(O.a/ua)-0.15);xb=Math.max(xb,Math.log10(O.a/ua)+0.15);}
+  const lt=la=>Math.log10(2*Math.PI*Math.sqrt(Math.pow(Math.pow(10,la)*ua,3)/b.mu)/ut);
+  const ya=lt(xa)-0.25,yb=lt(xb)+0.25;
+  const X=v=>L+(v-xa)/(xb-xa)*w,Yv=v=>T+h-(v-ya)/(yb-ya)*h;
+  c.strokeStyle=C.grid;c.lineWidth=1;c.font=`11px ${C.mono}`;c.fillStyle=C.muted;
+  c.textAlign='center';c.textBaseline='top';for(let k=Math.ceil(xa);k<=xb;k++){const x=X(k);c.beginPath();c.moveTo(x+0.5,T);c.lineTo(x+0.5,T+h);c.stroke();c.fillText('10'+sup(k),x,T+h+4);}
+  c.textAlign='right';c.textBaseline='middle';for(let k=Math.ceil(ya);k<=yb;k++){const y=Yv(k);c.beginPath();c.moveTo(L,y+0.5);c.lineTo(L+w,y+0.5);c.stroke();c.fillText('10'+sup(k),L-5,y);}
+  c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
+  c.strokeStyle=C.accent;c.lineWidth=2;c.beginPath();c.moveTo(X(xa),Yv(lt(xa)));c.lineTo(X(xb),Yv(lt(xb)));c.stroke();
+  c.font=`600 11px ${C.ui}`;
+  pts.forEach((p,i)=>{const x=X(Math.log10(p[1]/ua)),y=Yv(Math.log10(p[2]/ut));c.fillStyle=C.pt;c.beginPath();c.arc(x,y,3.6,0,2*Math.PI);c.fill();
+    c.fillStyle=C.ink;c.textBaseline='middle';const tw=c.measureText(p[0]).width;let right=(b.sun&&i%2===1)||x-8-tw<L;if(right&&x+8+tw>L+w)right=false;c.textAlign=right?'left':'right';halo(c,p[0],x+(right?7:-7),y+(right?7:-7));});
+  if(ell){const x=X(Math.log10(O.a/ua)),y=Yv(Math.log10(O.T/ut));c.strokeStyle=C.ink;c.lineWidth=2;c.beginPath();c.arc(x,y,7,0,2*Math.PI);c.stroke();
+    c.beginPath();c.moveTo(x-11,y);c.lineTo(x-4,y);c.moveTo(x+4,y);c.lineTo(x+11,y);c.moveTo(x,y-11);c.lineTo(x,y-4);c.moveTo(x,y+4);c.lineTo(x,y+11);c.stroke();}
+  c.restore();c.textAlign='left';
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,w-1,h-1);
+  c.fillStyle=C.muted;c.font=`11.5px ${C.ui}`;c.textAlign='center';c.textBaseline='bottom';c.fillText(`große Halbachse a (${b.sun?'AE':'km'})`,L+w/2,H-1);
+  c.save();c.translate(11,T+h/2);c.rotate(-Math.PI/2);c.textAlign='center';c.textBaseline='middle';c.fillText(`Umlaufzeit T (${b.sun?'Jahre':'h'})`,0,0);c.restore();c.textAlign='left';}
+function k3Note(){const b=B();let s=`Gerade: <i class="m">T</i> = 2π√(<i class="m">a</i><sup>3</sup>/<i class="m">GM</i>) mit Steigung 3/2. Punkte: gemessene Bahnen um ${b.akk}. `;
+  s+=O.type==='ell'?`Kreuz: aktuelle Bahn, <i class="m">a</i> = ${fLen(O.a)}, <i class="m">T</i> = <b>${fTime(O.T)}</b>.`:`Die aktuelle Bahn ist offen und hat keine Umlaufzeit.`;
+  $('#k3Note').innerHTML=s;}
+
+/* ----- Kennzahlen, Status, Legende ----- */
+function updateKZ(){const b=B(),ell=O.type==='ell',sun=b.sun;
+  const form=O.type==='hyp'?'Hyperbel':O.type==='par'?'Parabel':O.e<0.005?'Kreis':'Ellipse';
+  const ht=r=>sun?fLen(r):fLen(r-b.R);
+  const vp=Math.sqrt(2*(O.eps+O.mu/O.rp)),va=ell?Math.sqrt(2*(O.eps+O.mu/O.ra)):NaN;
+  let s=`<div class="gh">Bahn</div>
+  <dt>Form</dt><dd class="hi">${form}</dd>
+  <dt>Exzentrizität <i>e</i></dt><dd>${O.e<1e-9?"0":num(O.e,4)}</dd>
+  <dt>große Halbachse <i>a</i></dt><dd>${ell?fLen(O.a):O.type==='hyp'?'−'+fLen(-O.a):'∞'}</dd>
+  <dt>${b.peri} (${sun?'Abstand':'Höhe'})</dt><dd>${ht(O.rp)}</dd>
+  <dt>${b.apo} (${sun?'Abstand':'Höhe'})</dt><dd>${ell?ht(O.ra):'—'}</dd>
+  <dt>Umlaufzeit <i>T</i></dt><dd class="hi">${ell?fTime(O.T):'—'}</dd>
+  <div class="gh">Erhaltungsgrößen (pro kg)</div>
+  <dt>Energie <i>ε</i></dt><dd>${fE(O.eps)}</dd>
+  <dt>Drehimpuls <i>h</i></dt><dd>${fH(O.h)}</dd>
+  <div class="gh">Geschwindigkeiten</div>
+  <dt>Start <i>v</i><sub>0</sub></dt><dd>${fV(O.v0)}</dd>
+  <dt>Kreisbahn <i>v</i><sub>K</sub>(<i>r</i><sub>0</sub>)</dt><dd>${fV(G.vk0)}</dd>
+  <dt>Flucht <i>v</i><sub>F</sub>(<i>r</i><sub>0</sub>)</dt><dd>${fV(Math.SQRT2*G.vk0)}</dd>
+  <dt>im ${b.peri}</dt><dd>${O.rp>=b.R?fV(vp):'—'}</dd>
+  <dt>${ell?'im '+b.apo:'weit draußen <i>v</i><sub>∞</sub>'}</dt><dd>${ell?fV(va):fV(Math.sqrt(Math.max(0,2*O.eps)))}</dd>`;
+  if(MS.crash)s+=`<div class="gh">Aufschlag</div><dt>Flugzeit</dt><dd class="hi">${fTime(MS.D)}</dd><dt>Aufprallgeschwindigkeit</dt><dd>${fV(Math.sqrt(2*(O.eps+O.mu/b.R)))}</dd>`;
+  $('#kz').innerHTML=s;}
+function statusText(){const b=B(),name=st.sel?`<b>${EXM[st.sel].name}:</b> `:'';let t;
+  if(MS.crash)t=`<b>${b.sun?'Sturz in die Sonne':'Aufschlag'} nach ${fTime(MS.D)}.</b> Die Bahn ist eine ${O.type==='ell'?'Ellipse':O.type==='hyp'?'Hyperbel':'Parabel'}, deren ${b.peri} ${b.sun?'innerhalb der Sonne':'unter der Oberfläche'} läge (${fLen(b.R-O.rp)} tief). Gestrichelt: der Weiterflug um eine Punktmasse.`;
+  else if(O.type==='ell'&&O.e<0.005)t=`<b>Kreisbahn.</b> Bei <i>v</i> = <i>v</i><sub>K</sub> liefert die Gravitation genau die nötige Zentripetalkraft. <i>ε</i> &lt; 0: gebunden, ein Umlauf dauert ${fTime(O.T)}.`;
+  else if(O.type==='ell')t=`<b>Ellipse</b> (<i>e</i> = ${num(O.e,3)}). <i>ε</i> &lt; 0: gebunden, ein Umlauf dauert ${fTime(O.T)}. Im ${b.peri} ist der Körper ${num(O.ra/O.rp,3)}-mal so schnell wie im ${b.apo}.`;
+  else if(O.type==='par')t=`<b>Parabel.</b> <i>v</i><sub>0</sub> ist genau die Fluchtgeschwindigkeit, <i>ε</i> = 0. Der Körper entkommt gerade eben.`;
+  else t=`<b>Hyperbel</b> (<i>e</i> = ${num(O.e,3)}). <i>ε</i> &gt; 0: Der Körper entkommt und fliegt weit draußen noch mit <i>v</i><sub>∞</sub> = ${fV(Math.sqrt(2*O.eps))}.`;
+  $('#status').innerHTML=name+t;}
+function sw(col,dash,lw=2.4){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="${col}" stroke-width="${lw}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;}
+function aw(col){return `<svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="16" y2="5" stroke="${col}" stroke-width="2.4"/><path d="M23 5 L15 1 L15 9 Z" fill="${col}"/></svg>`;}
+function buildLegend(){const it=[[sw('var(--c-orbit)'),'Bahn'],[aw('var(--accent)'),'Startgeschwindigkeit (ziehbar)'],[aw('var(--c-v)'),'Geschwindigkeit']];
+  if(st.acc)it.push([aw('var(--c-acc)'),'Beschleunigung']);
+  if(MS.crash||O.type!=='ell')it.push([sw('var(--c-orbit)','5 5',1.3),MS.crash?'Weiterflug ohne Oberfläche':'nicht durchflogener Teil']);
+  if(st.area)it.push([`<svg width="24" height="10" aria-hidden="true"><rect width="11" height="10" fill="var(--c-sec0)" opacity=".35"/><rect x="12" width="11" height="10" fill="var(--c-sec1)" opacity=".35"/></svg>`,`gleiche Zeiten Δt = ${fTime(G.dtSect)}`]);
+  if(st.cmp)it.push([sw('var(--c-cmp)','6 5',1.4),'Kreisbahn'],[sw('var(--c-acc)','6 5',1.4),'Fluchtparabel']);
+  $('#legend').innerHTML=it.map(([s,t])=>`<span>${s}${t}</span>`).join('');}
+
+/* ----- Ziehen des Startpfeils, Tastatur ----- */
+(function(){const cv=$('#orb');
+  const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+  const near=(x,y)=>ARROW&&Math.hypot(x-ARROW.tx,y-ARROW.ty)<18;
+  const apply=(x,y)=>{const A=ARROW,dx=(x-A.sx)/A.AS,dy=-(y-A.sy)/A.AS;let q=Math.hypot(dx,dy),g=Math.atan2(dx,dy)/deg;
+    st.q=Math.max(0.05,Math.min(1.8,q));st.g=Math.max(-85,Math.min(85,g));st.sel=null;sync();};
+  cv.addEventListener('pointerdown',e=>{const [x,y]=pos(e);if(near(x,y)){dragging=true;VLOCK=true;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';e.preventDefault();}});
+  cv.addEventListener('pointermove',e=>{const [x,y]=pos(e);if(dragging){apply(x,y);}else cv.style.cursor=near(x,y)?'grab':'default';});
+  const end=()=>{if(dragging){dragging=false;VLOCK=false;cv.style.cursor='default';dirty=true;}};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  cv.addEventListener('keydown',e=>{const f=e.shiftKey?0.2:1;let used=true;
+    if(e.key==='ArrowRight')st.q+=0.01*f;else if(e.key==='ArrowLeft')st.q-=0.01*f;else if(e.key==='ArrowUp')st.g+=1*f;else if(e.key==='ArrowDown')st.g-=1*f;
+    else if(e.key===' '){$('#play').click();}else if(e.key==='r'||e.key==='R'){tau=0;hold=0;}else used=false;
+    if(used){e.preventDefault();if(e.key.startsWith('Arrow')){st.sel=null;sync();}}});})();
+
+/* ----- Schleife ----- */
+let lastTs=0;
+function update(){readColors();updateKZ();statusText();buildLegend();ueffNote();enerNote();k3Note();drawOrbit();drawUeff();drawEner();drawK3();}
+function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(dirty){dirty=false;update();}
+  else if(O){
+    if(playing&&!dragging){const f=Math.pow(10,st.lgf);
+      if(O.type==='ell'&&!MS.crash){tau+=dt*f;if(tau>1e6*O.T)tau%=O.T;}
+      else if(hold>0){hold-=dt;if(hold<=0){tau=0;hold=0;}}
+      else{tau+=dt*f;if(tau>=MS.D){tau=MS.D;hold=1.5;}}}
+    drawOrbit();drawUeff();drawEner();}
+  requestAnimationFrame(frameLoop);}
+function redrawAll(){readColors();dpr=Math.min(2,window.devicePixelRatio||1);if(O){drawOrbit();drawUeff();drawEner();drawK3();}}
+for(const id of ['#orb','#ueff','#ener','#k3'])new ResizeObserver(redrawAll).observe($(id).parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+dpr=Math.min(2,window.devicePixelRatio||1);
+buildControls();
+{const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
+  const id=h.find(k=>EXM[k]);selectEx(id||'iss');
+  for(const k of ['area','cmp','acc'])if(h.includes(k))st[k]=true;
+  const q=h.find(k=>k.startsWith('q='));if(q){st.q=parseFloat(q.slice(2));st.sel=null;}
+  const g=h.find(k=>k.startsWith('g='));if(g){st.g=parseFloat(g.slice(2));st.sel=null;}
+  sync();
+  const tf=h.find(k=>k.startsWith('t='));if(tf)tau=parseFloat(tf.slice(2))*MS.D;
+  if(h.includes('pause')||matchMedia('(prefers-reduced-motion: reduce)').matches){playing=false;$('#play').textContent='Weiter';}}
+requestAnimationFrame(frameLoop);
+</script>
+
+</body>
+</html>
