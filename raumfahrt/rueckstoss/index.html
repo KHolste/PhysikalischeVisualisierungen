@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rückstoßlabor</title>
+<style>
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+:root{
+  --bg:#e9edf1; --panel:#fbfcfd; --ink:#14202b; --muted:#566573; --line:#d2dae1; --stage:#ffffff; --grid:#e8edf1;
+  --accent:#0b6767; --accent-soft:#d9eeec; --on-accent:#ffffff;
+  --c-body:#c96a12; --c-shot:#1f5fc2; --c-cm:#0b6767; --c-cont:#2c8540; --c-ref:#7b3aa6; --c-warn:#b4291f; --c-ground:#9aa7b2;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --f-math:"Source Serif 4",Cambria,"Times New Roman",serif;
+  --r:7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+    --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+    --c-body:#ffae52; --c-shot:#62a1ff; --c-cm:#47b6ae; --c-cont:#5cc46a; --c-ref:#c48cf0; --c-warn:#ff715f; --c-ground:#4a5966; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1115; --panel:#121a20; --ink:#e1e8ed; --muted:#8d9eab; --line:#25323c; --stage:#0a0f13; --grid:#18222b;
+  --accent:#47b6ae; --accent-soft:#15302e; --on-accent:#06110f;
+  --c-body:#ffae52; --c-shot:#62a1ff; --c-cm:#47b6ae; --c-cont:#5cc46a; --c-ref:#c48cf0; --c-warn:#ff715f; --c-ground:#4a5966; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+.wrap{max-width:1600px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:16px 12px}
+header.top h1{font-family:var(--f-head);font-weight:600;font-size:26px;letter-spacing:.01em;margin:0}
+header.top .sub{color:var(--muted);margin:0}
+.app{display:grid;gap:14px;grid-template-columns:286px minmax(0,1fr);align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.params{padding:12px 14px 14px}
+.stage{min-width:0;display:flex;flex-direction:column;gap:10px}
+h2.lab{font-family:var(--f-head);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.seg{display:grid;grid-template-columns:repeat(var(--n,3),1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.seg button{all:unset;text-align:center;padding:6px 2px;cursor:pointer;font-size:12.5px;font-weight:500;line-height:1.2}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.seg.small{margin:0;min-width:130px}
+.seg.small button{padding:3px 8px;font-size:12px}
+.ctl{display:flex;flex-direction:column;gap:2px;margin-bottom:11px}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-weight:500}
+.ctl label i,.m i,dl.kz dt i,.lab2 i{font-family:var(--f-math);font-style:italic;font-size:1.08em}
+.ctl output{white-space:nowrap;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--accent);min-width:44px;text-align:center}
+.ctl .hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.ctl .val{display:flex;align-items:center;gap:4px}
+.stp{all:unset;box-sizing:border-box;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:14px;line-height:1;color:var(--ink);user-select:none;touch-action:manipulation}
+.stp:hover{border-color:var(--accent);color:var(--accent)}
+.stp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chkrow{display:flex;gap:7px;align-items:flex-start;font-size:13px;margin-bottom:8px;cursor:pointer}
+.chkrow input{accent-color:var(--accent);margin-top:3px}
+.sep{border:0;border-top:1px solid var(--line);margin:14px 0 12px}
+.btn{font:inherit;font-weight:500;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+dl.kz{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin:0;font-size:13px}
+dl.kz dt{color:var(--muted)}
+dl.kz dd{margin:0;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+dl.kz dd.hi{font-weight:600;color:var(--accent)}
+.plotbox{border:1px solid var(--line);border-radius:var(--r);background:var(--stage);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.vhead{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.vhead>.seg{margin:0;min-width:300px;flex:0 1 380px}
+.tctl{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.scenewrap{position:relative;height:clamp(300px,42vh,440px)}
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+#scene:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend svg{flex:none}
+.duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.boxp{padding:10px 12px;min-width:0}
+.boxp .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;min-height:24px}
+.boxp .ph h2.lab{margin:0}
+.cwrap{position:relative;height:240px}
+.note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4}
+.note b{color:var(--ink);font-weight:600;font-family:var(--f-mono);font-size:12px}
+.inl{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-top:4px}
+.inl input{flex:1}
+.inl output{font-family:var(--f-mono);font-size:12.5px;color:var(--accent);min-width:70px;text-align:right}
+.warn{color:var(--c-warn);font-size:12px;margin:-4px 0 10px}
+.foot{font-size:12px;color:var(--muted);margin-top:14px}
+@media (max-width:1100px){.duo{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .params{order:2}
+  .vhead>.seg{min-width:0;flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <h1>Rückstoßlabor</h1>
+  <p class="sub">Ein Maschinengewehr als Triebwerk: von der Plattform mit Zielscheibe zur Raumsonde</p>
+</header>
+
+<div class="app">
+  <section class="panel params" aria-label="Parameter">
+    <h2 class="lab">Gewehr</h2>
+    <div id="ctl-gun"></div>
+    <div id="grp-plat">
+      <h2 class="lab">Plattform auf Luftlager</h2>
+      <div id="ctl-plat"></div>
+    </div>
+    <div id="grp-son" hidden>
+      <h2 class="lab">Sonde im All</h2>
+      <div id="ctl-son"></div>
+      <p class="warn" id="warnN" hidden></p>
+      <h2 class="lab">Missionsziel</h2>
+      <div id="ctl-mis"></div>
+    </div>
+    <button class="btn" type="button" id="defaults">Standardwerte</button>
+    <hr class="sep">
+    <h2 class="lab">Messwerte</h2>
+    <dl class="kz" id="kz"></dl>
+  </section>
+
+  <main class="stage">
+    <div class="plotbox">
+      <div class="vhead">
+        <div class="seg" style="--n:2" id="segMode" role="group" aria-label="Szenario">
+          <button type="button" data-m="plat">Plattform mit Zielscheibe</button><button type="button" data-m="son">Sonde im All</button>
+        </div>
+        <div class="tctl"><button class="btn" type="button" id="play">❚❚ Pause</button><button class="btn" type="button" id="restart" aria-label="Von vorn">↺</button><span id="tnow"></span></div>
+      </div>
+      <div class="scenewrap"><canvas class="full" id="scene" tabindex="0" aria-label="Animation. Leertaste hält an."></canvas></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="duo" id="plotsPlat">
+      <div class="panel boxp">
+        <div class="ph"><h2 class="lab">Geschwindigkeit der Plattform</h2></div>
+        <div class="cwrap"><canvas class="full" id="pv"></canvas></div>
+      </div>
+      <div class="panel boxp">
+        <div class="ph"><h2 class="lab">Ort der Plattform und Schwerpunkt</h2></div>
+        <div class="cwrap"><canvas class="full" id="px"></canvas></div>
+      </div>
+    </div>
+
+    <div id="plotsSon" hidden>
+      <div class="duo">
+        <div class="panel boxp">
+          <div class="ph"><h2 class="lab">Geschwindigkeit der Sonde</h2>
+            <div class="seg small" style="--n:2" id="segZoom" role="group" aria-label="Ausschnitt"><button type="button" data-z="0">ganz</button><button type="button" data-z="1">Lupe</button></div></div>
+          <div class="cwrap"><canvas class="full" id="sv"></canvas></div>
+          <label class="chkrow" style="margin:6px 0 0"><input type="checkbox" id="o-cmp"><span>zum Vergleich: halbe und doppelte Feuerrate</span></label>
+        </div>
+        <div class="panel boxp">
+          <div class="ph"><h2 class="lab">Zuwachs pro Schuss Δ<i class="m">v</i><sub>k</sub></h2></div>
+          <div class="cwrap"><canvas class="full" id="sd"></canvas></div>
+        </div>
+        <div class="panel boxp">
+          <div class="ph"><h2 class="lab">Summe und Integral</h2></div>
+          <div class="cwrap"><canvas class="full" id="sr"></canvas></div>
+          <div class="inl"><span>Munition aufgeteilt in</span><input type="range" id="nR" min="0" max="1" step="0.001"><output id="oR"></output></div>
+          <div class="note" id="noteR"></div>
+        </div>
+        <div class="panel boxp">
+          <div class="ph"><h2 class="lab">Treibstoffbedarf für das Missionsziel</h2></div>
+          <div class="cwrap"><canvas class="full" id="sf"></canvas></div>
+          <div class="note" id="noteF"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<p class="foot">Keine äußeren Kräfte, keine Luftreibung · Kugeln bleiben in der Zielscheibe stecken</p>
+</div>
+
+<script>
+/*CORE-START*/
+// Plattform: ereignisgesteuert, exakt (Impulserhaltung bei jedem Schuss und jedem Einschlag)
+// Masse M_P enthält Gewehr und Munition. Gewehrmündung bei +L/2 (Norden), Zielscheibe bei −L/2 (Süden).
+function simPlatform(Mp,L,m,c,f,n){
+  const Ms=Mp-n*m;               // Plattform ohne Munition
+  let t=0,xp=0,V=0,Mb=Mp,k=0;    // Mb: alles, was gerade nicht fliegt
+  const segs=[{t:0,x:0,V:0}],B=[];let fly=[];
+  for(let guard=0;guard<100000;guard++){
+    const tF=k<n?k/f:Infinity;let tI=Infinity,jI=-1;
+    for(const j of fly){const b=B[j];const ti=(xp-V*t-L/2-b.x0+b.v*b.tf)/(b.v-V);if(ti<tI){tI=ti;jI=j;}}
+    if(tF===Infinity&&tI===Infinity)break;
+    if(tF<=tI){xp+=V*(tF-t);t=tF;const Vn=V+m*c/Mb;Mb-=m;B.push({tf:t,x0:xp+L/2,v:Vn-c,ti:Infinity});fly.push(B.length-1);V=Vn;k++;}
+    else{xp+=V*(tI-t);t=tI;const b=B[jI];b.ti=t;V=(Mb*V+m*b.v)/(Mb+m);Mb+=m;fly=fly.filter(j=>j!==jI);}
+    segs.push({t,x:xp,V});
+  }
+  const tEnd=Math.max(n/f,t+0.25/f);
+  return {Mp,Ms,L,m,c,f,n,segs,B,tEnd};
+}
+function platAt(P,t){const s=P.segs;let lo=0,hi=s.length-1;while(lo<hi){const mid=(lo+hi+1)>>1;if(s[mid].t<=t)lo=mid;else hi=mid-1;}
+  const g=s[lo];return {x:g.x+g.V*(t-g.t),V:g.V};}
+// Zustand zur Zeit t: Ort aller Kugeln, Schwerpunkt, Impulse
+function platState(P,t){const p=platAt(P,t);let A=0,E=0,sx=0,pb=0,nf=0;const fl=[];
+  for(const b of P.B){if(t<b.tf)A++;else if(t>=b.ti)E++;else{const x=b.x0+b.v*(t-b.tf);fl.push(x);sx+=x;pb+=P.m*b.v;nf++;}}
+  A+=P.n-P.B.length;
+  const Mb=P.Mp-nf*P.m;
+  const xcm=(P.Ms*p.x+A*P.m*(p.x+P.L/2)+E*P.m*(p.x-P.L/2)+P.m*sx)/P.Mp;
+  return {x:p.x,V:p.V,fl,A,E,nf,xcm,pp:Mb*p.V,pb};}
+
+// Sonde: Schuss k zur Zeit k/f, Masse vor dem Schuss M0 − (k−1)m
+function simProbe(M0,N,m,c,f){
+  const v=new Float64Array(N+1),X=new Float64Array(N+1);
+  for(let k=1;k<=N;k++){v[k]=v[k-1]+m*c/(M0-(k-1)*m);X[k]=X[k-1]+v[k-1]/f;}
+  return {M0,N,m,c,f,v,X,Tb:N/f,ME:M0-N*m,tEnd:N/f*1.3};
+}
+function probeK(S,t){return Math.max(0,Math.min(S.N,Math.floor(t*S.f+1e-9)));}
+function probeState(S,t){const k=probeK(S,t),x=S.X[k]+S.v[k]*(t-k/S.f),M=S.M0-k*S.m;let sx=0;
+  for(let j=1;j<=k;j++)sx+=S.X[j]+(S.v[j]-S.c)*(t-j/S.f);
+  let pb=0;for(let j=1;j<=k;j++)pb+=S.m*(S.v[j]-S.c);
+  return {k,x,v:S.v[k],M,xcm:(M*x+S.m*sx)/S.M0,pp:M*S.v[k],pb};}
+function riemann(M0,Mam,n,c){const mu=Mam/n;let s=0;for(let k=1;k<=n;k++)s+=mu/(M0-(k-1)*mu);return c*s;}
+/*CORE-END*/
+</script>
+
+<script>
+const $=s=>document.querySelector(s);
+const pw=x=>Math.pow(10,x),G0=9.80665;
+const NF=d=>new Intl.NumberFormat('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup=k=>String(k).split('').map(c=>SUP[c]).join('');
+function sci(x,d=1){if(!isFinite(x))return '—';if(x===0)return '0';let e=Math.floor(Math.log10(Math.abs(x))+1e-9);let mm=x/Math.pow(10,e);if(Math.abs(+mm.toFixed(d))>=10){mm/=10;e++;}return (NF(d).format(mm)+'·10'+sup(e)).replace('-','−');}
+function num(x,sig=3){if(x===null||x===undefined||!isFinite(x))return '—';return new Intl.NumberFormat('de-DE',{maximumSignificantDigits:sig}).format(x).replace('-','−');}
+function fmt(x,sig=3){if(!isFinite(x))return '—';const a=Math.abs(x);return (a>=0.01&&a<1e6)||x===0?num(x,sig):sci(x,sig>2?2:1);}
+const fKg=v=>v>=1e4?num(v/1e3,4)+' t':num(v,5)+' kg';
+// Einheit passend wählen: [Faktor, Name]
+function unitFor(maxAbs,base){const U=base==='m'?[[1,'m'],[1e-3,'mm'],[1e-6,'µm'],[1e-9,'nm']]:[[1,'m/s'],[1e-3,'mm/s'],[1e-6,'µm/s']];
+  for(const u of U)if(maxAbs>=u[0]*0.999)return u;return U[U.length-1];}
+const fU=(x,base,sig=3)=>{const u=unitFor(Math.abs(x)||1,base);return num(x/u[0],sig)+' '+u[1];};
+const fLen=x=>{const a=Math.abs(x);if(a>=1e3)return num(x/1e3,3)+' km';return fU(x,'m');};
+
+/* ----- Regler ----- */
+const PDEF={
+  m:{box:'#ctl-gun',lab:'Kugelmasse <i>m</i>',min:10,max:500,step:5,fmt:v=>num(v,3)+' g'},
+  c:{box:'#ctl-gun',lab:'Mündungsgeschw. <i>c</i>',min:100,max:1500,step:10,fmt:v=>num(v,4)+' m/s',hint:'relativ zum Gewehr'},
+  f:{box:'#ctl-gun',lab:'Feuerrate <i>f</i>',min:1,max:50,step:1,fmt:v=>v+' s⁻¹'},
+  Mp:{box:'#ctl-plat',lab:'Masse <i>M</i><sub>P</sub>',min:500,max:50000,step:500,fmt:fKg,hint:'mit Gewehr und Munition'},
+  L:{box:'#ctl-plat',lab:'Flugstrecke <i>L</i>',min:1,max:10,step:0.5,fmt:v=>num(v,3)+' m'},
+  n:{box:'#ctl-plat',lab:'Anzahl Schüsse',min:1,max:30,step:1,fmt:v=>String(v)},
+  lgSlow:{box:'#ctl-plat',lab:'Zeitlupe',min:1,max:3.5,step:0.05,fmt:v=>'1 : '+num(pw(v),2)},
+  M0:{box:'#ctl-son',lab:'Startmasse <i>M</i><sub>0</sub>',min:100,max:5000,step:50,fmt:fKg,hint:'mit Munition'},
+  N:{box:'#ctl-son',lab:'Anzahl Kugeln <i>N</i>',min:100,max:10000,step:100,fmt:v=>num(v,5)},
+  lgSpeed:{box:'#ctl-son',lab:'Zeitraffer',min:0,max:2,step:0.05,fmt:v=>num(pw(v),2)+' ×'},
+  dv:{box:'#ctl-mis',lab:'gewünschtes Δ<i>v</i>',min:0.1,max:5,step:0.1,fmt:v=>num(v,2)+' km/s'},
+  Md:{box:'#ctl-mis',lab:'Trockenmasse',min:100,max:5000,step:50,fmt:fKg}
+};
+// Standardwerte
+const DEF={mode:'plat',m:50,c:400,f:8,Mp:6000,L:4,n:12,lgSlow:2,M0:1500,N:3000,lgSpeed:1.3,dv:1.5,Md:1000,cmp:false,zoom:0,nRf:0.35};
+let st={},P=null,S=null,tSim=0,playing=true,dirty=true,dpr=1,C={};
+let flashT=-1;
+
+function buildControls(){
+  for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
+    w.innerHTML=`<div class="row"><label for="p-${k}">${d.lab}</label><span class="val"><button type="button" class="stp" data-d="-1" aria-label="verringern">−</button><output id="o-${k}"></output><button type="button" class="stp" data-d="1" aria-label="erhöhen">+</button></span></div>
+      <input type="range" id="p-${k}" min="${d.min}" max="${d.max}" step="${d.step}">${d.hint?`<div class="hint">${d.hint}</div>`:''}`;
+    $(d.box).appendChild(w);const inp=w.querySelector('input');
+    inp.addEventListener('input',()=>{st[k]=parseFloat(inp.value);sync(!['lgSlow','lgSpeed','dv','Md'].includes(k));});
+    w.querySelectorAll('.stp').forEach(b=>{let t1=null,t2=null;
+      const once=()=>{const v=inp.value;+b.dataset.d>0?inp.stepUp():inp.stepDown();if(inp.value!==v)inp.dispatchEvent(new Event('input'));};
+      const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
+      b.addEventListener('pointerdown',e=>{e.preventDefault();once();t1=setTimeout(()=>{t2=setInterval(once,70);},380);});
+      ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();once();}});});
+  }
+  document.querySelectorAll('#segMode button').forEach(b=>b.addEventListener('click',()=>{if(st.mode!==b.dataset.m){st.mode=b.dataset.m;sync(true);}}));
+  document.querySelectorAll('#segZoom button').forEach(b=>b.addEventListener('click',()=>{st.zoom=+b.dataset.z;sync(false);}));
+  $('#o-cmp').addEventListener('change',e=>{st.cmp=e.target.checked;sync(false);});
+  $('#nR').addEventListener('input',e=>{st.nRf=+e.target.value;sync(false);});
+  $('#play').addEventListener('click',()=>{if(!playing&&tSim>=curEnd())tSim=0;setPlay(!playing);});
+  $('#restart').addEventListener('click',()=>{tSim=0;setPlay(true);});
+  $('#defaults').addEventListener('click',()=>{const mode=st.mode;st=Object.assign({},DEF,{mode});sync(true);});
+  const cv=$('#scene');
+  cv.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();$('#play').click();}});
+  cv.addEventListener('click',()=>cv.focus());
+}
+function setPlay(on){playing=on;$('#play').innerHTML=on?'❚❚ Pause':'▶ Weiter';dirty=true;}
+function curEnd(){return st.mode==='plat'?P.tEnd:S.tEnd;}
+function nEff(){return Math.min(st.N,Math.floor(0.98*st.M0/(st.m/1000)));}
+function nR(){const N=nEff();return Math.max(1,Math.round(Math.pow(N,st.nRf)));}
+
+function sync(resim){
+  for(const k in PDEF){$('#p-'+k).value=st[k];$('#o-'+k).innerHTML=PDEF[k].fmt(st[k]);}
+  document.querySelectorAll('#segMode button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===st.mode)));
+  document.querySelectorAll('#segZoom button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.z===st.zoom)));
+  $('#o-cmp').checked=st.cmp;$('#nR').value=st.nRf;
+  const pl=st.mode==='plat';
+  $('#grp-plat').hidden=!pl;$('#grp-son').hidden=pl;$('#plotsPlat').hidden=!pl;$('#plotsSon').hidden=pl;
+  const m=st.m/1000,Ne=nEff();
+  $('#warnN').hidden=Ne===st.N;$('#warnN').textContent=`Munition wäre schwerer als die Sonde: nur ${num(Ne,5)} Kugeln geladen.`;
+  if(resim){P=simPlatform(st.Mp,st.L,m,st.c,st.f,st.n);S=simProbe(st.M0,Ne,m,st.c,st.f);tSim=0;setPlay(true);}
+  $('#oR').textContent=num(nR(),5)+(nR()===1?' Portion':' Portionen');
+  buildLegend();dirty=true;
+}
+
+/* ----- Farben, Canvas ----- */
+function readColors(){const cs=getComputedStyle(document.documentElement);
+  for(const k of ['ink','muted','line','grid','stage','panel','accent','c-body','c-shot','c-cm','c-cont','c-ref','c-warn','c-ground'])C[k]=cs.getPropertyValue('--'+k).trim();}
+function frame(cv){const r=cv.parentElement.getBoundingClientRect();const W=Math.max(10,r.width),H=Math.max(10,r.height);
+  const w=Math.round(W*dpr),h=Math.round(H*dpr);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);return {c,W,H};}
+function niceStep(range,target){const raw=range/target,p=Math.pow(10,Math.floor(Math.log10(raw))),r=raw/p;return (r<1.5?1:r<3?2:r<7?5:10)*p;}
+function tickLab(v,step){const d=Math.max(0,-Math.floor(Math.log10(step)+1e-9));return NF(Math.min(d,6)).format(Math.abs(v)<step*1e-6?0:v).replace('-','−');}
+function logLab(e){if(e>=0&&e<=3)return NF(0).format(pw(e));if(e<0&&e>=-2)return NF(-e).format(pw(e));return '10'+sup(e);}
+// Achsen; o: x0 x1 y0 y1 logx logy xlab ylab
+function axes(c,W,H,o){
+  const L=o.padL||58,R=12,T=10,B=34,pw_=W-L-R,ph=H-T-B;
+  const lx0=Math.log10(o.x0),lx1=Math.log10(o.x1),ly0=Math.log10(o.y0),ly1=Math.log10(o.y1);
+  const X=o.logx?(v=>L+pw_*(Math.log10(v)-lx0)/(lx1-lx0)):(v=>L+pw_*(v-o.x0)/(o.x1-o.x0));
+  const Y=o.logy?(v=>T+ph*(1-(Math.log10(v)-ly0)/(ly1-ly0))):(v=>T+ph*(1-(v-o.y0)/(o.y1-o.y0)));
+  c.font='11px '+getComputedStyle(document.body).getPropertyValue('--f-mono');c.lineWidth=1;
+  c.fillStyle=C.muted;c.strokeStyle=C.grid;
+  // x-Ticks
+  c.textAlign='center';c.textBaseline='top';
+  if(o.logx){for(let e=Math.ceil(lx0-1e-9);e<=lx1+1e-9;e++){const x=X(pw(e));c.beginPath();c.moveTo(x,T);c.lineTo(x,T+ph);c.stroke();c.fillText(logLab(e),x,T+ph+4);}}
+  else{const s=niceStep(o.x1-o.x0,Math.max(3,pw_/80));for(let v=Math.ceil(o.x0/s-1e-9)*s;v<=o.x1+s*1e-9;v+=s){const x=X(v);c.beginPath();c.moveTo(x,T);c.lineTo(x,T+ph);c.stroke();c.fillText(tickLab(v,s),x,T+ph+4);}}
+  c.textAlign='right';c.textBaseline='middle';
+  if(o.logy){for(let e=Math.ceil(ly0-1e-9);e<=ly1+1e-9;e++){const y=Y(pw(e));c.beginPath();c.moveTo(L,y);c.lineTo(L+pw_,y);c.stroke();c.fillText(logLab(e),L-5,y);}}
+  else{const s=niceStep(o.y1-o.y0,Math.max(3,ph/45));for(let v=Math.ceil(o.y0/s-1e-9)*s;v<=o.y1+s*1e-9;v+=s){const y=Y(v);c.beginPath();c.moveTo(L,y);c.lineTo(L+pw_,y);c.stroke();c.fillText(tickLab(v,s),L-5,y);}}
+  c.strokeStyle=C.line;c.strokeRect(L+0.5,T+0.5,pw_,ph);
+  c.fillStyle=C.muted;c.textAlign='right';c.textBaseline='bottom';c.fillText(o.xlab||'',L+pw_,H-1);
+  c.save();c.translate(11,T+ph/2);c.rotate(-Math.PI/2);c.textAlign='center';c.textBaseline='middle';c.fillText(o.ylab||'',0,0);c.restore();
+  return {X,Y,L,T,pw:pw_,ph};
+}
+function clip(c,A){c.save();c.beginPath();c.rect(A.L,A.T,A.pw,A.ph);c.clip();}
+function cursor(c,A,x){c.strokeStyle=C.muted;c.setLineDash([3,3]);c.beginPath();c.moveTo(x,A.T);c.lineTo(x,A.T+A.ph);c.stroke();c.setLineDash([]);}
+
+/* ----- Szene: Plattform ----- */
+function drawPlat(){
+  const {c,W,H}=frame($('#scene'));const s=platState(P,tSim);
+  const L=P.L,sc=0.56*W/L;
+  // Überhöhung der Verschiebung: Endverschiebung ≈ 0,22 L auf dem Bildschirm
+  const xe=Math.abs(platAt(P,P.tEnd).x)||1e-12;let Z=0.22*L/xe;{const e=Math.floor(Math.log10(Z)),r=Z/pw(e);Z=(r>=5?5:r>=2?2:1)*pw(e);}
+  const cx0=W/2-sc*Z*xe*0.5;
+  const gx=x=>cx0+sc*Z*x;                         // bodenfest (überhöht)
+  const px=gx(s.x),ax=x=>px+sc*(x-s.x);           // auf der Plattform (maßstäblich)
+  const yG=H*0.7,deckH=Math.max(12,H*0.04),yD=yG-16,yB=yD-deckH-H*0.2;
+  // Boden und Lineal
+  c.fillStyle=C.grid;c.fillRect(0,yG,W,H-yG);
+  c.strokeStyle=C['c-ground'];c.lineWidth=1.5;c.beginPath();c.moveTo(0,yG);c.lineTo(W,yG);c.stroke();
+  let du=niceStep(70/(sc*Z),1);const u=unitFor(5*du,'m');
+  c.font='11px '+getComputedStyle(document.body).getPropertyValue('--f-mono');c.fillStyle=C.muted;c.textAlign='center';c.textBaseline='top';c.lineWidth=1;
+  for(let i=Math.floor((0-cx0)/(sc*Z*du))-1;;i++){const x=gx(i*du);if(x>W+10)break;if(x<-10)continue;c.strokeStyle=C.muted;c.beginPath();c.moveTo(x,yG);c.lineTo(x,yG+(i%5===0?9:5));c.stroke();if(i%5===0)c.fillText(num(i*du/u[0],3),x,yG+11);}
+  c.textAlign='left';c.fillText('Boden, Teilung in '+u[1]+' · Verschiebung '+num(Z,2)+'-fach überhöht',8,yG+28);
+  // Schwerpunkt (bodenfest gezeichnet)
+  const xs=gx(s.xcm);drawCM(c,xs,yG,true);
+  // Luftlager
+  c.fillStyle=C['c-ground'];for(let i=0;i<=12;i++){const x=ax(-L*0.56+i*L*1.12/12);c.beginPath();c.arc(x,yD+8,3,0,7);c.fill();}
+  // Deck
+  const xL=ax(-L*0.56),xR=ax(L*0.56);
+  c.fillStyle=C['c-body'];c.globalAlpha=0.9;c.fillRect(xL,yD-deckH,xR-xL,deckH);c.globalAlpha=1;
+  // Zeiger: Plattformmitte
+  c.strokeStyle=C['c-body'];c.lineWidth=1.5;c.beginPath();c.moveTo(px,yD+2);c.lineTo(px,yG);c.stroke();
+  c.fillStyle=C['c-body'];c.beginPath();c.moveTo(px,yG);c.lineTo(px-5,yG-8);c.lineTo(px+5,yG-8);c.closePath();c.fill();
+  // Zielscheibe (Süden, links)
+  const tH=yD-deckH-yB+18,tx=ax(-L/2);
+  c.fillStyle=C.panel;c.strokeStyle=C.ink;c.lineWidth=1.5;c.fillRect(tx-10,yB-tH/2,10,tH+ (yD-deckH-(yB+tH/2)));c.strokeRect(tx-10,yB-tH/2,10,tH+(yD-deckH-(yB+tH/2)));
+  c.strokeStyle=C['c-warn'];c.lineWidth=2;c.beginPath();c.moveTo(tx,yB-8);c.lineTo(tx,yB+8);c.stroke();
+  // Gewehr (Norden, rechts)
+  const gxm=ax(L/2);
+  c.fillStyle=C.ink;const gw=Math.max(40,sc*L*0.07);c.fillRect(gxm,yB-8,gw,18);c.fillRect(gxm-16,yB-3,18,7);
+  c.fillRect(gxm+8,yB+10,8,yD-deckH-yB-10);c.fillRect(gxm+gw-14,yB+10,10,yD-deckH-yB-10);
+  // Mündungsfeuer
+  const lastF=P.B.filter(b=>b.tf<=tSim).pop();
+  if(lastF&&(tSim-lastF.tf)<0.12*P.L/P.c+1e-9){c.fillStyle=C['c-body'];c.beginPath();c.moveTo(gxm-16,yB);c.lineTo(gxm-34,yB-9);c.lineTo(gxm-27,yB);c.lineTo(gxm-34,yB+9);c.closePath();c.fill();}
+  // Kugeln
+  c.fillStyle=C['c-shot'];
+  for(const x of s.fl){const X=ax(x);c.beginPath();c.ellipse(X,yB,7,2.6,0,0,7);c.fill();c.strokeStyle=C['c-shot'];c.globalAlpha=0.3;c.lineWidth=2;c.beginPath();c.moveTo(X+7,yB);c.lineTo(X+28,yB);c.stroke();c.globalAlpha=1;}
+  for(let i=0;i<s.E;i++){c.beginPath();c.arc(tx-5,yB-tH/2+8+((i*7)%(tH-14)),2.4,0,7);c.fill();}
+  // Himmelsrichtungen
+  c.fillStyle=C.muted;c.font='600 12px '+getComputedStyle(document.body).getPropertyValue('--f-ui');c.textBaseline='top';
+  c.textAlign='left';c.fillText('← Süden',10,10);c.textAlign='right';c.fillText('Norden →',W-10,10);
+  momBars(c,W,H,s.pp,s.pb,P.m*P.c*1.15,'Plattform','Kugeln im Flug');
+}
+function drawCM(c,x,y,label){c.strokeStyle=C['c-cm'];c.lineWidth=1.8;c.beginPath();c.arc(x,y,6,0,7);c.stroke();c.beginPath();c.moveTo(x-10,y);c.lineTo(x+10,y);c.moveTo(x,y-10);c.lineTo(x,y+10);c.stroke();
+  if(label){c.fillStyle=C['c-cm'];c.font='italic 600 15px '+getComputedStyle(document.body).getPropertyValue('--f-math');c.textAlign='left';c.textBaseline='bottom';c.fillText('S',x+7,y-6);}}
+// Impulsbalken: oben Mitte
+function momBars(c,W,H,pa,pb,pmax,na,nb){
+  const w=Math.min(300,W*0.36),x0=W/2,y0=12,bh=9,sc=w/2/pmax;
+  c.font='11px '+getComputedStyle(document.body).getPropertyValue('--f-ui');c.textBaseline='middle';
+  const row=(y,p,col,name)=>{c.fillStyle=col;const L=Math.max(-w/2,Math.min(w/2,p*sc));c.fillRect(Math.min(x0,x0+L),y,Math.abs(L),bh);
+    c.fillStyle=C.muted;c.textAlign=p>=0?'right':'left';c.fillText(name,p>=0?x0-6:x0+6,y+bh/2);};
+  row(y0,pa,C['c-body'],na);row(y0+bh+5,pb,C['c-shot'],nb);row(y0+2*(bh+5),pa+pb,C['c-cm'],'Summe');
+  c.strokeStyle=C.muted;c.lineWidth=1;c.beginPath();c.moveTo(x0,y0-3);c.lineTo(x0,y0+3*(bh+5));c.stroke();
+  c.fillStyle=C.muted;c.textAlign='center';c.textBaseline='top';c.fillText('Impuls',x0,y0+3*(bh+5)+1);
+}
+
+/* ----- Szene: Sonde ----- */
+function hash(i){let x=Math.sin(i*12.9898)*43758.5453;return x-Math.floor(x);}
+function drawSon(){
+  const {c,W,H}=frame($('#scene'));const s=probeState(S,tSim);
+  const t=tSim,k=s.k;
+  // Ausschnitt: alle Kugeln, Sonde, Schwerpunkt
+  let xmin=0,xmax=Math.max(0,s.x);
+  if(k>0)xmin=Math.min(xmin,S.X[1]+(S.v[1]-S.c)*(t-1/S.f));
+  const span=Math.max(xmax-xmin,S.c*3/S.f,1)*1.0;
+  const padL=60,padR=110,sc=(W-padL-padR)/span,X=x=>padL+(x-xmin)*sc+(xmax-xmin<span?(span-(xmax-xmin))*sc*0.15:0);
+  const yA=H*0.58,band=H*0.26;
+  c.strokeStyle=C.line;c.lineWidth=1;c.beginPath();c.moveTo(0,yA);c.lineTo(W,yA);c.stroke();
+  // Kugeln (senkrecht auseinandergezogen)
+  c.fillStyle=C['c-shot'];const step=k>4000?2:1;
+  for(let j=1;j<=k;j+=step){const x=S.X[j]+(S.v[j]-S.c)*(t-j/S.f);c.globalAlpha=0.75;c.fillRect(X(x)-1.2,yA+(hash(j)-0.5)*band-1.2,2.4,2.4);}
+  c.globalAlpha=1;
+  // Schwerpunkt: unter der Wolke, Hilfslinie zur Achse
+  {const xs=X(s.xcm),ys=yA+band/2+22;c.strokeStyle=C['c-cm'];c.lineWidth=1;c.setLineDash([3,3]);c.beginPath();c.moveTo(xs,yA-band/2-6);c.lineTo(xs,ys);c.stroke();c.setLineDash([]);drawCM(c,xs,ys,true);}
+  // Sonde
+  const sx=X(s.x),bw=34,bh=20;
+  c.fillStyle=C['c-body'];c.fillRect(sx-bw/2,yA-bh/2,bw,bh);
+  c.fillStyle=C.ink;c.fillRect(sx-bw/2-14,yA-2,14,4);
+  c.fillStyle=C.panel;c.strokeStyle=C.ink;c.lineWidth=1;
+  // Munitionsanzeige
+  const fr=(S.N-k)/S.N;c.strokeRect(sx-bw/2+4,yA-bh/2+4,bw-8,5);c.fillStyle=C.ink;c.fillRect(sx-bw/2+4,yA-bh/2+4,(bw-8)*fr,5);
+  if(k>0&&k<S.N&&(t*S.f-k)<0.35){c.fillStyle=C['c-body'];c.beginPath();c.moveTo(sx-bw/2-14,yA);c.lineTo(sx-bw/2-26,yA-6);c.lineTo(sx-bw/2-22,yA);c.lineTo(sx-bw/2-26,yA+6);c.closePath();c.fill();}
+  // Maßstab
+  const bar=niceStep(span,4);c.strokeStyle=C.muted;c.lineWidth=1.5;const y=H-18;
+  c.beginPath();c.moveTo(padL,y);c.lineTo(padL+bar*sc,y);c.moveTo(padL,y-4);c.lineTo(padL,y+4);c.moveTo(padL+bar*sc,y-4);c.lineTo(padL+bar*sc,y+4);c.stroke();
+  c.fillStyle=C.muted;c.font='11px '+getComputedStyle(document.body).getPropertyValue('--f-mono');c.textAlign='left';c.textBaseline='middle';
+  c.fillText(fLen(bar)+' · Bezugssystem: anfängliches Ruhesystem · Kugeln senkrecht auseinandergezogen',padL+bar*sc+8,y);
+  const pm=S.M0*S.v[S.N]*1.1||1;momBars(c,W,H,s.pp,s.pb,pm,'Sonde','alle Kugeln');
+}
+
+/* ----- Diagramme Plattform ----- */
+function drawPV(){const {c,W,H}=frame($('#pv'));
+  let vmax=0;for(const g of P.segs)vmax=Math.max(vmax,g.V);const u=unitFor(vmax||1e-9,'v');
+  const A=axes(c,W,H,{x0:0,x1:P.tEnd*1e3,y0:0,y1:vmax/u[0]*1.15||1,xlab:'t in ms',ylab:'v_P in '+u[1]});
+  clip(c,A);c.strokeStyle=C['c-body'];c.lineWidth=2;c.beginPath();
+  let first=true;for(let i=0;i<P.segs.length;i++){const g=P.segs[i];if(g.t>tSim)break;const t1=Math.min(tSim,i+1<P.segs.length?P.segs[i+1].t:P.tEnd);
+    const y=A.Y(g.V/u[0]);if(first){c.moveTo(A.X(g.t*1e3),y);first=false;}else c.lineTo(A.X(g.t*1e3),y);c.lineTo(A.X(t1*1e3),y);}
+  c.stroke();cursor(c,A,A.X(tSim*1e3));c.restore();}
+function drawPX(){const {c,W,H}=frame($('#px'));
+  const xe=platAt(P,P.tEnd).x;const s0=platState(P,0);let lo=Math.min(0,s0.xcm),hi=Math.max(xe,s0.xcm);const u=unitFor(Math.max(Math.abs(lo),Math.abs(hi))||1e-9,'m');
+  const pad=(hi-lo)*0.1||1e-6;
+  const A=axes(c,W,H,{x0:0,x1:P.tEnd*1e3,y0:(lo-pad)/u[0],y1:(hi+pad)/u[0],xlab:'t in ms',ylab:'x in '+u[1]});
+  clip(c,A);
+  // Schwerpunkt über die ganze Zeit (exakt nachgerechnet)
+  c.strokeStyle=C['c-cm'];c.lineWidth=2;c.setLineDash([6,4]);c.beginPath();
+  const n=200;for(let i=0;i<=n;i++){const t=tSim*i/n,y=A.Y(platState(P,t).xcm/u[0]);i?c.lineTo(A.X(t*1e3),y):c.moveTo(A.X(t*1e3),y);}c.stroke();c.setLineDash([]);
+  c.strokeStyle=C['c-body'];c.lineWidth=2;c.beginPath();
+  for(let i=0;i<P.segs.length;i++){const g=P.segs[i];if(g.t>tSim)break;const t1=Math.min(tSim,i+1<P.segs.length?P.segs[i+1].t:P.tEnd);
+    const y0=A.Y(g.x/u[0]),y1=A.Y((g.x+g.V*(t1-g.t))/u[0]);i?c.lineTo(A.X(g.t*1e3),y0):c.moveTo(A.X(g.t*1e3),y0);c.lineTo(A.X(t1*1e3),y1);}
+  c.stroke();cursor(c,A,A.X(tSim*1e3));c.restore();}
+
+/* ----- Diagramme Sonde ----- */
+function vCont(t){const mdot=S.m*S.f,tt=Math.min(t,S.Tb);return S.c*Math.log(S.M0/(S.M0-mdot*tt));}
+function stepPath(c,A,f,t0,t1,col,lw,dash){
+  const k0=Math.max(0,Math.floor(t0*f)),k1=Math.min(S.N,Math.floor(t1*f+1e-9));
+  c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();
+  c.moveTo(A.X(t0),A.Y(S.v[k0]));
+  const stride=Math.max(1,Math.floor((k1-k0)/(A.pw*1.5)));
+  for(let k=k0+1;k<=k1;k+=stride){const x=A.X(k/f);c.lineTo(x,A.Y(S.v[k-1>=k0?Math.max(k0,k-stride):k0]));c.lineTo(x,A.Y(S.v[k]));}
+  c.lineTo(A.X(t1),A.Y(S.v[k1]));c.stroke();c.setLineDash([]);}
+function drawSV(){const {c,W,H}=frame($('#sv'));const vE=S.v[S.N],t=tSim;
+  let x0,x1,y0,y1;
+  if(st.zoom){const w=5/S.f;x0=Math.max(0,t-4.5/S.f);x1=x0+w;const ka=Math.floor(x0*S.f),kb=Math.min(S.N,Math.floor(x1*S.f)+1);
+    y0=S.v[Math.max(0,ka)];y1=Math.max(S.v[kb],vCont(x1));const pd=(y1-y0)*0.15||S.m*S.c/S.M0;y0-=pd;y1+=pd;}
+  else{x0=0;x1=S.tEnd*(st.cmp?1.6:1);y0=0;y1=vE*1.08||1;}
+  const A=axes(c,W,H,{x0,x1,y0,y1,xlab:'t in s',ylab:'v in m/s',padL:62});
+  clip(c,A);
+  if(st.cmp&&!st.zoom){for(const fac of [0.5,2]){const f2=S.f*fac;stepPath(c,A,f2,0,Math.min(t,x1),C['c-ref'],1.5,[4,3]);}}
+  // kontinuierlich
+  c.strokeStyle=C['c-cont'];c.lineWidth=1.6;c.setLineDash([6,4]);c.beginPath();
+  const n=300;for(let i=0;i<=n;i++){const tt=x0+(Math.min(t,x1)-x0)*i/n;const y=A.Y(vCont(tt));i?c.lineTo(A.X(tt),y):c.moveTo(A.X(tt),y);}c.stroke();c.setLineDash([]);
+  stepPath(c,A,S.f,x0,Math.min(t,x1),C['c-body'],2);
+  cursor(c,A,A.X(t));c.restore();}
+function drawSD(){const {c,W,H}=frame($('#sd'));const k=probeK(S,tSim);
+  const d=j=>S.v[j]-S.v[j-1];const dmax=d(S.N)||1;
+  const u=dmax<0.1?[1e-3,'mm/s']:[1,'m/s'];
+  const A=axes(c,W,H,{x0:0,x1:S.N,y0:0,y1:dmax/u[0]*1.15,xlab:'Schuss k',ylab:'Δv_k in '+u[1],padL:62});
+  clip(c,A);
+  // Rahmen: Wert des ersten Schusses als Bezug
+  c.strokeStyle=C.muted;c.setLineDash([3,4]);c.beginPath();c.moveTo(A.L,A.Y(d(1)/u[0]));c.lineTo(A.L+A.pw,A.Y(d(1)/u[0]));c.stroke();c.setLineDash([]);
+  if(k>0){c.fillStyle=C['c-body'];c.globalAlpha=0.14;c.beginPath();c.moveTo(A.X(0),A.Y(0));
+    const stride=Math.max(1,Math.floor(k/A.pw));for(let j=1;j<=k;j+=stride)c.lineTo(A.X(j),A.Y(d(j)/u[0]));c.lineTo(A.X(k),A.Y(d(k)/u[0]));c.lineTo(A.X(k),A.Y(0));c.closePath();c.fill();c.globalAlpha=1;
+    c.strokeStyle=C['c-body'];c.lineWidth=2;c.beginPath();for(let j=1;j<=k;j+=stride){const y=A.Y(d(j)/u[0]);j===1?c.moveTo(A.X(j),y):c.lineTo(A.X(j),y);}c.lineTo(A.X(k),A.Y(d(k)/u[0]));c.stroke();
+    c.fillStyle=C['c-body'];c.beginPath();c.arc(A.X(k),A.Y(d(k)/u[0]),4,0,7);c.fill();}
+  c.restore();
+  c.fillStyle=C.muted;c.font='11px '+getComputedStyle(document.body).getPropertyValue('--f-ui');c.textAlign='left';c.textBaseline='bottom';c.fillText('gestrichelt: erster Schuss',A.L+6,A.Y(d(1)/u[0])-3);}
+function drawSR(){const {c,W,H}=frame($('#sr'));const n=nR(),Mam=S.N*S.m,mu=Mam/n,M0=S.M0,ME=S.ME;
+  const pd=(M0-ME)*0.08;
+  const g=1e3/ME-1e3/M0,ya=Math.max(0,1e3/(M0+pd)-0.3*g);
+  const A=axes(c,W,H,{x0:ME-pd,x1:M0+pd,y0:ya,y1:1e3/(ME-pd)+0.1*g,xlab:'Masse M in kg  (← nimmt beim Feuern ab)',ylab:'1/M in 1/t (Achse nicht ab 0)',padL:58});
+  clip(c,A);
+  const kf=probeK(S,tSim)/S.N*n;
+  // Rechtecke: Breite mu, Höhe 1/M vor dem Schuss
+  for(let k=1;k<=n;k++){const Mb=M0-(k-1)*mu,Ma=M0-k*mu;const xa=A.X(Ma),xb=A.X(Mb),y=A.Y(1e3/Mb);
+    c.fillStyle=C['c-shot'];c.globalAlpha=k<=kf?0.55:0.18;const yb=A.T+A.ph+2;c.fillRect(xa,y,xb-xa,yb-y);
+    if(n<=80){c.globalAlpha=0.9;c.strokeStyle=C['c-shot'];c.lineWidth=1;c.strokeRect(xa,y,xb-xa,yb-y);}}
+  c.globalAlpha=1;
+  c.strokeStyle=C['c-cont'];c.lineWidth=2;c.beginPath();
+  for(let i=0;i<=200;i++){const M=ME-pd+(M0-ME+2*pd)*i/200;const y=A.Y(1e3/M);i?c.lineTo(A.X(M),y):c.moveTo(A.X(M),y);}c.stroke();
+  c.restore();
+  const sm=riemann(M0,Mam,n,S.c),it=S.c*Math.log(M0/ME),df=sm-it;
+  $('#noteR').innerHTML=`Fläche × <i class="m">c</i>: Summe <b>${num(sm,7)} m/s</b> · Integral <b>${num(it,7)} m/s</b> · Differenz <b>${df>=0?'+':'−'}${fU(Math.abs(df),'v',3)}</b>`;}
+function drawSF(){const {c,W,H}=frame($('#sf'));const dv=st.dv*1e3,Md=st.Md,mF=cc=>Md*(Math.exp(dv/cc)-1);
+  const x0=100,x1=1e5,y0=pw(Math.floor(Math.log10(mF(x1)))),y1=pw(Math.ceil(Math.log10(Md))+3);
+  const A=axes(c,W,H,{x0,x1,y0,y1,logx:true,logy:true,xlab:'Ausstoßgeschwindigkeit c in m/s',ylab:'Treibstoff in kg',padL:56});
+  clip(c,A);
+  c.strokeStyle=C.muted;c.setLineDash([3,4]);c.beginPath();c.moveTo(A.L,A.Y(Md));c.lineTo(A.L+A.pw,A.Y(Md));c.stroke();c.setLineDash([]);
+  c.strokeStyle=C['c-cont'];c.lineWidth=2;c.beginPath();let st0=false;
+  for(let i=0;i<=300;i++){const cc=x0*Math.pow(x1/x0,i/300),m=mF(cc);if(!isFinite(m)||m>y1*10){st0=false;continue;}const X=A.X(cc),Y=A.Y(m);st0?c.lineTo(X,Y):c.moveTo(X,Y);st0=true;}c.stroke();
+  const pts=[[st.c,'Gewehr',C['c-body']],[4400,'chemisch',C.ink],[30000,'Ionentriebwerk',C.ink]];
+  c.font='11px '+getComputedStyle(document.body).getPropertyValue('--f-ui');c.textBaseline='bottom';
+  for(const [cc,name,col] of pts){const m=mF(cc);if(!isFinite(m))continue;const X=A.X(cc),Y=Math.max(A.T+4,A.Y(m));c.fillStyle=col;c.beginPath();c.arc(X,Y,4.5,0,7);c.fill();c.textAlign='left';c.fillText(name,X+7,Y-3);}
+  c.restore();
+  c.fillStyle=C.muted;c.textAlign='right';c.textBaseline='bottom';c.fillText('gestrichelt: Trockenmasse',A.L+A.pw-6,A.Y(Md)-3);
+  const mg=mF(st.c),nk=mg/(st.m/1000);
+  $('#noteF').innerHTML=`Gewehr: <b>${isFinite(mg)?fKg(+mg.toPrecision(3)):'—'}</b> Munition (${isFinite(nk)?fmt(nk,3):'—'} Kugeln) · chemisch: <b>${fKg(+mF(4400).toPrecision(3))}</b> · Ionentriebwerk: <b>${fKg(+mF(30000).toPrecision(3))}</b>`;}
+
+/* ----- Messwerte, Legende ----- */
+let vmaxSeen=0;
+function updateKZ(){let rows;
+  if(st.mode==='plat'){const s=platState(P,tSim);let vm=0;for(const g of P.segs){if(g.t>tSim)break;vm=Math.max(vm,g.V);}
+    const fired=P.B.filter(b=>b.tf<=tSim).length;const s0=platState(P,0);
+    rows=[['Zeit <i>t</i>',num(tSim*1e3,4)+' ms'],['Schüsse',fired+' / '+P.n],['Kugeln im Flug',s.nf],
+      ['<i>v</i><sub>P</sub> jetzt',fU(s.V,'v')],['<i>v</i><sub>P</sub> bisher max.',fU(vm,'v'),1],['<i>x</i><sub>P</sub>',fU(s.x,'m')],
+      ['<i>x</i><sub>P</sub> / <i>t</i>',tSim>0?fU(s.x/tSim,'v'):'—',1],['Verschiebung von S',Math.abs(s.xcm-s0.xcm)<1e-12*P.L?'0':fU(s.xcm-s0.xcm,'m',2),1]];}
+  else{const s=probeState(S,tSim);const dvl=s.k?S.v[s.k]-S.v[s.k-1]:0;
+    rows=[['Zeit <i>t</i>',num(tSim,4)+' s'],['Schüsse',num(s.k,5)+' / '+num(S.N,5)],['Masse <i>M</i>',num(s.M,6)+' kg'],
+      ['<i>v</i> jetzt',num(s.v,5)+' m/s',1],['letztes Δ<i>v</i><sub>k</sub>',s.k?fU(dvl,'v',4):'—'],['Ort der Sonde',fLen(s.x)],['Ort von S',Math.abs(s.xcm)<1e-9*Math.max(1,Math.abs(s.x))?'0':fLen(s.xcm),1]];}
+  $('#kz').innerHTML=rows.map(r=>`<dt>${r[0]}</dt><dd${r[2]?' class="hi"':''}>${r[1]}</dd>`).join('');}
+const sw=(col,dash,w)=>`<svg width="22" height="10"><path d="M1 5h20" stroke="${col}" stroke-width="${w||2.2}" ${dash?`stroke-dasharray="${dash}"`:''}/></svg>`;
+const dot=col=>`<svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="${col}"/></svg>`;
+const cmS=()=>`<svg width="14" height="14"><circle cx="7" cy="7" r="3.5" fill="none" stroke="var(--c-cm)" stroke-width="1.6"/><path d="M0 7h14M7 0v14" stroke="var(--c-cm)" stroke-width="1.4"/></svg>`;
+function buildLegend(){const it=st.mode==='plat'
+  ?[[dot('var(--c-body)'),'Plattform'],[dot('var(--c-shot)'),'Kugel'],[cmS(),'Schwerpunkt S von Plattform + Kugeln'],[sw('var(--c-cm)','6 4'),'S im Ort-Diagramm']]
+  :[[dot('var(--c-body)'),'Sonde'],[dot('var(--c-shot)'),'Kugeln'],[cmS(),'Schwerpunkt S'],[sw('var(--c-body)'),'Einzelschüsse'],[sw('var(--c-cont)','6 4'),'kontinuierlich: c·ln(M₀/M)'],...(st.cmp?[[sw('var(--c-ref)','4 3',1.5),'halbe / doppelte Feuerrate']]:[])];
+  $('#legend').innerHTML=it.map(([s,t])=>`<span>${s}${t}</span>`).join('');}
+
+/* ----- Schleife ----- */
+function drawAll(){
+  if(st.mode==='plat'){$('#tnow').textContent='t = '+NF(1).format(tSim*1e3)+' ms';drawPlat();drawPV();drawPX();}
+  else{$('#tnow').textContent='t = '+NF(1).format(tSim)+' s';drawSon();drawSV();drawSD();drawSR();drawSF();}
+  updateKZ();}
+let lastTs=0;
+function frameLoop(ts){const dt=lastTs?Math.min(0.05,(ts-lastTs)/1000):0;lastTs=ts;
+  if(playing&&dt>0){const rate=st.mode==='plat'?1/pw(st.lgSlow):pw(st.lgSpeed);tSim+=dt*rate;if(tSim>=curEnd()){tSim=curEnd();setPlay(false);}dirty=true;}
+  if(dirty){dirty=false;drawAll();}
+  requestAnimationFrame(frameLoop);}
+function redrawAll(){readColors();dpr=Math.min(2,window.devicePixelRatio||1);if(P)drawAll();}
+for(const id of ['#scene','#pv','#px','#sv','#sd','#sr','#sf'])new ResizeObserver(redrawAll).observe($(id).parentElement);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+dpr=Math.min(2,window.devicePixelRatio||1);readColors();
+st=Object.assign({},DEF);
+buildControls();
+{const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
+  if(h.includes('sonde'))st.mode='son';if(h.includes('cmp'))st.cmp=true;if(h.includes('lupe'))st.zoom=1;
+  let t0=null;for(const k of h){const n=k.match(/^(\w+)=([-\d.]+)$/);if(n){if(n[1]==='t')t0=+n[2];else if(n[1] in st)st[n[1]]=+n[2];}}
+  sync(true);if(t0!==null){tSim=Math.min(t0,curEnd());}if(h.includes('pause')||t0!==null)setPlay(false);readColors();}
+requestAnimationFrame(frameLoop);
+</script>
+</body>
+</html>

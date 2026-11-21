@@ -155,6 +155,10 @@ canvas.full{position:absolute;inset:0;width:100%;height:100%}
     <h2 class="lab">Ort in der Karte</h2>
     <div id="ctl-n"></div>
     <div id="ctl-T"></div>
+    <h2 class="lab">Temperatur angeben in</h2>
+    <div class="seg" style="--n:2" id="segU" role="group" aria-label="Einheit der Temperatur">
+      <button type="button" data-u="K">Kelvin (<i>T</i>)</button><button type="button" data-u="eV">eV (<i>k</i><sub>B</sub><i>T</i>)</button>
+    </div>
     <h2 class="lab">Ionensorte</h2>
     <div class="seg" style="--n:3" id="segZ" role="group" aria-label="Ionensorte">
       <button type="button" data-z="1">H⁺ (<i>Z</i> = 1)</button><button type="button" data-z="2">He²⁺ (<i>Z</i> = 2)</button><button type="button" data-z="6">C⁶⁺ (<i>Z</i> = 6)</button>
@@ -264,7 +268,11 @@ function unitFmt(v,units){for(const [f,u] of units){if(Math.abs(v)>=f*0.9999)ret
 const fLen=m=>unitFmt(m,[[1e3,'km'],[1,'m'],[1e-2,'cm'],[1e-3,'mm'],[1e-6,'µm'],[1e-9,'nm'],[1e-12,'pm'],[1e-15,'fm']])||sci(m)+' m';
 const fFreq=h=>unitFmt(h,[[1e18,'EHz'],[1e15,'PHz'],[1e12,'THz'],[1e9,'GHz'],[1e6,'MHz'],[1e3,'kHz'],[1,'Hz']])||sci(h)+' Hz';
 const fE=J=>{const ev=J/QE;return unitFmt(ev,[[1e6,'MeV'],[1e3,'keV'],[1,'eV'],[1e-3,'meV']])||sci(ev)+' eV';};
-const fT=T=>(T>=1e4||T<1)?sci(T,1)+' K':num(T,3)+' K';
+const fK=T=>(T>=1e4||T<1)?sci(T,1)+' K':num(T,3)+' K';
+const fEv=T=>fE(KB*T);
+let unit='K';   // Einheit der Temperaturachse: 'K' oder 'eV'
+const fT=T=>unit==='eV'?fEv(T):fK(T);
+const fT2=T=>unit==='eV'?fEv(T)+' ≙ '+fK(T):fK(T)+' ≙ '+fEv(T);
 const pct=x=>x>0.999?'> 99,9 %':x<0.001?'< 0,1 %':num(100*x,3)+' %';
 
 /* ----- Beispiele (typische Größenordnungen) ----- */
@@ -295,7 +303,7 @@ let st=Object.assign({},DEF), show=Object.assign({},SHOWDEF), p=null, dirty=true
 /* ----- Regler ----- */
 const PDEF={
   lgN:{box:'#ctl-n',lab:'Elektronendichte <i>n</i><sub>e</sub>',min:N0,max:N1,step:0.05,fmt:v=>sci(Math.pow(10,v),1)+' m⁻³',hint:'Ziehen nach rechts: dichter'},
-  lgT:{box:'#ctl-T',lab:'Temperatur <i>T</i>',min:T0,max:T1,step:0.05,fmt:v=>fT(Math.pow(10,v)),hint:'1 eV entspricht 11 600 K'}
+  lgT:{box:'#ctl-T',lab:'Temperatur <i>T</i>',min:T0,max:T1,step:0.05,fmt:v=>fT(Math.pow(10,v)),hint:'<i>k</i><sub>B</sub><i>T</i> = 1 eV ≙ <i>T</i> = 11 605 K'}
 };
 function buildControls(){
   for(const k in PDEF){const d=PDEF[k];const w=document.createElement('div');w.className='ctl';
@@ -314,9 +322,13 @@ function buildControls(){
   sel.innerHTML='<option value="">— eigener Punkt —</option>'+EX.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
   sel.addEventListener('change',()=>{if(sel.value)selectEx(sel.value);else{st.sel=null;sync();}});
   document.querySelectorAll('#segZ button').forEach(b=>b.addEventListener('click',()=>{st.Z=+b.dataset.z;sync();}));
+  document.querySelectorAll('#segU button').forEach(b=>b.addEventListener('click',()=>setUnit(b.dataset.u)));
   for(const k in SHOWDEF)$('#o-'+k).addEventListener('change',e=>{show[k]=e.target.checked;buildLegend();drawMap();});
   $('#defaults').addEventListener('click',()=>{st=Object.assign({},DEF);show=Object.assign({},SHOWDEF);syncShow();sync();});
 }
+function setUnit(u){unit=u==='eV'?'eV':'K';try{localStorage.setItem('plasmakarte-unit',unit);}catch(e){}
+  document.querySelectorAll('#segU button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===unit)));
+  if(st)sync();}
 function syncShow(){for(const k in show)$('#o-'+k).checked=show[k];buildLegend();}
 function clampSt(){st.lgN=Math.max(N0,Math.min(N1,st.lgN));st.lgT=Math.max(T0,Math.min(T1,st.lgT));}
 function selectEx(id){const e=EXM[id];st.lgN=L10(e.n);st.lgT=L10(e.T);st.Z=e.Z;st.sel=id;sync();}
@@ -351,7 +363,7 @@ function updateKZ(){
   const thc=p.Th<1?' class="hi deg"':'';
   let s=`<div class="gh">Ort</div>
   <dt>Elektronendichte <i>n</i><sub>e</sub></dt><dd>${sci(p.ne,1)} m⁻³</dd>
-  <dt>Temperatur <i>T</i></dt><dd>${fT(p.T)}</dd>
+  <dt>Temperatur <i>T</i></dt><dd>${fT2(p.T)}</dd>
   <dt>thermische Energie <i>k</i><sub>B</sub><i>T</i></dt><dd>${fE(p.kT)}</dd>
   <div class="gh">Kopplung</div>
   <dt>Teilchenabstand <i>a</i></dt><dd>${fLen(p.a)}</dd>
@@ -361,7 +373,7 @@ function updateKZ(){
   <dt>Elektronen in Debye-Kugel <i>N</i><sub>D</sub></dt><dd>${fmt(p.ND)}</dd>
   <div class="gh">Entartung</div>
   <dt>Fermi-Energie <i>E</i><sub>F</sub></dt><dd>${fE(p.EF)}</dd>
-  <dt>Fermi-Temperatur <i>T</i><sub>F</sub></dt><dd>${fT(p.TF)}</dd>
+  <dt>Fermi-Temperatur <i>T</i><sub>F</sub></dt><dd>${fT2(p.TF)}</dd>
   <dt>Entartung <i>Θ</i> = <i>T</i>/<i>T</i><sub>F</sub></dt><dd${thc}>${fmt(p.Th)}</dd>
   <dt>de-Broglie-Länge <i>λ</i><sub>th</sub></dt><dd>${fLen(p.lth)}</dd>
   <div class="gh">Beides zusammen</div>
@@ -432,7 +444,11 @@ function drawMap(){if(!p)return;const cv=$('#map');const {c,W,H}=ctxOf(cv);
   // Gitter
   c.lineWidth=1;c.strokeStyle=hexA(C.muted,0.16);
   for(let k=N0;k<=N1;k+=2){c.beginPath();c.moveTo(X(k)+0.5,T);c.lineTo(X(k)+0.5,T+h);c.stroke();}
-  for(let k=T0;k<=T1;k++){c.beginPath();c.moveTo(L,Y(k)+0.5);c.lineTo(L+w,Y(k)+0.5);c.stroke();}
+  const evK=L10(QE/KB);   // lg T(K) - lg kT(eV)
+  const tk=[];  // Hauptteilung links: [lg T in K, Exponent]
+  if(unit==='eV'){for(let k=-5;k<=7;k++){const y=k+evK;if(y>=T0-1e-9&&y<=T1+1e-9)tk.push([y,k]);}}
+  else for(let k=T0;k<=T1;k++)tk.push([k,k]);
+  for(const [y] of tk){c.beginPath();c.moveTo(L,Y(y)+0.5);c.lineTo(L+w,Y(y)+0.5);c.stroke();}
   c.save();c.beginPath();c.rect(L,T,w,h);c.clip();
   const curve=(f,col,lw,dash,a=N0,b=N1)=>{const pts=[];const nS=700;for(let s=0;s<=nS;s++){const x=a+(b-a)*s/nS,y=f(x);pts.push(y===null?null:[x,y]);}
     c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.beginPath();let pen=false;
@@ -464,11 +480,14 @@ function drawMap(){if(!p)return;const cv=$('#map');const {c,W,H}=ctxOf(cv);
   for(let k=N0;k<=N1;k+=2)c.fillText('10'+sup(k),X(k),T+h+5);
   rich(c,'Elektronendichte n_{e} (m⁻³)',L+w/2,T+h+24,{size:12,weight:400,align:'center',halo:false});
   c.font=`11px ${C.mono}`;c.textAlign='right';c.textBaseline='middle';
-  for(let k=T0;k<=T1;k++)c.fillText('10'+sup(k),L-6,Y(k));
-  c.textAlign='left';const evK=L10(QE/KB);
-  for(let k=-4;k<=6;k++){const y=Y(k+evK);if(y<T-1||y>T+h+1)continue;c.fillText('10'+sup(k),L+w+6,y);c.strokeStyle=C.muted;c.beginPath();c.moveTo(L+w,y);c.lineTo(L+w+3,y);c.stroke();}
-  c.save();c.font=`12px ${C.ui}`;c.textAlign='center';c.translate(14,T+h/2);c.rotate(-Math.PI/2);c.fillText('Temperatur T (K)',0,0);c.restore();
-  c.save();c.font=`12px ${C.ui}`;c.textAlign='center';c.translate(W-12,T+h/2);c.rotate(Math.PI/2);c.textBaseline='middle';rich(c,'k_{B}T (eV)',0,0,{size:12,weight:400,align:'center',halo:false});c.restore();
+  for(const [y,k] of tk)c.fillText('10'+sup(k),L-6,Y(y));
+  // Nebenskala rechts in der anderen Einheit
+  c.textAlign='left';c.strokeStyle=C.muted;
+  const tk2=[];if(unit==='eV'){for(let k=T0;k<=T1;k++)tk2.push([k,k]);}else for(let k=-5;k<=7;k++)tk2.push([k+evK,k]);
+  for(const [lg,k] of tk2){const y=Y(lg);if(y<T-1||y>T+h+1)continue;c.fillText('10'+sup(k),L+w+6,y);c.beginPath();c.moveTo(L+w,y);c.lineTo(L+w+3,y);c.stroke();}
+  const axK='Temperatur T (K)',axE='k_{B}T (eV)',axL=unit==='eV'?axE:axK,axR=unit==='eV'?axK:axE;
+  c.save();c.translate(14,T+h/2);c.rotate(-Math.PI/2);c.textBaseline='middle';rich(c,axL,0,0,{size:12,weight:unit==='eV'?600:400,align:'center',halo:false});c.restore();
+  c.save();c.translate(W-12,T+h/2);c.rotate(Math.PI/2);c.textBaseline='middle';rich(c,axR,0,0,{size:12,weight:400,align:'center',halo:false});c.restore();
   // Gebietsnamen
   const zone=(lgN,lgT,txt,col,size,it)=>{c.font=`${it?'italic ':''}600 ${size}px ${C.ui}`;c.fillStyle=col;c.textAlign='center';c.textBaseline='middle';halo(c,txt,X(lgN),Y(lgT));};
   zone(10,8.3,'klassisch · ideal',C.muted,15);
@@ -672,6 +691,9 @@ new MutationObserver(redrawAll).observe(document.documentElement,{attributes:tru
 
 dpr=Math.min(2,window.devicePixelRatio||1);
 buildControls();syncShow();
+{let u0='K';try{u0=localStorage.getItem('plasmakarte-unit')||'K';}catch(e){}
+  const h0=location.hash.slice(1).split('&');if(h0.includes('eV'))u0='eV';if(h0.includes('K'))u0='K';
+  unit=u0==='eV'?'eV':'K';document.querySelectorAll('#segU button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===unit)));}
 {const h=location.hash.slice(1).split('&');if(h.includes('dark'))document.documentElement.dataset.theme='dark';if(h.includes('light'))document.documentElement.dataset.theme='light';
   const id=h.find(k=>EXM[k]);if(h.includes('adi')){show.adi=true;syncShow();}selectEx(id||'glow');}
 requestAnimationFrame(frameLoop);
