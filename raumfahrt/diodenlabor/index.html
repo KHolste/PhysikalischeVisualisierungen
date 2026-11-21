@@ -115,7 +115,9 @@ canvas.full{position:absolute;inset:0;width:100%;height:100%}
 h2.lab .nm{text-transform:none;font-family:var(--f-math);font-style:italic;font-size:13px;letter-spacing:0}
 .foot{font-size:12px;color:var(--muted);margin-top:14px;max-width:110ch}
 .law{padding:14px 18px 16px}
-.lawgrid{display:grid;grid-template-columns:minmax(300px,1fr) minmax(0,1.7fr) minmax(250px,.9fr);gap:22px;align-items:start}
+.lawgrid{display:grid;grid-template-columns:minmax(300px,1fr) minmax(0,2fr);gap:22px;align-items:start}
+.lawp .row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:6px}
+.lawp .row .note{margin-top:0}
 .cwrap.big{height:330px}
 .lawf .big{font-family:var(--f-math);font-size:30px;line-height:1.3;margin:2px 0 4px}
 .lawf .big i,.lawf .eq i{font-style:italic}
@@ -134,13 +136,14 @@ h2.lab .nm{text-transform:none;font-family:var(--f-math);font-style:italic;font-
 .scbtn{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
 .scbtn .btn{font-size:12.5px;padding:6px 6px}
 .scbtn .xe{grid-column:1/-1}
+.off{opacity:.4;pointer-events:none}
 .scbtn .btn:disabled{opacity:.45;cursor:not-allowed}
 .scout{font-size:13px;line-height:1.45;min-height:7em}
 .scout .fac2{font-family:var(--f-mono);font-size:22px;color:var(--accent);font-weight:600;margin:4px 0}
 .scout .row{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
 .scout p{margin:6px 0 0}
 @media (max-width:1500px){.six{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:1180px){.lawgrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.lawp{grid-column:1/-1;grid-row:1}}
+@media (max-width:1180px){.lawgrid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:1280px){
   .app{grid-template-columns:286px minmax(0,1fr);grid-template-areas:"params stage" "kz kz"}
 }
@@ -168,6 +171,7 @@ h2.lab .nm{text-transform:none;font-family:var(--f-math);font-style:italic;font-
     <div class="seg" style="--n:2" id="segMat" role="group" aria-label="Kathodenmaterial">
       <button type="button" data-k="W">Wolfram</button><button type="button" data-k="LaB6">LaB₆</button>
     </div>
+    <label class="chkrow"><input type="checkbox" id="o-ideal"><span>Ideale Kathode<small>unbegrenzte Emission, alle Elektronen starten aus der Ruhe: das Child-Langmuir-Gesetz exakt, ohne Temperatur</small></span></label>
     <div id="ctl-T"></div>
     <h2 class="lab">Diode</h2>
     <div id="ctl-U"></div>
@@ -198,19 +202,10 @@ h2.lab .nm{text-transform:none;font-family:var(--f-math);font-style:italic;font-
 
 <div class="lower">
   <section class="panel law" aria-label="Das Child-Langmuir-Gesetz">
-    <h2 class="lab">Das <span class="nm">U</span><sup>3/2</sup>-Gesetz: <span class="nm">I = K·U</span><sup>3/2</sup> – kalte Elektronen, die an der Kathode aus der Ruhe starten</h2>
+    <h2 class="lab">Das <span class="nm">U</span><sup>3/2</sup>-Gesetz: <span class="nm">I = K·U</span><sup>3/2</sup> – Messreihe über die Regler</h2>
     <div class="lawgrid">
       <div class="lawf" id="lawF"></div>
-      <div class="lawp"><div class="cwrap big"><canvas class="full" id="pLin" aria-label="Anodenstrom über U hoch 3/2, Gerade mit Steigung K"></canvas></div><div class="note" id="nLin"></div></div>
-      <div class="laws">
-        <h2 class="lab">Skalierung ausprobieren</h2>
-        <div class="scbtn" id="scbtn">
-          <button class="btn" type="button" data-s="U">U verdoppeln</button><button class="btn" type="button" data-s="d">d halbieren</button>
-          <button class="btn xe" type="button" data-s="Xe">Elektronen → Xe⁺</button>
-        </div>
-        <div class="scout" id="scout"><p>Ein Knopf ändert eine Größe und vergleicht den Strom nach dem Child-Langmuir-Gesetz vorher und nachher.</p></div>
-        <button class="btn" type="button" id="scundo" hidden>Rückgängig</button>
-      </div>
+      <div class="lawp"><div class="cwrap big"><canvas class="full" id="pLin" aria-label="Messpunkte des Anodenstroms über U hoch 3/2 mit Ausgleichsgerade"></canvas></div><div class="row"><div class="note" id="nLin"></div><button class="btn" type="button" id="clearPts">Messreihen löschen</button></div></div>
     </div>
   </section>
     <div class="six">
@@ -311,6 +306,13 @@ function profile(R){
     P.x.push(R.xm+R.lam*X(e,g2,Gf,N));P.phi.push(R.phim+th*e);P.E.push(-th*Math.sqrt(g2+2*Gf(e))/R.lam);P.n.push(R.nm*erfcx(s));}
   const sc=R.d/P.x[P.x.length-1];for(let i=0;i<P.x.length;i++)P.x[i]*=sc; // Rundung auf exakt d
   return P;}
+// Ideale Kathode: unbegrenzte Emission, Start aus der Ruhe (kaltes Child-Langmuir-Gesetz)
+function solveIdeal(T,U,d){const j=jCL(U,d,ME);
+  return {T,U,d,th:0,js:Infinity,jcl:j,j,regime:'C',g0:0,ec:0,lam:NaN,nm:NaN,xm:0,phim:0,E0:0,Ed:-4/3*U/d,fret:0};}
+function profileIdeal(R){const P={x:[],phi:[],E:[],n:[]},n0=4/9*EPS0*R.U/(R.d*R.d)/QE;
+  for(let i=0;i<=240;i++){const u=Math.pow(i/240,3),x=R.d*u;
+    P.x.push(x);P.phi.push(R.U*Math.pow(u,4/3));P.E.push(-4/3*R.U/R.d*Math.cbrt(u));P.n.push(u>0?n0*Math.pow(u,-2/3):NaN);}
+  return P;}
 /*CORE-END*/
 </script>
 <script>
@@ -327,7 +329,7 @@ const fJ=j=>fmt(j*1e-4,3)+' A/cm²';
 function fL(x){const a=Math.abs(x);if(a>=1e-3)return fmt(x*1e3,3)+' mm';return fmt(x*1e6,3)+' µm';}
 
 /* ----- Zustand und Regler ----- */
-const DEF={mat:'W',T:2300,U:100,d:5,A:1,dur:3,cmp:true};
+const DEF={mat:'W',T:2500,U:100,d:5,A:1,dur:3,cmp:true,ideal:false};
 let st={},R=null,P=null,playing=true,curvesDirty=true,curveTimer=0,CU=null;
 const PDEF={
   T:{box:'#ctl-T',lab:'Temperatur <i>T</i>',min:1000,max:3200,step:10,fmt:v=>fx(v,0)+' K',hint:'Wolfram schmilzt bei 3695 K, LaB₆ wird meist bei 1700–2000 K betrieben'},
@@ -347,39 +349,49 @@ function buildControls(){
 function syncUI(){
   for(const [k,d] of Object.entries(PDEF)){$('#r-'+k).value=st[k];$('#o-'+k).textContent=d.fmt(st[k]);}
   document.querySelectorAll('#segMat button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===st.mat));
-  $('#o-cmp').checked=st.cmp;
+  $('#o-cmp').checked=st.cmp;$('#o-ideal').checked=st.ideal;
+  $('#ctl-T').classList.toggle('off',st.ideal);$('#segMat').classList.toggle('off',st.ideal);
 }
 function setState(s){st=Object.assign({},DEF,s);lastKey=null;syncUI();recompute();}
 let lastKey=null;
 function changed(k){syncUI();if(k==='dur')return;lastKey=k;recompute();}
 document.querySelectorAll('#segMat button').forEach(b=>b.addEventListener('click',()=>{st.mat=b.dataset.k;lastKey='mat';syncUI();recompute();}));
 $('#o-cmp').addEventListener('change',e=>{st.cmp=e.target.checked;drawPlots();});
+$('#o-ideal').addEventListener('change',e=>{st.ideal=e.target.checked;lastKey=null;parts=[];syncUI();recompute();});
 $('#defaults').addEventListener('click',()=>setState({}));
 
 /* ----- Rechnen ----- */
 function recompute(){
-  R=solve(st.T,st.mat,st.U,st.d*1e-3,false);P=profile(R);
-  updateText();updateLaw();drawPlots();
+  R=st.ideal?solveIdeal(st.T,st.U,st.d*1e-3):solve(st.T,st.mat,st.U,st.d*1e-3,false);P=st.ideal?profileIdeal(R):profile(R);
+  recordPoint();updateText();updateLaw();drawPlots();
   clearTimeout(curveTimer);curveTimer=setTimeout(()=>{computeCurves();drawCurves();},120);
 }
 const logspace=(a,b,n)=>Array.from({length:n},(_,i)=>a*Math.pow(b/a,i/(n-1)));
 function Trange(){return st.mat==='W'?[1600,3200]:[1000,2200];}
 function computeCurves(){
-  const A=st.A*1e-4,d=st.d*1e-3;
+  const A=st.A*1e-4,d=st.d*1e-3,solve=st.ideal?((T,k,U,dd)=>solveIdeal(T,U,dd)):window.solve;
   const Us=logspace(1,1000,46);
-  const Ts=[st.T-150,st.T,st.T+150].filter(T=>T>=800);
+  const Ts=st.ideal?[st.T]:[st.T-150,st.T,st.T+150].filter(T=>T>=800);
   const iu=Ts.map(T=>({T,I:Us.map(U=>solve(T,st.mat,U,d,true).j*A)}));
   const [ta,tb]=Trange(),Tg=Array.from({length:46},(_,i)=>ta+(tb-ta)*i/45);
   const UU=[st.U/2,st.U,Math.min(2*st.U,2000)];
   const it=UU.map(U=>({U,I:Tg.map(T=>solve(T,st.mat,U,d,true).j*A)}));
-  const Ul=Array.from({length:17},(_,i)=>linUmax()*i/16).slice(1);
-  CU={Us,iu,Tg,it,UU,A,d,js:Tg.map(T=>jRD(T,st.mat)*A),Ul,Il:Ul.map(U=>solve(st.T,st.mat,U,d,true).j*A)};
+  CU={Us,iu,Tg,it,UU,A,d,js:Tg.map(T=>jRD(T,st.mat)*A)};
 }
 
 /* ----- Texte und Kennzahlen ----- */
 function updateText(){
   const A=st.A*1e-4,I=R.j*A,K=4*EPS0*A/(9*R.d*R.d)*Math.sqrt(2*QE/ME);
   let s;
+  if(R.regime==='C'){
+    $('#status').innerHTML=`<b>Ideale Kathode.</b> Sie liefert beliebig viele Elektronen, und alle starten aus der Ruhe. Das Feld an der Kathode ist genau null, das Potential folgt <i class="m">U</i>(<i class="m">x</i>/<i class="m">d</i>)<sup>4/3</sup>, und es fließt exakt <i class="m">I</i> = <i class="m">KU</i><sup>3/2</sup> = <b>${fI(I)}</b>.`;
+    const rows=[['gh','Kathode'],['Modell','ideal','hi'],['Emission','unbegrenzt'],['Startenergie','0'],
+      ['gh','Diode'],['Anodenstrom <i>I</i>',fI(I),'hi'],['<i>j</i> an der Anode',fJ(R.j)],['<i>j</i>/<i>j</i><sub>CL</sub>',fx(1,3)],
+      ['Perveanz <i>K</i>',sci(K,2)+' A/V<sup>3/2</sup>'],['Leistung an der Anode',fmt(I*R.U,3)+' W'],
+      ['gh','Feld'],['<i>E</i> an der Kathode','0 V/m'],['<i>E</i> an der Anode',sci(R.Ed,2)+' V/m'],['Vakuum <i>U</i>/<i>d</i>',sci(-R.U/R.d,2)+' V/m']];
+    $('#kz').innerHTML=rows.map(r=>r[0]==='gh'?`<div class="gh">${r[1]}</div>`:`<dt>${r[0]}</dt><dd class="${r[2]||''}">${r[1]}</dd>`).join('');
+    return;
+  }
   if(R.regime==='S'){
     s=R.fret>0.02?`<b>Raumladungsbegrenzt.</b> Die Kathode liefert ${fJ(R.js)}, doch vor ihr liegt ein Potentialminimum von <b>${fx(R.phim,2)} V</b> (virtuelle Kathode). <b>${fx(R.fret*100,R.fret>0.999?2:1)} %</b> der Elektronen kehren um, an der Anode kommen ${fJ(R.j)} an.`
       :`<b>Übergangsbereich.</b> Ein flaches Minimum von ${fx(R.phim*1e3,1)} mV bildet sich gerade; ${fx(R.fret*100,1)} % der Elektronen kehren um.`;
@@ -452,7 +464,7 @@ function plot(cv,cfg){
       const px=X(xv),py=Math.max(-1e4,Math.min(1e4,Y(yv)));if(pen)g.lineTo(px,py);else{g.moveTo(px,py);pen=true;}}
     g.stroke();g.setLineDash([]);
     if(s.t){g.fillStyle=s.c;g.textAlign='right';g.textBaseline='bottom';const i=s.tAt??s.x.length-1;if(isFinite(s.y[i]))g.fillText(s.t,Math.min(L+pw-3,X(s.x[i])),Y(s.y[i])-3);}}
-  for(const p of cfg.pts||[]){if(!isFinite(p.y)||(cfg.ylog&&p.y<=0))continue;g.fillStyle=p.c;g.beginPath();g.arc(X(p.x),Y(p.y),4,0,7);g.fill();}
+  for(const p of cfg.pts||[]){if(!isFinite(p.y)||(cfg.ylog&&p.y<=0))continue;g.beginPath();g.arc(X(p.x),Y(p.y),4,0,7);if(p.hollow){g.strokeStyle=p.c;g.lineWidth=1.6;g.stroke();g.lineWidth=1;}else{g.fillStyle=p.c;g.fill();}}
   g.restore();g.lineWidth=1;
   if(cfg.draw)cfg.draw(g,X,Y,{L,T,pw,ph});
 }
@@ -471,35 +483,35 @@ function drawPlots(){
   const sPhi=[{x:xmm,y:P.phi,c:C['c-phi'],w:2.4}];
   if(cmp)sPhi.unshift({x:xs,y:vac,c:C['c-cmp'],dash:[5,4],w:1.4},{x:xs,y:cl,c:C['c-el'],dash:[2,3],w:1.4});
   plot($('#pPhi'),{xr:[0,dmm],yr:yRange([P.phi,[0,st.U]],0.06),xl:'x in mm',yl:'φ in V',series:sPhi,vl:R.regime==='S'?[{x:R.xm*1e3,c:C['c-ret'],dash:[3,3]}]:[]});
-  $('#nPhi').innerHTML=(cmp?'Grau: Vakuum, blau gestrichelt: kaltes Child-Langmuir-Profil <i class="m">U</i>(<i class="m">x</i>/<i class="m">d</i>)<sup>4/3</sup>. ':'')+(R.regime==='S'?`Minimum ${fx(R.phim,3)} V bei ${fL(R.xm)}.`:'Kein Minimum: Das Feld an der Kathode beschleunigt.');
+  $('#nPhi').innerHTML=(cmp?'Grau: Vakuum, blau gestrichelt: kaltes Child-Langmuir-Profil <i class="m">U</i>(<i class="m">x</i>/<i class="m">d</i>)<sup>4/3</sup>. ':'')+(R.regime==='S'?`Minimum ${fx(R.phim,3)} V bei ${fL(R.xm)}.`:R.regime==='C'?'Ideale Kathode: Die Kurve fällt mit dem kalten Profil zusammen.':'Kein Minimum: Das Feld an der Kathode beschleunigt.');
   const Ek=P.E.map(v=>v*1e-3);
   const sE=[{x:xmm,y:Ek,c:C['c-th'],w:2.4}];
   if(cmp)sE.unshift({x:xs,y:xs.map(()=>-st.U/(st.d*1e-3)*1e-3),c:C['c-cmp'],dash:[5,4],w:1.4},{x:xs,y:xs.map(x=>-4/3*st.U/(st.d*1e-3)*Math.cbrt(x/dmm)*1e-3),c:C['c-el'],dash:[2,3],w:1.4});
   plot($('#pE'),{xr:[0,dmm],yr:yRange([Ek,[0]],0.08),xl:'x in mm',yl:'E in kV/m',series:sE});
-  $('#nE').innerHTML=`<i class="m">E</i> &lt; 0 zieht Elektronen zur Anode. An der Kathode: <b>${sci(R.E0,2)} V/m</b>`+(R.regime==='S'?' (bremst, bis zum Minimum).':' (beschleunigt).');
+  $('#nE').innerHTML=`<i class="m">E</i> &lt; 0 zieht Elektronen zur Anode. An der Kathode: <b>${sci(R.E0,2)} V/m</b>`+(R.regime==='S'?' (bremst, bis zum Minimum).':R.regime==='C'?' – die Bedingung des Child-Langmuir-Gesetzes.':' (beschleunigt).');
   const nCL=xs.map(x=>x>0?4/9*EPS0*st.U/Math.pow(st.d*1e-3,2)*Math.pow(x/dmm,-2/3)/QE:NaN);
   const sN=[{x:xmm,y:P.n,c:C['c-el'],w:2.4}];
   if(cmp)sN.unshift({x:xs,y:nCL,c:C['c-el'],dash:[2,3],w:1.4});
   plot($('#pN'),{xr:[0,dmm],yr:logRange([P.n,cmp?nCL.filter(v=>v<P.n[0]*10):[]]),ylog:true,xl:'x in mm',yl:'n in m⁻³',series:sN,vl:R.regime==='S'?[{x:R.xm*1e3,c:C['c-ret'],dash:[3,3]}]:[]});
-  $('#nN').innerHTML=`An der Kathode ${sci(P.n[0],2)} m⁻³`+(R.regime==='S'?`, davon kehrt der Großteil vor dem Minimum um. Das kalte Profil (∝ <i class="m">x</i><sup>−2/3</sup>) divergiert an der Kathode.`:'. Ohne Minimum fällt die Dichte, weil die Elektronen schneller werden.');
+  $('#nN').innerHTML=R.regime==='C'?'Die Dichte divergiert an der Kathode wie <i class="m">x</i><sup>−2/3</sup>, weil die Elektronen dort ruhen; die Ladung bis zu jedem Ort bleibt trotzdem endlich.':`An der Kathode ${sci(P.n[0],2)} m⁻³`+(R.regime==='S'?`, davon kehrt der Großteil vor dem Minimum um. Das kalte Profil (∝ <i class="m">x</i><sup>−2/3</sup>) divergiert an der Kathode.`:'. Ohne Minimum fällt die Dichte, weil die Elektronen schneller werden.');
   drawCurves();
 }
 function drawCurves(){
-  if(!R)return;readColors();drawLaw();scaleBtns();
+  if(!R)return;readColors();drawLaw();
   const A=st.A*1e-4,d=st.d*1e-3,I=R.j*A;
   if(CU){
     const cols=[C['c-cmp'],C['c-el'],C['c-ret']];
-    const ser=CU.iu.map((c,i)=>({x:CU.Us,y:c.I,c:cols[CU.iu.length===3?i:i+1],w:c.T===st.T?2.4:1.6,t:fx(c.T,0)+' K'}));
+    const ser=CU.iu.map((c,i)=>({x:CU.Us,y:c.I,c:cols[CU.iu.length===3?i:i+1],w:c.T===st.T?2.4:1.6,t:st.ideal?'':fx(c.T,0)+' K'}));
     const clI=CU.Us.map(U=>jCL(U,d,ME)*A);
     ser.unshift({x:CU.Us,y:clI,c:C['c-cmp'],dash:[5,4],w:1.2});
     plot($('#pIU'),{xr:[1,1000],yr:logRange([clI.slice(0,1),...CU.iu.map(c=>c.I)]),xlog:true,ylog:true,xl:'U in V',yl:'I in A',series:ser,pts:[{x:st.U,y:I,c:C.accent}]});
     $('#nIU').innerHTML='Gestrichelt: <i class="m">KU</i><sup>3/2</sup> (Steigung 3/2 im doppelt logarithmischen Diagramm). Bei hoher Spannung sättigt der Strom bei <i class="m">I</i><sub>s</sub>(<i class="m">T</i>).';
     const cols2=[C['c-cmp'],C['c-el'],C['c-ret']];
     const ser2=CU.it.map((c,i)=>({x:CU.Tg,y:c.I,c:cols2[i],w:i===1?2.4:1.6,t:fx(c.U,0)+' V',tAt:Math.round(CU.Tg.length*0.97)-1}));
-    ser2.unshift({x:CU.Tg,y:CU.js,c:C['c-th'],dash:[5,4],w:1.2});
+    if(!st.ideal)ser2.unshift({x:CU.Tg,y:CU.js,c:C['c-th'],dash:[5,4],w:1.2});
     const top=Math.max(...CU.it[2].I)*3;
     plot($('#pIT'),{xr:Trange(),yr:[top/1e4,top],ylog:true,xl:'T in K',yl:'I in A',series:ser2,pts:[{x:st.T,y:I,c:C.accent}]});
-    $('#nIT').innerHTML='Rot gestrichelt: Emission nach Richardson-Dushman. Die Kurven folgen ihr, bis die Raumladung den Strom auf ein Plateau ∝ <i class="m">U</i><sup>3/2</sup> begrenzt – wie in Langmuirs Messung.';
+    $('#nIT').innerHTML=st.ideal?'Ideale Kathode: Der Strom hängt nicht von der Temperatur ab, nur von der Spannung (∝ <i class="m">U</i><sup>3/2</sup>).':'Rot gestrichelt: Emission nach Richardson-Dushman. Die Kurven folgen ihr, bis die Raumladung den Strom auf ein Plateau ∝ <i class="m">U</i><sup>3/2</sup> begrenzt – wie in Langmuirs Messung.';
   }
   const Ui=logspace(10,10000,40),je=Ui.map(U=>jCL(U,d,ME)*1e-4),jx=Ui.map(U=>jCL(U,d,MXE)*1e-4);
   plot($('#pIon'),{xr:[10,10000],yr:logRange([je,jx]),xlog:true,ylog:true,xl:'U in V',yl:'j_CL in A/cm²',
@@ -525,44 +537,50 @@ function updateLaw(){
       <dt><i>A</i>/<i>d</i><sup>2</sup></dt><dd>${fmt(f3,4)}<small>Geometrie: <i>A</i> = 1 cm² (fest), <i>d</i> = ${fx(st.d,1)} mm</small></dd>
       <dt><i>U</i><sup>3/2</sup></dt><dd>${fmt(U32,4)} V<sup>3/2</sup><small>(${fx(st.U,0)} V)<sup>3/2</sup></small></dd>
     </dl>
-    <div class="cmp">Die Temperatur kommt in der Formel nicht vor. Vollständiges Modell (thermische Startenergie, ${fx(st.T,0)} K): <b>${fI(Imod)}</b>, das ${fx(Imod/Icl,2)}-Fache – ${R.regime==='S'?'raumladungsbegrenzt, das Gesetz gilt (bis auf die Startenergie).':'<span style="color:var(--c-warn)">temperaturbegrenzt: Es fließt der gesamte Emissionsstrom, die Raumladung begrenzt nicht.</span>'}</div>`;
+    <div class="cmp">${R.regime==='C'?'Ideale Kathode: Das Modell stimmt exakt mit der Formel überein. Schalte sie aus, um den Einfluss der Temperatur zu sehen.':`Die Temperatur kommt in der Formel nicht vor. Vollständiges Modell (thermische Startenergie, ${fx(st.T,0)} K): <b>${fI(Imod)}</b>, das ${fx(Imod/Icl,2)}-Fache – ${R.regime==='S'?'raumladungsbegrenzt, das Gesetz gilt (bis auf die Startenergie).':'<span style="color:var(--c-warn)">temperaturbegrenzt: Es fließt der gesamte Emissionsstrom, die Raumladung begrenzt nicht.</span>'}`}</div>`;
   if(lastKey){clearTimeout(updateLaw.t);updateLaw.t=setTimeout(()=>document.querySelectorAll('#lawF .flash').forEach(e=>e.classList.remove('flash')),900);}
 }
+// Messreihen: jede Einstellung setzt einen Punkt (U^(3/2), I); neue Reihe, wenn sich d, T, Material oder Modus ändern
+let SER=[];
+const SCOL=['c-el','c-ion','c-ret','c-th','c-phi'];
+function serKey(){return st.ideal?`i|${st.d}`:`${st.mat}|${st.T}|${st.d}`;}
+function serLabel(){return (st.ideal?'ideale Kathode':`${MAT[st.mat].name}, ${fx(st.T,0)} K`)+`, d = ${fx(st.d,1)} mm`;}
+function recordPoint(){
+  const key=serKey();let S=SER.find(x=>x.key===key);
+  if(!S){const used=SER.map(x=>x.col);S={key,label:serLabel(),col:SCOL.find(c=>!used.includes(c))||SCOL[SER.length%SCOL.length],pts:[]};SER.push(S);if(SER.length>5)SER.shift();}
+  else{SER.splice(SER.indexOf(S),1);SER.push(S);}
+  const I=R.j*st.A*1e-4;
+  const sat=R.regime==='T',old=S.pts.find(q=>Math.abs(q.U-st.U)<0.5);if(old){old.I=I;old.sat=sat;}else S.pts.push({U:st.U,x:Math.pow(st.U,1.5),I,sat});
+}
+const fitK=S=>{let a=0,b=0;for(const q of S.pts){if(q.sat)continue;a+=q.x*q.I;b+=q.x*q.x;}return b>0?a/b:NaN;};
 function drawLaw(){
   if(!R)return;
-  const A=st.A*1e-4,d=st.d*1e-3,K=perveance(A,d,ME),Um=linUmax(),Xm=Math.pow(Um,1.5);
-  const mA=K*Xm<1,sc=mA?1e3:1,xs=[0,Xm],ys=[0,K*Xm*sc];
-  const ser=[{x:xs,y:ys,c:C['c-el'],w:2.4}];
-  const pts=[];
-  if(CU&&CU.Ul)CU.Ul.forEach((U,i)=>pts.push({x:Math.pow(U,1.5),y:CU.Il[i]*sc,c:C['c-ret']}));
-  const top=Math.max(K*Xm,...(CU&&CU.Il?CU.Il:[0]))*sc*1.08;
-  plot($('#pLin'),{xr:[0,Xm],yr:[0,top],xl:'U³ᐟ² in V³ᐟ²',yl:mA?'I in mA':'I in A',series:ser,pts:pts.concat([{x:Math.pow(st.U,1.5),y:K*Math.pow(st.U,1.5)*sc,c:C.accent}]),
-    draw:(g,X,Y,b)=>{ // Steigungsdreieck
-      const x1=0.35*Xm,x2=0.7*Xm,y1=K*x1*sc,y2=K*x2*sc;
-      g.strokeStyle=C.ink;g.lineWidth=1.2;g.setLineDash([4,3]);g.beginPath();g.moveTo(X(x1),Y(y1));g.lineTo(X(x2),Y(y1));g.lineTo(X(x2),Y(y2));g.stroke();g.setLineDash([]);
-      g.fillStyle=C.ink;g.font='13px '+getComputedStyle(document.body).fontFamily;g.textAlign='center';g.textBaseline='top';
-      g.fillText('Δ(U³ᐟ²)',(X(x1)+X(x2))/2,Y(y1)+4);g.textAlign='left';g.textBaseline='middle';g.fillText('ΔI',X(x2)+6,(Y(y1)+Y(y2))/2);
-      g.font='600 14px '+getComputedStyle(document.body).fontFamily;g.fillStyle=C['c-el'];g.textAlign='right';g.textBaseline='bottom';
-      g.fillText('Steigung K = ΔI/Δ(U³ᐟ²) = '+sci(K,3)+' A/V³ᐟ²',b.L+b.pw-10,b.T+b.ph-10);}});
-  $('#nLin').innerHTML=`Blaue Gerade: Child-Langmuir-Gesetz, eine Ursprungsgerade mit der Steigung <i class="m">K</i>. Violette Punkte: vollständiges Modell bei ${fx(st.T,0)} K. Sie liegen etwas über der Geraden (Startenergie der Elektronen) und knicken waagerecht ab, sobald die Kathode nicht mehr genug liefert. Grüner Punkt: aktuelle Spannung.`;
+  const cur=SER[SER.length-1],A=st.A*1e-4,d=st.d*1e-3,K=perveance(A,d,ME);
+  let xm=0,ym=0;for(const S of SER)for(const q of S.pts){xm=Math.max(xm,q.x);ym=Math.max(ym,q.I);}
+  xm=Math.max(xm*1.15,50);ym=Math.max(ym*1.15,1e-9);
+  const mA=ym<1,sc=mA?1e3:1,series=[],pts=[];
+  for(const S of SER){const c=C[S.col],k=fitK(S);
+    if(S.pts.filter(q=>!q.sat).length>=2&&isFinite(k))series.push({x:[0,xm],y:[0,k*xm*sc],c,dash:S===cur?[]:[5,4],w:S===cur?2:1.2});
+    for(const q of S.pts)pts.push({x:q.x,y:q.I*sc,c,hollow:q.sat});}
+  const n=cur?cur.pts.filter(q=>!q.sat).length:0,kc=cur?fitK(cur):NaN;
+  plot($('#pLin'),{xr:[0,xm],yr:[0,ym*sc],xl:'U³ᐟ² in V³ᐟ²',yl:mA?'I in mA':'I in A',series,pts,
+    draw:(g,X,Y,b)=>{
+      const q=cur&&cur.pts.find(p=>Math.abs(p.U-st.U)<0.5);
+      if(q){g.strokeStyle=C.ink;g.lineWidth=1.5;g.beginPath();g.arc(X(q.x),Y(q.I*sc),7,0,7);g.stroke();}
+      if(n>=2&&isFinite(kc)){ // Steigungsdreieck zwischen kleinstem und größtem Punkt der aktuellen Reihe
+        const xs=cur.pts.filter(p=>!p.sat).map(p=>p.x),x1=Math.min(...xs),x2=Math.max(...xs);
+        if(x2>x1*1.05){const y1=kc*x1*sc,y2=kc*x2*sc;
+          g.strokeStyle=C.ink;g.lineWidth=1.2;g.setLineDash([4,3]);g.beginPath();g.moveTo(X(x1),Y(y1));g.lineTo(X(x2),Y(y1));g.lineTo(X(x2),Y(y2));g.stroke();g.setLineDash([]);
+          g.fillStyle=C.ink;g.font='13px '+getComputedStyle(document.body).fontFamily;g.textAlign='center';g.textBaseline='top';
+          g.fillText('Δ(U³ᐟ²)',(X(x1)+X(x2))/2,Y(y1)+4);g.textAlign='left';g.textBaseline='middle';g.fillText('ΔI',X(x2)+6,(Y(y1)+Y(y2))/2);}
+        g.font='600 14px '+getComputedStyle(document.body).fontFamily;g.fillStyle=C[cur.col];g.textAlign='right';g.textBaseline='bottom';
+        g.fillText('Steigung K = ΔI/Δ(U³ᐟ²) = '+sci(kc,3)+' A/V³ᐟ²',b.L+b.pw-10,b.T+b.ph-10);}
+      else{g.font='13px '+getComputedStyle(document.body).fontFamily;g.fillStyle=C.muted;g.textAlign='center';g.textBaseline='middle';
+        g.fillText('Verstelle die Anodenspannung U: Jeder neue Wert setzt einen Messpunkt.',b.L+b.pw/2,b.T+b.ph*0.3);}}});
+  const lst=SER.map(S=>{const k=fitK(S);const ns=S.pts.filter(q=>q.sat).length,nf=S.pts.length-ns;return `<span style="color:${C[S.col]}">●</span> ${S.label}: ${S.pts.length} Punkt${S.pts.length===1?'':'e'}`+(ns?` (davon ${ns} gesättigt)`:'')+(nf>=2?`, <i class="m">K</i> = ${sci(k,3)} A/V<sup>3/2</sup>`:'');}).join('<br>');
+  $('#nLin').innerHTML=`Ab zwei Punkten erscheint die Ausgleichsgerade durch den Ursprung; ihre Steigung ist die Perveanz. Ändert man <i class="m">d</i>, <i class="m">T</i>, das Material oder den Kathodenmodus, beginnt eine neue Messreihe. Offene Kreise: temperaturbegrenzt (Sättigung), sie zählen nicht zur Geraden. Child-Langmuir für <i class="m">d</i> = ${fx(st.d,1)} mm: <i class="m">K</i> = ${sci(K,3)} A/V<sup>3/2</sup>.<br>${lst}`;
 }
-let undoState=null;
-const SC={
-  U:{ok:()=>2*st.U<=PDEF.U.max,apply:s=>({U:2*s.U}),why:'Der Strom wächst mit <i class="m">U</i><sup>3/2</sup>: 2<sup>3/2</sup> = 2,83. Doppelt so viel Raumladung passt in den Spalt (∝ <i class="m">U</i>), und die Elektronen sind √2-mal so schnell.'},
-  d:{ok:()=>st.d/2>=PDEF.d.min,apply:s=>({d:+(s.d/2).toFixed(2)}),why:'<i class="m">K</i> ∝ 1/<i class="m">d</i><sup>2</sup>: Halber Abstand gibt den vierfachen Strom. Das Feld ist doppelt so stark und die Laufstrecke halb so lang.'},
-  Xe:{ok:()=>true,apply:null,why:'<i class="m">K</i> ∝ √(<i class="m">e</i>/<i class="m">m</i>): Xenonionen sind 239 000-mal schwerer, der Strom sinkt auf 1/489. Bei gleicher Energie sind sie langsam, und schon wenig Strom füllt den Spalt mit Raumladung.'}
-};
-function scaleBtns(){document.querySelectorAll('#scbtn button').forEach(b=>b.disabled=!SC[b.dataset.s].ok());}
-document.querySelectorAll('#scbtn button').forEach(b=>b.addEventListener('click',()=>{
-  const k=b.dataset.s,c=SC[k],A=st.A*1e-4,d=st.d*1e-3,I0=perveance(A,d,ME)*Math.pow(st.U,1.5);
-  let I1,txt=b.textContent;
-  if(k==='Xe'){I1=perveance(A,d,MXE)*Math.pow(st.U,1.5);}
-  else{undoState=Object.assign({},st);const ns=Object.assign({},st,c.apply(st));I1=perveance(ns.A*1e-4,ns.d*1e-3,ME)*Math.pow(ns.U,1.5);
-    st=ns;lastKey=k;syncUI();recompute();$('#scundo').hidden=false;}
-  const f=I1/I0;
-  $('#scout').innerHTML=`<div><b>${txt}</b></div><div class="row"><span>vorher</span><span>${fI(I0)}</span></div><div class="row"><span>nachher</span><span>${fI(I1)}</span></div><div class="fac2">${f>=1?'× '+fx(f,2):'÷ '+fx(1/f,0)}</div><p>${c.why}</p>`;
-}));
-$('#scundo').addEventListener('click',()=>{if(!undoState)return;st=undoState;undoState=null;lastKey=null;syncUI();recompute();$('#scundo').hidden=true;$('#scout').innerHTML='<p>Zurückgesetzt.</p>';});
+$('#clearPts').addEventListener('click',()=>{SER=[];recordPoint();drawLaw();});
 
 /* ----- Animation der Diode ----- */
 const cv=$('#view');let parts=[],lastT=0,spawnAcc=0;
@@ -572,10 +590,11 @@ function step(dt){
   if(!R)return;
   const d=R.d,kT=KB*R.T,vA=Math.sqrt(2*QE*Math.max(R.U,1)/ME),tau=3*d/vA,scale=tau/st.dur; // Child-Langmuir-Flugzeit 3d/v_A ↦ dur
   // Emission: Punkte pro Sekunde nicht maßstäblich, Anteil der Umkehrer wie im Modell
-  const ratio=R.js/R.j,shown=Math.min(ratio,8),rate=45*shown,pPass=1/shown,thr=-R.phim*QE;
+  const ideal=R.regime==='C',ratio=ideal?1:R.js/R.j,shown=Math.min(ratio,8),rate=45*shown,pPass=1/shown,thr=-R.phim*QE;
   spawnAcc+=rate*dt;
   while(spawnAcc>=1&&parts.length<1600){spawnAcc-=1;let eps;
-    if(Math.random()<pPass)eps=thr-kT*Math.log(1-Math.random()); // passiert das Minimum
+    if(ideal)eps=0; // ideale Kathode: Start aus der Ruhe
+    else if(Math.random()<pPass)eps=thr-kT*Math.log(1-Math.random()); // passiert das Minimum
     else{const u=Math.random();eps=-kT*Math.log(1-u*(1-Math.exp(-thr/kT)));} // kehrt um
     parts.push({x:0,eps,dir:1,y:Math.random(),ret:eps<thr});}
   if(spawnAcc>1)spawnAcc=0;
@@ -592,14 +611,14 @@ function drawView(){
   const {g,w,h}=fit(cv);readColors();g.clearRect(0,0,w,h);if(!R)return;
   const L=86,Rr=86,T=26,B=40,pw=w-L-Rr,ph=h-T-B,X=x=>L+x/R.d*pw;
   // Platten
-  const hot=Math.max(0,Math.min(1,(R.T-1000)/2000));
+  const hot=R.regime==='C'?0.55:Math.max(0,Math.min(1,(R.T-1000)/2000));
   g.fillStyle=`rgba(${Math.round(120+130*hot)},${Math.round(110+40*hot*(1-hot))},${Math.round(100-60*hot)},1)`;
   g.fillRect(L-14,T,14,ph);
   if(hot>0.3){g.save();g.globalAlpha=(hot-0.3)*0.6;const gr=g.createLinearGradient(L,0,L+40,0);gr.addColorStop(0,'rgba(255,140,40,0.7)');gr.addColorStop(1,'rgba(255,140,40,0)');g.fillStyle=gr;g.fillRect(L,T,40,ph);g.restore();}
   g.fillStyle=C['c-plate'];g.fillRect(L+pw,T,14,ph);
   g.font='12px '+getComputedStyle(document.body).fontFamily;g.fillStyle=C.ink;g.textAlign='center';g.textBaseline='top';
   g.fillText('Kathode',L-7,T+ph+6);g.fillText('Anode',L+pw+7,T+ph+6);
-  g.fillStyle=C.muted;g.fillText(fx(R.T,0)+' K, 0 V',L-7,T+ph+21);g.fillText(fx(R.U,0)+' V',L+pw+7,T+ph+21);
+  g.fillStyle=C.muted;g.fillText(R.regime==='C'?'ideal, 0 V':fx(R.T,0)+' K, 0 V',L-7,T+ph+21);g.fillText(fx(R.U,0)+' V',L+pw+7,T+ph+21);
   // Elektronen
   for(const p of parts){g.fillStyle=p.ret?C['c-ret']:C['c-el'];g.globalAlpha=p.dir<0?0.9:0.75;g.fillRect(X(p.x)-1.6,T+4+p.y*(ph-8)-1.6,3.2,3.2);}
   g.globalAlpha=1;
@@ -630,7 +649,7 @@ function frame(t){const dt=Math.min(0.05,(t-lastT)/1000||0);lastT=t;if(playing)s
 $('#play').addEventListener('click',togglePlay);
 function togglePlay(){playing=!playing;$('#play').textContent=playing?'❚❚ Pause':'▶ Weiter';$('#play').setAttribute('aria-label',playing?'Animation anhalten':'Animation fortsetzen');}
 cv.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();togglePlay();}
-  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();st.T=Math.min(3200,Math.max(1000,st.T+(e.key==='ArrowRight'?20:-20)));changed('T');}});
+  else if(!st.ideal&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();st.T=Math.min(3200,Math.max(1000,st.T+(e.key==='ArrowRight'?20:-20)));changed('T');}});
 function legend(){readColors();const it=[[C['c-el'],'Elektron, erreicht die Anode','sq'],[C['c-ret'],'Elektron, kehrt vor dem Minimum um','sq'],[C['c-phi'],'Potential φ(x)','ln'],[C['c-cmp'],'Vakuum (ohne Raumladung)','da']];
   $('#legend').innerHTML=it.map(([c,t,k])=>`<span><svg width="18" height="10">${k==='sq'?`<rect x="6" y="2" width="6" height="6" fill="${c}"/>`:`<line x1="1" y1="5" x2="17" y2="5" stroke="${c}" stroke-width="${k==='ln'?3:1.5}" ${k==='da'?'stroke-dasharray="4 3"':''}/>`}</svg>${t}</span>`).join('');}
 
